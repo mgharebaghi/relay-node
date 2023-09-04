@@ -79,7 +79,7 @@ async fn main() {
 
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
 
-    let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
+    let privacy = libp2p::gossipsub::MessageAuthenticity::Anonymous;
     let gossip_cfg = libp2p::gossipsub::Config::default();
     let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
     gossipsub.subscribe(&relay_topic.clone()).unwrap();
