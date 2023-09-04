@@ -7,7 +7,7 @@ use std::{
 
 use libp2p::{
     futures::StreamExt,
-    gossipsub::{IdentTopic, Message, TopicHash},
+    gossipsub::{IdentTopic, Message, TopicHash, ValidationMode},
     identity::Keypair,
     request_response::{cbor, Event, ProtocolSupport, ResponseChannel},
     swarm::{NetworkBehaviour, SwarmBuilder, SwarmEvent},
@@ -80,7 +80,11 @@ async fn main() {
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
 
     let privacy = libp2p::gossipsub::MessageAuthenticity::Anonymous;
-    let gossip_cfg = libp2p::gossipsub::Config::default();
+    let mut gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
+    gossip_cfg_builder.validation_mode(ValidationMode::None);
+    
+    let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
+
     let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
     gossipsub.subscribe(&relay_topic.clone()).unwrap();
     gossipsub.subscribe(&clients_topic.clone()).unwrap();
