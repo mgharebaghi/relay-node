@@ -82,6 +82,8 @@ async fn main() {
     let privacy = libp2p::gossipsub::MessageAuthenticity::Anonymous;
     let mut gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     gossip_cfg_builder.validation_mode(ValidationMode::None);
+    gossip_cfg_builder.heartbeat_interval(std::time::Duration::from_secs(10));
+    gossip_cfg_builder.mesh_n(20);
     
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
 
