@@ -2,18 +2,18 @@ use std::{
     fs,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, BufWriter, Write},
-    net::Ipv4Addr
+    net::Ipv4Addr, time::Duration
 };
 
 use libp2p::{
     futures::StreamExt,
-    gossipsub::{IdentTopic, Message, TopicHash, ValidationMode},
+    gossipsub::{IdentTopic, Message, TopicHash},
     identity::Keypair,
     request_response::{cbor, Event, ProtocolSupport, ResponseChannel},
     swarm::{NetworkBehaviour, SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, StreamProtocol, Swarm, Transport,
 };
-use rand::seq::SliceRandom;
+use rand::{seq::SliceRandom, Rng};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -79,11 +79,12 @@ async fn main() {
 
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
 
-    let privacy = libp2p::gossipsub::MessageAuthenticity::Anonymous;
+    let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair);
     let mut gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
-    gossip_cfg_builder.validation_mode(ValidationMode::None);
     gossip_cfg_builder.heartbeat_interval(std::time::Duration::from_secs(10));
-    gossip_cfg_builder.mesh_n(20);
+    gossip_cfg_builder.mesh_n_high(20);
+    gossip_cfg_builder.gossip_lazy(20);
+    gossip_cfg_builder.idle_timeout(Duration::from_secs(60 * 1000000));
     
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
 
