@@ -13,7 +13,7 @@ use libp2p::{
     swarm::{NetworkBehaviour, SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, StreamProtocol, Swarm, Transport,
 };
-use rand::{seq::SliceRandom, Rng};
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -214,6 +214,7 @@ async fn handle_streams(
                         peer_id
                     );
                     connections.push(peer_id);
+                    swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                 }
                 SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
                     println!(
