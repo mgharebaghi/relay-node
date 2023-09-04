@@ -100,7 +100,7 @@ async fn main() {
         req_res,
     };
 
-    let mut swarm = SwarmBuilder::without_executor(transport, behaviour, local_peer_id).build();
+    let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build();
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();
 
