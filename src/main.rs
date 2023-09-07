@@ -2,7 +2,7 @@ use std::{
     fs,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, BufWriter, Write},
-    net::Ipv4Addr, time::Duration
+    net::Ipv4Addr
 };
 
 use libp2p::{
@@ -81,8 +81,11 @@ async fn main() {
 
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair);
     let mut gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
-    gossip_cfg_builder.idle_timeout(Duration::from_secs(60 * 1000000));
-    
+    gossip_cfg_builder.history_gossip(1);
+    gossip_cfg_builder.history_length(1);
+    gossip_cfg_builder.allow_self_origin(true);
+    gossip_cfg_builder.max_ihave_messages(1000);
+
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
 
     let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
@@ -203,7 +206,7 @@ async fn handle_streams(
                 SwarmEvent::NewListenAddr { address, .. } => {
                     let str_addr = address.clone().to_string();
                     let ipv4 = str_addr.split("/").nth(2).unwrap();
-                    let ip:Ipv4Addr = ipv4.parse().unwrap();
+                    let ip: Ipv4Addr = ipv4.parse().unwrap();
                     if !ip.is_private() && ipv4 != "127.0.0.1" {
                         handle_new_listener_event(address, local_peer_id, my_addresses);
                     }
@@ -294,7 +297,7 @@ async fn handle_streams(
                                 relay_topic.clone(),
                                 connections,
                                 relay_topic_subscribers,
-                                my_addresses
+                                my_addresses,
                             );
                         }
                         libp2p::gossipsub::Event::Subscribed { peer_id, topic } => {
@@ -423,7 +426,7 @@ fn handle_gossip_message(
     relay_topic: IdentTopic,
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
-    my_addresses: &mut Vec<String>
+    my_addresses: &mut Vec<String>,
 ) {
     println!(
         "gossip messag from:\n{}\nmessag: {:?}\n--------------------",
