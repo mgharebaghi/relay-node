@@ -80,11 +80,7 @@ async fn main() {
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
 
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair);
-    let mut gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
-    gossip_cfg_builder.history_gossip(1);
-    gossip_cfg_builder.history_length(1);
-    gossip_cfg_builder.allow_self_origin(true);
-    gossip_cfg_builder.max_ihave_messages(1000);
+    let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
 
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
 
