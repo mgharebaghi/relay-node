@@ -2,9 +2,10 @@ use std::{
     fs,
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, BufWriter, Write},
-    net::Ipv4Addr
+    net::Ipv4Addr,
 };
 
+use env_logger::Env;
 use libp2p::{
     futures::StreamExt,
     gossipsub::{IdentTopic, Message, TopicHash},
@@ -13,8 +14,12 @@ use libp2p::{
     swarm::{NetworkBehaviour, SwarmBuilder, SwarmEvent},
     tcp, Multiaddr, PeerId, StreamProtocol, Swarm, Transport,
 };
+
 use rand::seq::SliceRandom;
+
 use serde::{Deserialize, Serialize};
+
+use log::{error, info, warn};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Req {
@@ -64,12 +69,23 @@ struct OutNode {
 
 #[tokio::main]
 async fn main() {
+    //initialize logger for terminal
+    env_logger::Builder::from_env(
+        Env::default()
+            .default_filter_or("warn")
+            .default_filter_or("error")
+            .default_filter_or("info"),
+    )
+    .init();
+
     let relay_topic = IdentTopic::new("relay");
     let clients_topic = IdentTopic::new("client");
+
+    //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
     let local_peer_id = PeerId::from(keypair.public());
-    println!("peer id: {}", local_peer_id.clone());
 
+    //config transport as TCP
     let tcp_transport = tcp::tokio::Transport::default();
     let transport = tcp_transport
         .upgrade(libp2p::core::upgrade::Version::V1)
@@ -77,28 +93,31 @@ async fn main() {
         .multiplex(libp2p::yamux::Config::default())
         .boxed();
 
+    //initial keep alive behaviour for stable connection
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
 
+    //gossip protocol config
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair);
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
-
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
-
     let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
     gossipsub.subscribe(&relay_topic.clone()).unwrap();
     gossipsub.subscribe(&clients_topic.clone()).unwrap();
 
+    //request and response protocol config
     let req_res = cbor::Behaviour::<Req, Res>::new(
         [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
         libp2p::request_response::Config::default(),
     );
 
+    //Definition of behavior
     let behaviour = CustomBehav {
         keep_alive,
         gossipsub,
         req_res,
     };
 
+    //config swarm
     let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build();
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();
@@ -163,7 +182,7 @@ async fn handle_streams(
                     .unwrap()
                     .clone();
                 swarm.dial(rnd_dial_addr.clone()).unwrap();
-                println!("dialing with: {}\n---------------", rnd_dial_addr.clone());
+                warn!("dialing with: {}\n---------------", rnd_dial_addr.clone());
             }
         }
 
@@ -208,7 +227,7 @@ async fn handle_streams(
                     }
                 }
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                    println!(
+                    info!(
                         "connection stablishe with: {}\n------------------------",
                         peer_id
                     );
@@ -216,7 +235,7 @@ async fn handle_streams(
                     swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                 }
                 SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
-                    println!(
+                    error!(
                         "dialing with: {}\nhas error: {:?}\n------------------------",
                         peer_id.unwrap(),
                         error
@@ -268,15 +287,13 @@ async fn handle_streams(
                             .gossipsub
                             .remove_explicit_peer(&peer_id);
                         removed_peer_dialing_error(peer_id);
-                        println!("relay removed: {}\n-------------------", peer_id);
-                        println!("relays after remove: {:?}\n-------------------", relays);
+                        warn!("relay removed: {}\n-------------------", peer_id);
+                        warn!("relays after remove: {:?}\n-------------------", relays);
                         break;
                     }
                 }
                 SwarmEvent::Behaviour(custom_behav) => match custom_behav {
-                    CustomBehavEvent::KeepAlive(keep_alive) => {
-                        println!("keep alive: {:?}", keep_alive);
-                    }
+                    CustomBehavEvent::KeepAlive(..) => {}
                     CustomBehavEvent::Gossipsub(gossipevent) => match gossipevent {
                         libp2p::gossipsub::Event::Message {
                             propagation_source,
@@ -310,42 +327,28 @@ async fn handle_streams(
                         }
                         _ => (),
                     },
-                    CustomBehavEvent::ReqRes(req_res) => {
-                        println!("{:?}\n--------------------", req_res);
-                        match req_res {
-                            Event::Message { peer, message } => {
-                                println!(
-                                    "you get message from: {}\nmessage: {:?}\n-----------------",
-                                    peer, message
+                    CustomBehavEvent::ReqRes(req_res) => match req_res {
+                        Event::Message { peer, message } => match message {
+                            libp2p::request_response::Message::Request {
+                                channel, request, ..
+                            } => {
+                                handle_requests(
+                                    request,
+                                    &mut clients,
+                                    &mut swarm,
+                                    &mut channels,
+                                    channel,
+                                    &mut relays,
+                                    peer,
+                                    local_peer_id,
                                 );
-                                match message {
-                                    libp2p::request_response::Message::Request {
-                                        channel,
-                                        request,
-                                        ..
-                                    } => {
-                                        handle_requests(
-                                            request,
-                                            &mut clients,
-                                            &mut swarm,
-                                            &mut channels,
-                                            channel,
-                                            &mut relays,
-                                            peer,
-                                            local_peer_id,
-                                        );
-                                    }
-                                    libp2p::request_response::Message::Response {
-                                        response,
-                                        ..
-                                    } => {
-                                        handle_responses(response, local_peer_id, channels, swarm);
-                                    }
-                                }
                             }
-                            _ => (),
-                        }
-                    }
+                            libp2p::request_response::Message::Response { response, .. } => {
+                                handle_responses(response, local_peer_id, channels, swarm);
+                            }
+                        },
+                        _ => (),
+                    },
                 },
                 _ => (),
             }
@@ -358,8 +361,8 @@ fn handle_new_listener_event(
     local_peer_id: PeerId,
     my_addresses: &mut Vec<String>,
 ) {
-    println!("listener: {}\n----------------", address);
     let my_full_addr = format!("{}/p2p/{}", address, local_peer_id);
+    info!("Your full address:\n{}", my_full_addr);
     let exists = fs::metadata("relays.dat").is_ok();
     if exists {
         let file = OpenOptions::new()
@@ -424,12 +427,6 @@ fn handle_gossip_message(
     relay_topic_subscribers: &mut Vec<PeerId>,
     my_addresses: &mut Vec<String>,
 ) {
-    println!(
-        "gossip messag from:\n{}\nmessag: {:?}\n--------------------",
-        propagation_source,
-        String::from_utf8(message.data.clone()).unwrap()
-    );
-
     let msg = String::from_utf8(message.data.clone()).unwrap();
 
     if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
@@ -507,8 +504,7 @@ fn handle_requests(
     if clients.len() > 0 {
         let chnl = Channels { peer, channel };
         channels.push(chnl);
-        println!("in clients bigger\n{:?}\n----------------", channels);
-        println!("clients: {:?}\n----------------", clients);
+
         let random_client = clients.choose(&mut rand::thread_rng()).unwrap();
         swarm
             .behaviour_mut()
@@ -519,20 +515,12 @@ fn handle_requests(
         for i in 0..relays.len() {
             if relays[i] != peer {
                 relays_without_req_sender.push(relays[i].clone());
-                println!(
-                    "relays without req push: {}\n------------",
-                    relays[i].clone()
-                );
             }
         }
         if relays_without_req_sender.len() > 0 {
-            println!(
-                "in relays bigger\n{:?}\n------------------",
-                relays_without_req_sender
-            );
             let chnl = Channels { peer, channel };
             channels.push(chnl);
-            println!("{:?}\n----------------", channels);
+
             let mut original_req: ReqForReq = serde_json::from_str(&request.req).unwrap();
             original_req.peer.push(local_peer_id);
             let req = serde_json::to_string(&original_req).unwrap();
@@ -546,39 +534,29 @@ fn handle_requests(
                 .req_res
                 .send_request(random_relay, req_for_relay);
         } else {
-            let response = Res {
-                res: "You Are First Client".to_string(),
-            };
-            let original_req: ReqForReq = serde_json::from_str(&request.req).unwrap();
-            let res = ResForReq {
-                peer: original_req.peer,
-                res: response,
-            };
-            let str_res = serde_json::to_string(&res).unwrap();
-            let final_res = Res { res: str_res };
-            swarm
-                .behaviour_mut()
-                .req_res
-                .send_response(channel, final_res)
-                .unwrap();
+            send_res(request, swarm, channel);
         }
     } else {
-        let response = Res {
-            res: "You Are First Client".to_string(),
-        };
-        let original_req: ReqForReq = serde_json::from_str(&request.req).unwrap();
-        let res = ResForReq {
-            peer: original_req.peer,
-            res: response,
-        };
-        let str_res = serde_json::to_string(&res).unwrap();
-        let final_res = Res { res: str_res };
-        swarm
-            .behaviour_mut()
-            .req_res
-            .send_response(channel, final_res)
-            .unwrap();
+        send_res(request, swarm, channel);
     }
+}
+
+fn send_res(request: Req, swarm: &mut Swarm<CustomBehav>, channel: ResponseChannel<Res>) {
+    let response = Res {
+        res: "You Are First Client".to_string(),
+    };
+    let original_req: ReqForReq = serde_json::from_str(&request.req).unwrap();
+    let res = ResForReq {
+        peer: original_req.peer,
+        res: response,
+    };
+    let str_res = serde_json::to_string(&res).unwrap();
+    let final_res = Res { res: str_res };
+    swarm
+        .behaviour_mut()
+        .req_res
+        .send_response(channel, final_res)
+        .unwrap();
 }
 
 //send listener addresses to another relays and clients
@@ -592,10 +570,6 @@ fn send_my_address_after_get_new_subscriber(
     clients: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
 ) {
-    println!(
-        "this peer: {}\nsubscribe to: {}\n-------------------",
-        peer_id, topic
-    );
     if topic.to_string() == "relay".to_string() {
         relay_topic_subscribers.push(peer_id);
         if connections.contains(&peer_id) && clients.len() > 0 {
