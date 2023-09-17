@@ -57,10 +57,10 @@ struct Channels {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct NewSyncNode {
+struct ImSync {
     peerid: PeerId,
     msg: String,
-    pub public_key: Public
+    pub public_key: sp_core::ecdsa::Public
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -456,7 +456,7 @@ fn handle_gossip_message(
     }
 
     //Relay announcement
-    if let Ok(new_sync_node) = serde_json::from_str::<NewSyncNode>(&msg) {
+    if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&msg) {
         if !relay_topic_subscribers.contains(&propagation_source) {
             let new_sync_node_pid = new_sync_node.peerid;
             clients.push(new_sync_node_pid);
