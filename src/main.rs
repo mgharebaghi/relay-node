@@ -60,6 +60,7 @@ struct Channels {
 struct NewSyncNode {
     peerid: PeerId,
     msg: String,
+    pub public_key: Public
 }
 
 #[derive(Debug, Serialize, Deserialize)]
