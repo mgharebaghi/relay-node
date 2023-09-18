@@ -60,7 +60,7 @@ struct Channels {
 struct ImSync {
     peerid: PeerId,
     msg: String,
-    pub public_key: sp_core::ecdsa::Public
+    pub public_key: sp_core::ecdsa::Public,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -345,7 +345,14 @@ async fn handle_streams(
                                 );
                             }
                             libp2p::request_response::Message::Response { response, .. } => {
-                                handle_responses(response, local_peer_id, channels, swarm);
+                                handle_responses(
+                                    response,
+                                    local_peer_id,
+                                    channels,
+                                    swarm,
+                                    client_topic_subscriber,
+                                    relay_topic_subscribers,
+                                );
                             }
                         },
                         _ => (),
@@ -621,6 +628,8 @@ fn handle_responses(
     local_peer_id: PeerId,
     channels: &mut Vec<Channels>,
     swarm: &mut Swarm<CustomBehav>,
+    client_topic_subscriber: &mut Vec<PeerId>,
+    relay_topic_subscribers: &mut Vec<PeerId>,
 ) {
     let mut res: ResForReq = serde_json::from_str(&response.res).unwrap();
 
@@ -632,20 +641,28 @@ fn handle_responses(
             .iter()
             .position(|channel| channel.peer == res.peer.last().unwrap().clone())
             .unwrap();
-        swarm
-            .behaviour_mut()
-            .req_res
-            .send_response(channels.remove(index).channel, new_response)
-            .unwrap();
+        if client_topic_subscriber.contains(res.peer.last().unwrap())
+            || relay_topic_subscribers.contains(res.peer.last().unwrap())
+        {
+            swarm
+                .behaviour_mut()
+                .req_res
+                .send_response(channels.remove(index).channel, new_response)
+                .unwrap();
+        }
     } else {
         let index = channels
             .iter()
             .position(|channel| channel.peer == res.peer.last().unwrap().clone())
             .unwrap();
-        swarm
-            .behaviour_mut()
-            .req_res
-            .send_response(channels.remove(index).channel, response)
-            .unwrap();
+        if client_topic_subscriber.contains(res.peer.last().unwrap())
+            || relay_topic_subscribers.contains(res.peer.last().unwrap())
+        {
+            swarm
+                .behaviour_mut()
+                .req_res
+                .send_response(channels.remove(index).channel, response)
+                .unwrap();
+        }
     }
 }
