@@ -101,9 +101,7 @@ async fn main() {
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair);
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
-    let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    gossipsub.subscribe(&relay_topic.clone()).unwrap();
-    gossipsub.subscribe(&clients_topic.clone()).unwrap();
+    let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
 
     //request and response protocol config
     let req_res = cbor::Behaviour::<Req, Res>::new(
@@ -112,11 +110,14 @@ async fn main() {
     );
 
     //Definition of behavior
-    let behaviour = CustomBehav {
+    let mut behaviour = CustomBehav {
         keep_alive,
         gossipsub,
         req_res,
     };
+
+    behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
+    behaviour.gossipsub.subscribe(&clients_topic.clone()).unwrap();
 
     //config swarm
     let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build();
