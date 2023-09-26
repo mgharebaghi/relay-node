@@ -256,6 +256,8 @@ async fn handle_streams(
                     if clients.contains(&peer_id) {
                         let i_client = clients.iter().position(|i| i == &peer_id).unwrap();
                         clients.remove(i_client);
+                        warn!("client removed: {}\n-------------------", peer_id);
+                        warn!("clients after remove: {:?}\n-------------------", clients);
                         handle_out_node(
                             peer_id,
                             swarm,
