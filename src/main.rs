@@ -448,6 +448,7 @@ fn handle_gossip_message(
     my_addresses: &mut Vec<String>,
 ) {
     let msg = String::from_utf8(message.data.clone()).unwrap();
+    println!("{}\n-----------------", msg);
 
     if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
         let r_relay_file = File::open("relays.dat").unwrap();
