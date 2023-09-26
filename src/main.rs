@@ -260,6 +260,21 @@ async fn handle_streams(
 
                     for i in indexes {
                         clients.remove(i);
+                        warn!("client removed: {}\n-------------------", peer_id);
+                        warn!("clients after remove: {:?}\n-------------------", clients);
+                        handle_out_node(
+                            peer_id,
+                            swarm,
+                            clients_topic.clone(),
+                            client_topic_subscriber,
+                            relays,
+                            clients,
+                            relay_topic.clone(),
+                        );
+                        swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .remove_explicit_peer(&peer_id);
                     }
 
                     if relay_topic_subscribers.contains(&peer_id) {
