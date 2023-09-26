@@ -473,7 +473,15 @@ fn handle_gossip_message(
     if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&msg) {
         if !relay_topic_subscribers.contains(&propagation_source) {
             let new_sync_node_pid = new_sync_node.peerid;
-            clients.push(new_sync_node_pid);
+            let mut count_exist = 0;
+            for i in clients.clone() {
+                if i == new_sync_node_pid {
+                    count_exist += 1;
+                }
+            }
+            if count_exist == 0 {
+                clients.push(new_sync_node_pid);
+            }
             if relay_topic_subscribers.len() > 0 && clients.len() == 1 {
                 swarm
                     .behaviour_mut()
