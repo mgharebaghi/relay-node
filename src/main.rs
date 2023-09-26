@@ -251,30 +251,31 @@ async fn handle_streams(
                             client_topic_subscriber.remove(i);
                         }
                     }
-                    let mut indexes = Vec::new();
-                    for i in 0..clients.len() {
-                        if clients[i] == peer_id {
-                            indexes.push(i);
+                    loop {
+                        let index = clients.iter().position(|c| *c == peer_id);
+                        match index {
+                            Some(i) => {
+                                clients.remove(i);
+                                warn!("client removed: {}\n-------------------", peer_id);
+                                warn!("clients after remove: {:?}\n-------------------", clients);
+                                handle_out_node(
+                                    peer_id,
+                                    swarm,
+                                    clients_topic.clone(),
+                                    client_topic_subscriber,
+                                    relays,
+                                    clients,
+                                    relay_topic.clone(),
+                                );
+                                swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .remove_explicit_peer(&peer_id);
+                            }
+                            None => {
+                                break;
+                            }
                         }
-                    }
-
-                    for i in indexes {
-                        clients.remove(i);
-                        warn!("client removed: {}\n-------------------", peer_id);
-                        warn!("clients after remove: {:?}\n-------------------", clients);
-                        handle_out_node(
-                            peer_id,
-                            swarm,
-                            clients_topic.clone(),
-                            client_topic_subscriber,
-                            relays,
-                            clients,
-                            relay_topic.clone(),
-                        );
-                        swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .remove_explicit_peer(&peer_id);
                     }
 
                     if relay_topic_subscribers.contains(&peer_id) {
