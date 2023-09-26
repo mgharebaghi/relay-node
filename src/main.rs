@@ -246,9 +246,13 @@ async fn handle_streams(
                 }
                 SwarmEvent::ConnectionClosed { peer_id, .. } => {
                     println!("connection closed with:\n{}\n-------------------", peer_id);
-                    for i in 0..client_topic_subscriber.len() {
-                        if client_topic_subscriber[i] == peer_id {
-                            client_topic_subscriber.remove(i);
+                    loop {
+                        let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
+                        match index {
+                            Some(i) => {
+                                client_topic_subscriber.remove(i);
+                            }
+                            None => break
                         }
                     }
                     loop {
