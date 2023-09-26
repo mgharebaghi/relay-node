@@ -246,31 +246,30 @@ async fn handle_streams(
                 }
                 SwarmEvent::ConnectionClosed { peer_id, .. } => {
                     println!("connection closed with:\n{}\n-------------------", peer_id);
-                    if client_topic_subscriber.contains(&peer_id) {
-                        let index = client_topic_subscriber
-                            .iter()
-                            .position(|x| *x == peer_id)
-                            .unwrap();
-                        client_topic_subscriber.remove(index);
+                    for i in 0..client_topic_subscriber.len() {
+                        if client_topic_subscriber[i] == peer_id {
+                            client_topic_subscriber.remove(i);
+                        }
                     }
-                    if clients.contains(&peer_id) {
-                        let i_client = clients.iter().position(|i| i == &peer_id).unwrap();
-                        clients.remove(i_client);
-                        warn!("client removed: {}\n-------------------", peer_id);
-                        warn!("clients after remove: {:?}\n-------------------", clients);
-                        handle_out_node(
-                            peer_id,
-                            swarm,
-                            clients_topic.clone(),
-                            client_topic_subscriber,
-                            relays,
-                            clients,
-                            relay_topic.clone(),
-                        );
-                        swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .remove_explicit_peer(&peer_id);
+                    for i in 0..clients.len() {
+                        if clients[i] == peer_id {
+                            clients.remove(i);
+                            warn!("client removed: {}\n-------------------", peer_id);
+                            warn!("clients after remove: {:?}\n-------------------", clients);
+                            handle_out_node(
+                                peer_id,
+                                swarm,
+                                clients_topic.clone(),
+                                client_topic_subscriber,
+                                relays,
+                                clients,
+                                relay_topic.clone(),
+                            );
+                            swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .remove_explicit_peer(&peer_id);
+                        }
                     }
 
                     if relay_topic_subscribers.contains(&peer_id) {
