@@ -313,6 +313,7 @@ async fn handle_streams(
                             message,
                             ..
                         } => {
+                            println!("{:?}\n----------------", message.data);
                             handle_gossip_message(
                                 propagation_source,
                                 message,
