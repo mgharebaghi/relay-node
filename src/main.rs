@@ -117,7 +117,10 @@ async fn main() {
     };
 
     behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
-    behaviour.gossipsub.subscribe(&clients_topic.clone()).unwrap();
+    behaviour
+        .gossipsub
+        .subscribe(&clients_topic.clone())
+        .unwrap();
 
     //config swarm
     let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build();
@@ -247,40 +250,34 @@ async fn handle_streams(
                 }
                 SwarmEvent::ConnectionClosed { peer_id, .. } => {
                     println!("connection closed with:\n{}\n-------------------", peer_id);
-                    loop {
-                        let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
-                        match index {
-                            Some(i) => {
-                                client_topic_subscriber.remove(i);
-                            }
-                            None => break
+                    let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
+                    match index {
+                        Some(i) => {
+                            client_topic_subscriber.remove(i);
                         }
+                        None => {}
                     }
-                    loop {
-                        let index = clients.iter().position(|c| *c == peer_id);
-                        match index {
-                            Some(i) => {
-                                clients.remove(i);
-                                warn!("client removed: {}\n-------------------", peer_id);
-                                warn!("clients after remove: {:?}\n-------------------", clients);
-                                handle_out_node(
-                                    peer_id,
-                                    swarm,
-                                    clients_topic.clone(),
-                                    client_topic_subscriber,
-                                    relays,
-                                    clients,
-                                    relay_topic.clone(),
-                                );
-                                swarm
-                                    .behaviour_mut()
-                                    .gossipsub
-                                    .remove_explicit_peer(&peer_id);
-                            }
-                            None => {
-                                break;
-                            }
+                    let index = clients.iter().position(|c| *c == peer_id);
+                    match index {
+                        Some(i) => {
+                            clients.remove(i);
+                            warn!("client removed: {}\n-------------------", peer_id);
+                            warn!("clients after remove: {:?}\n-------------------", clients);
+                            handle_out_node(
+                                peer_id,
+                                swarm,
+                                clients_topic.clone(),
+                                client_topic_subscriber,
+                                relays,
+                                clients,
+                                relay_topic.clone(),
+                            );
+                            swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .remove_explicit_peer(&peer_id);
                         }
+                        None => {}
                     }
 
                     if relay_topic_subscribers.contains(&peer_id) {
