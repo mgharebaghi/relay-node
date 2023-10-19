@@ -229,6 +229,8 @@ async fn handle_streams(
                     let ip: Ipv4Addr = ipv4.parse().unwrap();
                     if !ip.is_private() && ipv4 != "127.0.0.1" {
                         handle_new_listener_event(address, local_peer_id, my_addresses);
+                    } else {
+                        error!("You can not be a relay node because You dont have any public IPs. ");
                     }
                 }
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
