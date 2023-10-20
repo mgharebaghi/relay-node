@@ -1,0 +1,180 @@
+use std::net::Ipv4Addr;
+
+use libp2p::futures::StreamExt;
+use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
+use log::{error, info, warn};
+
+use super::gossip_messages::handle_gossip_message;
+use super::handle_listeners::handle;
+use super::outnodes::handle_outnode;
+use super::remove_relays::remove_peer;
+use super::requests::handle_requests;
+use super::responses::handle_responses;
+use super::send_address::send_address;
+use super::structures::{Channels, CustomBehav, CustomBehavEvent};
+
+pub async fn events(
+    mut swarm: &mut Swarm<CustomBehav>,
+    local_peer_id: PeerId,
+    my_addresses: &mut Vec<String>,
+    mut clients: &mut Vec<PeerId>,
+    mut channels: &mut Vec<Channels>,
+    mut relays: &mut Vec<PeerId>,
+    clients_topic: IdentTopic,
+    relay_topic: IdentTopic,
+    connections: &mut Vec<PeerId>,
+    relay_topic_subscribers: &mut Vec<PeerId>,
+    client_topic_subscriber: &mut Vec<PeerId>,
+) {
+    loop {
+        match swarm.next().await.unwrap() {
+            SwarmEvent::NewListenAddr { address, .. } => {
+                let str_addr = address.clone().to_string();
+                let ipv4 = str_addr.split("/").nth(2).unwrap();
+                let ip: Ipv4Addr = ipv4.parse().unwrap();
+                if !ip.is_private() && ipv4 != "127.0.0.1" {
+                    handle(address, local_peer_id, my_addresses);
+                } else {
+                    error!("You can not be a relay node because You dont have any public IPs. ");
+                }
+            }
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                info!(
+                    "connection stablishe with: {}\n------------------------",
+                    peer_id
+                );
+                connections.push(peer_id);
+                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+            }
+            SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
+                error!(
+                    "dialing with: {}\nhas error: {:?}\n------------------------",
+                    peer_id.unwrap(),
+                    error
+                );
+                remove_peer(peer_id.unwrap());
+                break;
+            }
+            SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                println!("connection closed with:\n{}\n-------------------", peer_id);
+                let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
+                match index {
+                    Some(i) => {
+                        client_topic_subscriber.remove(i);
+                    }
+                    None => {}
+                }
+
+                if relays.contains(&peer_id) {
+                    let i_relay = relays.iter().position(|pid| pid == &peer_id).unwrap();
+                    relays.remove(i_relay);
+
+                    swarm
+                        .behaviour_mut()
+                        .gossipsub
+                        .remove_explicit_peer(&peer_id);
+                    remove_peer(peer_id);
+                    warn!("relay removed: {}\n-------------------", peer_id);
+                    warn!("relays after remove: {:?}\n-------------------", relays);
+                    break;
+                }
+
+                let index = clients.iter().position(|c| *c == peer_id);
+                match index {
+                    Some(i) => {
+                        clients.remove(i);
+                        warn!("client removed: {}\n-------------------", peer_id);
+                        warn!("clients after remove: {:?}\n-------------------", clients);
+                        swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .remove_explicit_peer(&peer_id);
+                        handle_outnode(
+                            peer_id,
+                            swarm,
+                            clients_topic.clone(),
+                            client_topic_subscriber,
+                            relays,
+                            clients,
+                            relay_topic.clone(),
+                        );
+                    }
+                    None => {}
+                }
+
+                if relay_topic_subscribers.contains(&peer_id) {
+                    let i_relay_subscriber = relay_topic_subscribers
+                        .iter()
+                        .position(|pid| *pid == peer_id)
+                        .unwrap();
+                    relay_topic_subscribers.remove(i_relay_subscriber);
+                }
+            }
+            SwarmEvent::Behaviour(custom_behav) => match custom_behav {
+                CustomBehavEvent::KeepAlive(..) => {}
+                CustomBehavEvent::Gossipsub(gossipevent) => match gossipevent {
+                    libp2p::gossipsub::Event::Message {
+                        propagation_source,
+                        message,
+                        ..
+                    } => {
+                        println!("{:?}\n----------------", message.data);
+                        handle_gossip_message(
+                            propagation_source,
+                            message,
+                            local_peer_id,
+                            clients,
+                            relays,
+                            swarm,
+                            relay_topic.clone(),
+                            connections,
+                            relay_topic_subscribers,
+                            my_addresses,
+                        );
+                    }
+                    libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
+                        topic,
+                        peer_id,
+                        &mut swarm,
+                        my_addresses.clone(),
+                        relay_topic_subscribers,
+                        connections,
+                        clients,
+                        client_topic_subscriber,
+                    ),
+                    _ => (),
+                },
+                CustomBehavEvent::ReqRes(req_res) => match req_res {
+                    Event::Message { peer, message } => match message {
+                        libp2p::request_response::Message::Request {
+                            channel, request, ..
+                        } => {
+                            handle_requests(
+                                request,
+                                &mut clients,
+                                &mut swarm,
+                                &mut channels,
+                                channel,
+                                &mut relays,
+                                peer,
+                                local_peer_id,
+                            );
+                        }
+                        libp2p::request_response::Message::Response { response, .. } => {
+                            handle_responses(
+                                response,
+                                local_peer_id,
+                                channels,
+                                swarm,
+                                client_topic_subscriber,
+                                relay_topic_subscribers,
+                            );
+                        }
+                    },
+                    _ => (),
+                },
+            },
+            _ => (),
+        }
+    }
+}
