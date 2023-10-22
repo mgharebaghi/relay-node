@@ -35,7 +35,7 @@ pub async fn events(
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses);
                 } else {
-                    error!("You can not be a relay node because You dont have any public IPs. ");
+                    warn!("found a local ip!");
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
@@ -53,6 +53,12 @@ pub async fn events(
                     error
                 );
                 remove_peer(peer_id.unwrap());
+                for i in relays.clone() {
+                    if peer_id.unwrap() == i {
+                        let i_relay = relays.iter().position(|pid| pid == &peer_id.unwrap()).unwrap();
+                        relays.remove(i_relay);
+                    }
+                }
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
