@@ -55,7 +55,10 @@ pub async fn events(
                 remove_peer(peer_id.unwrap());
                 for i in relays.clone() {
                     if peer_id.unwrap() == i {
-                        let i_relay = relays.iter().position(|pid| pid == &peer_id.unwrap()).unwrap();
+                        let i_relay = relays
+                            .iter()
+                            .position(|pid| pid == &peer_id.unwrap())
+                            .unwrap();
                         relays.remove(i_relay);
                     }
                 }
@@ -124,7 +127,7 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        println!("{:?}\n----------------", message.data);
+                        println!("{:?}\n----------------", String::from_utf8(message.data.clone()));
                         handle_gossip_message(
                             propagation_source,
                             message,
