@@ -1,5 +1,6 @@
 mod handlers;
 use handlers::handle_streams;
+use handlers::keypair_generation::generation::keys_generate;
 use handlers::structures::Channels;
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
@@ -23,6 +24,19 @@ pub async fn run() {
             .default_filter_or("info"),
     )
     .init();
+
+    let mut wallet = String::new();
+    let mut answer = String::new();
+    loop {
+        answer.clear();
+        wallet.clear();
+        println!("enter phrases key or enter 'N' to generate one:");
+        std::io::stdin().read_line(&mut answer).unwrap();
+        keys_generate(answer.clone().trim().to_string(), &mut wallet);
+        if wallet != "emptey".to_string() {
+            break;
+        }
+    }
 
     let relay_topic = IdentTopic::new("relay");
     let clients_topic = IdentTopic::new("client");
@@ -93,6 +107,7 @@ pub async fn run() {
         &mut connections,
         &mut relay_topic_subscribers,
         &mut client_topic_subscribers,
+        &mut wallet
     )
     .await;
 }

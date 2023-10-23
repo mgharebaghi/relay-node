@@ -25,6 +25,7 @@ pub async fn events(
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
+    wallet: &mut String
 ) {
     loop {
         match swarm.next().await.unwrap() {
@@ -167,6 +168,7 @@ pub async fn events(
                                 &mut relays,
                                 peer,
                                 local_peer_id,
+                                wallet
                             );
                         }
                         libp2p::request_response::Message::Response { response, .. } => {

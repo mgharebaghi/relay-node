@@ -13,6 +13,7 @@ mod send_address;
 mod requests;
 mod send_response;
 mod responses;
+pub mod keypair_generation;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
@@ -31,6 +32,7 @@ pub async fn handle_streams(
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
+    wallet: &mut String
 ) {
     loop {
         let relays_file_exist = fs::metadata("relays.dat").is_ok();
@@ -69,6 +71,7 @@ pub async fn handle_streams(
             &mut connections.clone(),
             relay_topic_subscribers,
             client_topic_subscriber,
+            wallet
         )
         .await;
     }
