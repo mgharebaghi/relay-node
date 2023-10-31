@@ -64,19 +64,13 @@ pub fn handle_gossip_message(
                     .gossipsub
                     .publish(relay_topic, "i have a client".as_bytes())
                     .unwrap();
-                println!("im relay sent\n------------------------");
             }
-            println!("clients after add new node:\n{:?}", clients);
         }
     }
 
     if msg == "i have a client".to_string() && connections.contains(&propagation_source) {
         if !relays.contains(&propagation_source) {
             relays.push(propagation_source);
-            println!(
-                "new relay: {}\nrelays: {:?}\n-------------------",
-                propagation_source, relays
-            );
         }
     }
 

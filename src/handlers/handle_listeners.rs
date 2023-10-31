@@ -1,15 +1,24 @@
-use std::{fs::{OpenOptions, self, File}, io::{BufWriter, Write}};
+use std::{
+    fs::{self, File, OpenOptions},
+    io::{stdout, BufWriter, Write},
+};
 
+use crossterm::{
+    execute,
+    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
+};
 use libp2p::{Multiaddr, PeerId};
-use log::info;
 
-pub fn handle(
-    address: Multiaddr,
-    local_peer_id: PeerId,
-    my_addresses: &mut Vec<String>,
-) {
+pub fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<String>) {
     let my_full_addr = format!("{}/p2p/{}", address, local_peer_id);
-    info!("Your full address:\n{}", my_full_addr);
+    execute!(
+        stdout(),
+        SetForegroundColor(Color::Green),
+        Print("Your Full Address:\n".bold()),
+        ResetColor
+    )
+    .unwrap();
+    println!("{}", my_full_addr);
     let exists = fs::metadata("relays.dat").is_ok();
     if exists {
         let file = OpenOptions::new()

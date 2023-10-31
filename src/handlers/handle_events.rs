@@ -1,8 +1,8 @@
+use std::io::stdout;
 use std::net::Ipv4Addr;
 
 use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
-use log::{error, info, warn};
 
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::handle;
@@ -12,6 +12,10 @@ use super::requests::handle_requests;
 use super::responses::handle_responses;
 use super::send_address::send_address;
 use super::structures::{Channels, CustomBehav, CustomBehavEvent};
+use crossterm::{
+    execute,
+    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
+};
 
 pub async fn events(
     mut swarm: &mut Swarm<CustomBehav>,
@@ -25,7 +29,7 @@ pub async fn events(
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
-    wallet: &mut String
+    wallet: &mut String,
 ) {
     loop {
         match swarm.next().await.unwrap() {
@@ -36,23 +40,27 @@ pub async fn events(
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses);
                 } else {
-                    warn!("found a local ip!");
+                    execute!(
+                        stdout(),
+                        SetForegroundColor(Color::Magenta),
+                        Print("Find a local IP!\n"),
+                        ResetColor
+                    )
+                    .unwrap();
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                info!(
-                    "connection stablishe with: {}\n------------------------",
-                    peer_id
-                );
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
-            SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
-                error!(
-                    "dialing with: {}\nhas error: {:?}\n------------------------",
-                    peer_id.unwrap(),
-                    error
-                );
+            SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
+                execute!(
+                    stdout(),
+                    SetForegroundColor(Color::Red),
+                    Print("Dialing failed with:\n".bold()),
+                    ResetColor
+                ).unwrap();
+                println!("{}", peer_id.unwrap());
                 remove_peer(peer_id.unwrap());
                 for i in relays.clone() {
                     if peer_id.unwrap() == i {
@@ -66,7 +74,6 @@ pub async fn events(
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                println!("connection closed with:\n{}\n-------------------", peer_id);
                 let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {
@@ -84,8 +91,6 @@ pub async fn events(
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
                     remove_peer(peer_id);
-                    warn!("relay removed: {}\n-------------------", peer_id);
-                    warn!("relays after remove: {:?}\n-------------------", relays);
                     break;
                 }
 
@@ -93,8 +98,6 @@ pub async fn events(
                 match index {
                     Some(i) => {
                         clients.remove(i);
-                        warn!("client removed: {}\n-------------------", peer_id);
-                        warn!("clients after remove: {:?}\n-------------------", clients);
                         swarm
                             .behaviour_mut()
                             .gossipsub
@@ -128,7 +131,6 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        println!("{:?}\n----------------", String::from_utf8(message.data.clone()));
                         handle_gossip_message(
                             propagation_source,
                             message,
@@ -168,7 +170,7 @@ pub async fn events(
                                 &mut relays,
                                 peer,
                                 local_peer_id,
-                                wallet
+                                wallet,
                             );
                         }
                         libp2p::request_response::Message::Response { response, .. } => {

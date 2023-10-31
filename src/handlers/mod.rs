@@ -1,7 +1,6 @@
-use std::{fs::{File, self}, io::{BufReader, BufRead}};
+use std::{fs::{File, self}, io::{BufReader, BufRead, stdout}};
 
 use libp2p::{PeerId, Swarm, gossipsub::IdentTopic, Multiaddr};
-use log::warn;
 use rand::seq::SliceRandom;
 
 mod handle_events;
@@ -17,6 +16,11 @@ pub mod keypair_generation;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
+
+use crossterm::{
+    execute,
+    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
+};
 
 use self::structures::Channels;
 //handle streams that come to swarm events and relays.dat file to add or remove addresses
@@ -55,7 +59,13 @@ pub async fn handle_streams(
                     .unwrap()
                     .clone();
                 swarm.dial(rnd_dial_addr.clone()).unwrap();
-                warn!("dialing with: {}\n---------------", rnd_dial_addr.clone());
+                execute!(
+                    stdout(),
+                    SetForegroundColor(Color::Blue),
+                    Print("Dialing With:\n".bold()),
+                    ResetColor
+                ).unwrap();
+                println!("{}", rnd_dial_addr);
             }
         }
 

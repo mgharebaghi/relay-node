@@ -6,7 +6,6 @@ use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
 
-use env_logger::Env;
 use libp2p::{
     gossipsub::IdentTopic,
     identity::Keypair,
@@ -16,21 +15,12 @@ use libp2p::{
 };
 
 pub async fn run() {
-    //initialize logger for terminal
-    env_logger::Builder::from_env(
-        Env::default()
-            .default_filter_or("warn")
-            .default_filter_or("error")
-            .default_filter_or("info"),
-    )
-    .init();
-
     let mut wallet = String::new();
     let mut answer = String::new();
     loop {
         answer.clear();
         wallet.clear();
-        println!("enter phrases key or enter 'N' to generate one:");
+        println!("Enter phrases key or enter 'N' to generate one:");
         std::io::stdin().read_line(&mut answer).unwrap();
         keys_generate(answer.clone().trim().to_string(), &mut wallet);
         if wallet != "emptey".to_string() {
