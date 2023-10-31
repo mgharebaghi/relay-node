@@ -12,7 +12,6 @@ mod send_address;
 mod requests;
 mod send_response;
 mod responses;
-pub mod keypair_generation;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;

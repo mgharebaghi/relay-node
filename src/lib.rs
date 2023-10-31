@@ -1,6 +1,8 @@
 mod handlers;
+use std::fs::File;
+use std::io::{BufReader, BufRead};
+
 use handlers::handle_streams;
-use handlers::keypair_generation::generation::keys_generate;
 use handlers::structures::Channels;
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
@@ -16,15 +18,12 @@ use libp2p::{
 
 pub async fn run() {
     let mut wallet = String::new();
-    let mut answer = String::new();
-    loop {
-        answer.clear();
-        wallet.clear();
-        println!("Enter phrases key or enter 'N' to generate one:");
-        std::io::stdin().read_line(&mut answer).unwrap();
-        keys_generate(answer.clone().trim().to_string(), &mut wallet);
-        if wallet != "emptey".to_string() {
-            break;
+    let wallet_file = File::open("./wallet.dat").unwrap();
+    let reader = BufReader::new(wallet_file);
+    for addr in reader.lines() {
+        let wallet_addr = addr.unwrap();
+        if wallet_addr.trim().len() > 0 {
+            wallet.push_str(&wallet_addr);
         }
     }
 
