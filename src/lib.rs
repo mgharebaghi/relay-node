@@ -47,7 +47,7 @@ pub async fn run() {
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
 
     //gossip protocol config
-    let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair);
+    let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
     let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
@@ -72,7 +72,7 @@ pub async fn run() {
         .unwrap();
 
     //config swarm
-    let mut swarm = SwarmBuilder::with_new_identity()
+    let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
         .with_tcp(
             Default::default(),
