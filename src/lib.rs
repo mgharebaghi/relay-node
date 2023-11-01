@@ -1,6 +1,6 @@
 mod handlers;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
 
 use handlers::handle_streams;
 use handlers::structures::Channels;
@@ -8,17 +8,18 @@ use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
 
+use libp2p::core::muxing::StreamMuxerBox;
+use libp2p::core::transport::dummy::DummyTransport;
 use libp2p::{
     gossipsub::IdentTopic,
     identity::Keypair,
     request_response::{cbor, ProtocolSupport},
-    swarm::SwarmBuilder,
-    tcp, Multiaddr, PeerId, StreamProtocol, Transport,
+    Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
 
 pub async fn run() {
     let mut wallet = String::new();
-    let wallet_file = File::open("./wallet.dat").unwrap();
+    let wallet_file = File::open(format!("/etc/wallet.dat",)).unwrap();
     let reader = BufReader::new(wallet_file);
     for addr in reader.lines() {
         let wallet_addr = addr.unwrap();
@@ -35,12 +36,12 @@ pub async fn run() {
     let local_peer_id = PeerId::from(keypair.public());
 
     //config transport as TCP
-    let tcp_transport = tcp::tokio::Transport::default();
-    let transport = tcp_transport
-        .upgrade(libp2p::core::upgrade::Version::V1)
-        .authenticate(libp2p::noise::Config::new(&keypair).unwrap())
-        .multiplex(libp2p::yamux::Config::default())
-        .boxed();
+    // let tcp_transport = tcp::tokio::Transport::default();
+    // let transport = tcp_transport
+    //     .upgrade(libp2p::core::upgrade::Version::V1)
+    //     .authenticate(libp2p::noise::Config::new(&keypair).unwrap())
+    //     .multiplex(libp2p::yamux::Config::default())
+    //     .boxed();
 
     //initial keep alive behaviour for stable connection
     let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
@@ -71,7 +72,28 @@ pub async fn run() {
         .unwrap();
 
     //config swarm
-    let mut swarm = SwarmBuilder::with_tokio_executor(transport, behaviour, local_peer_id).build();
+    let mut swarm = SwarmBuilder::with_new_identity()
+        .with_tokio()
+        .with_tcp(
+            Default::default(),
+            (libp2p::tls::Config::new, libp2p::noise::Config::new),
+            libp2p::yamux::Config::default,
+        )
+        .unwrap()
+        .with_quic()
+        .with_other_transport(|_key| DummyTransport::<(PeerId, StreamMuxerBox)>::new())
+        .unwrap()
+        .with_dns()
+        .unwrap()
+        .with_websocket(
+            (libp2p::tls::Config::new, libp2p::noise::Config::new),
+            libp2p::yamux::Config::default,
+        )
+        .await
+        .unwrap()
+        .with_behaviour(|_key| behaviour)
+        .unwrap()
+        .build();
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();
 
@@ -96,7 +118,7 @@ pub async fn run() {
         &mut connections,
         &mut relay_topic_subscribers,
         &mut client_topic_subscribers,
-        &mut wallet
+        &mut wallet,
     )
     .await;
 }
