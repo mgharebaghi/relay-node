@@ -13,7 +13,6 @@ pub struct Res {
 
 #[derive(NetworkBehaviour)]
 pub struct CustomBehav {
-    pub keep_alive: libp2p::swarm::keep_alive::Behaviour,
     pub gossipsub: libp2p::gossipsub::Behaviour,
     pub req_res: cbor::Behaviour<Req, Res>,
 }

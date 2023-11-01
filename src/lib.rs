@@ -1,6 +1,7 @@
 mod handlers;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::time::Duration;
 
 use handlers::handle_streams;
 use handlers::structures::Channels;
@@ -8,8 +9,6 @@ use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
 
-use libp2p::core::muxing::StreamMuxerBox;
-use libp2p::core::transport::dummy::DummyTransport;
 use libp2p::{
     gossipsub::IdentTopic,
     identity::Keypair,
@@ -35,17 +34,6 @@ pub async fn run() {
     let keypair = Keypair::generate_ecdsa();
     let local_peer_id = PeerId::from(keypair.public());
 
-    //config transport as TCP
-    // let tcp_transport = tcp::tokio::Transport::default();
-    // let transport = tcp_transport
-    //     .upgrade(libp2p::core::upgrade::Version::V1)
-    //     .authenticate(libp2p::noise::Config::new(&keypair).unwrap())
-    //     .multiplex(libp2p::yamux::Config::default())
-    //     .boxed();
-
-    //initial keep alive behaviour for stable connection
-    let keep_alive = libp2p::swarm::keep_alive::Behaviour::default();
-
     //gossip protocol config
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
@@ -60,7 +48,6 @@ pub async fn run() {
 
     //Definition of behavior
     let mut behaviour = CustomBehav {
-        keep_alive,
         gossipsub,
         req_res,
     };
@@ -72,6 +59,9 @@ pub async fn run() {
         .unwrap();
 
     //config swarm
+    let swarm_config = libp2p::swarm::Config::with_tokio_executor()
+        .with_idle_connection_timeout(Duration::from_secs(u64::MAX));
+
     let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
         .with_tcp(
@@ -81,8 +71,6 @@ pub async fn run() {
         )
         .unwrap()
         .with_quic()
-        .with_other_transport(|_key| DummyTransport::<(PeerId, StreamMuxerBox)>::new())
-        .unwrap()
         .with_dns()
         .unwrap()
         .with_websocket(
@@ -93,6 +81,7 @@ pub async fn run() {
         .unwrap()
         .with_behaviour(|_key| behaviour)
         .unwrap()
+        .with_swarm_config(|_conf| swarm_config)
         .build();
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();

@@ -124,7 +124,6 @@ pub async fn events(
                 }
             }
             SwarmEvent::Behaviour(custom_behav) => match custom_behav {
-                CustomBehavEvent::KeepAlive(..) => {}
                 CustomBehavEvent::Gossipsub(gossipevent) => match gossipevent {
                     libp2p::gossipsub::Event::Message {
                         propagation_source,
