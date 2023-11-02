@@ -9,7 +9,7 @@ use crossterm::{
 };
 use libp2p::{Multiaddr, PeerId};
 
-pub fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<String>) {
+pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<String>) {
     let my_full_addr = format!("{}/p2p/{}", address, local_peer_id);
     execute!(
         stdout(),
@@ -18,7 +18,7 @@ pub fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<
         ResetColor
     )
     .unwrap();
-    println!("{}", my_full_addr);
+    send_addr_to_server(my_full_addr.clone()).await;
     let exists = fs::metadata("relays.dat").is_ok();
     if exists {
         let file = OpenOptions::new()
@@ -40,4 +40,10 @@ pub fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<
         writeln!(buf_writer, "{}", my_full_addr).unwrap();
     }
     my_addresses.push(my_full_addr);
+}
+
+async fn send_addr_to_server(full_addr: String) {
+    let client = reqwest::Client::new();
+    let res = client.post("https://centichain.org:3002/relays").body(full_addr).send().await.unwrap();
+    println!("your address add to server:\n{:?}", res);
 }

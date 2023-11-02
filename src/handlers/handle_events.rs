@@ -38,7 +38,7 @@ pub async fn events(
                 let ipv4 = str_addr.split("/").nth(2).unwrap();
                 let ip: Ipv4Addr = ipv4.parse().unwrap();
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
-                    handle(address, local_peer_id, my_addresses);
+                    handle(address, local_peer_id, my_addresses).await;
                 } else {
                     execute!(
                         stdout(),
