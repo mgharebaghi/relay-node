@@ -45,5 +45,5 @@ pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mu
 async fn send_addr_to_server(full_addr: String) {
     let client = reqwest::Client::new();
     let res = client.post("https://centichain.org:3002/relays").body(full_addr).send().await.unwrap();
-    println!("your address add to server:\n{:?}", res);
+    println!("your address add to server:\n{}", res.text().await.unwrap());
 }
