@@ -3,10 +3,6 @@ use std::{
     io::{stdout, BufRead, BufReader, BufWriter, Write},
 };
 
-use crossterm::{
-    execute,
-    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
-};
 use libp2p::{Multiaddr, PeerId};
 use serde::{Deserialize, Serialize};
 
@@ -45,18 +41,18 @@ async fn send_addr_to_server(full_addr: String) {
             let file = OpenOptions::new()
                 .write(true)
                 .append(true)
-                .open("relays.dat")
+                .open("/etc/relays.dat")
                 .unwrap();
             let mut buf_writer = BufWriter::new(&file);
             if !prev_addresses.contains(&addr) {
                 writeln!(buf_writer, "{}", addr).unwrap();
             }
         } else {
-            File::create("relays.dat").unwrap();
+            File::create("/etc/relays.dat").unwrap();
             let file = OpenOptions::new()
                 .write(true)
                 .append(true)
-                .open("relays.dat")
+                .open("/etc/relays.dat")
                 .unwrap();
             let mut buf_writer = BufWriter::new(&file);
             writeln!(buf_writer, "{}", addr).unwrap();
