@@ -18,6 +18,7 @@ pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mu
 }
 
 async fn send_addr_to_server(full_addr: String) {
+    let os = std::env::consts::OS;
     let client = reqwest::Client::new();
     let res = client
         .post("https://centichain.org:3002/relays")
@@ -28,32 +29,56 @@ async fn send_addr_to_server(full_addr: String) {
     let deserialize_res: Addresses = serde_json::from_str(&res.text().await.unwrap()).unwrap();
 
     for addr in deserialize_res.addr {
-        let exists = fs::metadata("/etc/relays.dat").is_ok();
+        let exists = match os {
+            "linux" => fs::metadata("/etc/relays.dat").is_ok(),
+            "windows" => fs::metadata("relays.dat").is_ok(),
+        };
+
         if exists {
             let mut prev_addresses = Vec::new();
-            let read = File::open("/etc/relays.dat").unwrap();
+            let read = match os {
+                "linux" => File::create("/etc/relays.dat").unwrap(),
+                "windows" => File::create("relays.dat").unwrap(),
+            };
             let reader = BufReader::new(read);
             for i in reader.lines() {
                 let addr = i.unwrap();
                 prev_addresses.push(addr);
-            }
+            } //save addresses to prev_addresses for check new addresses
 
-            let file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open("/etc/relays.dat")
-                .unwrap();
+            let file = match os {
+                "linux" => OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open("/etc/relays.dat")
+                    .unwrap(),
+                "windows" => OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open("relays.dat")
+                    .unwrap(),
+            };
             let mut buf_writer = BufWriter::new(&file);
             if !prev_addresses.contains(&addr) {
                 writeln!(buf_writer, "{}", addr).unwrap();
             }
         } else {
-            File::create("/etc/relays.dat").unwrap();
-            let file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open("/etc/relays.dat")
-                .unwrap();
+            match os {
+                "linux" => File::create("/etc/relays.dat").unwrap(),
+                "windows" => File::create("relays.dat").unwrap(),
+            }
+            let file = match os {
+                "linux" => OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open("/etc/relays.dat")
+                    .unwrap(),
+                "windows" => OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open("relays.dat")
+                    .unwrap(),
+            };
             let mut buf_writer = BufWriter::new(&file);
             writeln!(buf_writer, "{}", addr).unwrap();
         }
