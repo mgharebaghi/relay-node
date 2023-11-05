@@ -31,16 +31,20 @@ async fn send_addr_to_server(full_addr: String) {
     for addr in deserialize_res.addr {
         let exists = if os == "linux" {
             fs::metadata("/etc/relays.dat").is_ok()
-        } else if os == "windows" {
-            fs::metadata("relays.dat").is_ok()
+        } else {
+            if os == "windows" {
+                fs::metadata("relays.dat").is_ok()
+            }
         };
 
         if exists {
             let mut prev_addresses = Vec::new();
             let read = if os == "linux" {
                 File::create("/etc/relays.dat").unwrap()
-            } else if os == "windows" {
-                File::create("/etc/relays.dat").unwrap()
+            } else {
+                if os == "windows" {
+                    File::create("/etc/relays.dat").unwrap()
+                }
             };
             let reader = BufReader::new(read);
             for i in reader.lines() {
@@ -54,12 +58,14 @@ async fn send_addr_to_server(full_addr: String) {
                     .append(true)
                     .open("/etc/relays.dat")
                     .unwrap()
-            } else if os == " windows" {
-                OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open("relays.dat")
-                    .unwrap()
+            } else {
+                if os == " windows" {
+                    OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open("relays.dat")
+                        .unwrap()
+                }
             };
             let mut buf_writer = BufWriter::new(&file);
             if !prev_addresses.contains(&addr) {
@@ -68,8 +74,10 @@ async fn send_addr_to_server(full_addr: String) {
         } else {
             if os == "linux" {
                 File::create("/etc/relays.dat").unwrap()
-            } else if os == "windows" {
-                File::create("relays.dat").unwrap()
+            } else {
+                if os == "windows" {
+                    File::create("relays.dat").unwrap()
+                }
             };
             let file = if os == "linux" {
                 OpenOptions::new()
@@ -77,12 +85,14 @@ async fn send_addr_to_server(full_addr: String) {
                     .append(true)
                     .open("/etc/relays.dat")
                     .unwrap()
-            } else if os == " windows" {
-                OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open("relays.dat")
-                    .unwrap()
+            } else {
+                if os == " windows" {
+                    OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open("relays.dat")
+                        .unwrap()
+                }
             };
             let mut buf_writer = BufWriter::new(&file);
             writeln!(buf_writer, "{}", addr).unwrap();
