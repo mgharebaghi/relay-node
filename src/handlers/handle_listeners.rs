@@ -17,13 +17,6 @@ struct Addresses {
 
 pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<String>) {
     let my_full_addr = format!("{}/p2p/{}", address, local_peer_id);
-    execute!(
-        stdout(),
-        SetForegroundColor(Color::Green),
-        Print("Your Full Address:\n".bold()),
-        ResetColor
-    )
-    .unwrap();
     send_addr_to_server(my_full_addr.clone()).await;
     my_addresses.push(my_full_addr);
 }
