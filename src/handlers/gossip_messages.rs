@@ -1,4 +1,4 @@
-use std::{fs::{File, OpenOptions}, io::{BufReader, BufRead, BufWriter, Write}};
+use std::{fs::{File, OpenOptions}, io::{BufReader, BufRead, BufWriter, Write}, env::consts::OS};
 
 use libp2p::{PeerId, gossipsub::{Message, IdentTopic}, Swarm};
 
@@ -21,7 +21,14 @@ pub fn handle_gossip_message(
     let msg = String::from_utf8(message.data.clone()).unwrap(); //convert messages to string
 
     if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
-        let r_relay_file = File::open("relays.dat").unwrap();
+        let mut relay_path = "";
+        if OS == "linux" {
+            relay_path = "/etc/relays.dat";
+        } else if OS == "windows" {
+            relay_path = "relays.dat";
+        }
+
+        let r_relay_file = File::open(relay_path).unwrap();
         let reader = BufReader::new(r_relay_file);
         let mut old_addresses = Vec::new();
         for i in reader.lines() {
@@ -31,7 +38,7 @@ pub fn handle_gossip_message(
         let relays_file = OpenOptions::new()
             .write(true)
             .append(true)
-            .open("relays.dat")
+            .open(relay_path)
             .unwrap();
         let mut buf_writer = BufWriter::new(relays_file);
         for i in addresses {

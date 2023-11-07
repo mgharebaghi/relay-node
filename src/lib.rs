@@ -1,4 +1,5 @@
 mod handlers;
+use std::env::consts::OS;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
@@ -18,7 +19,13 @@ use libp2p::{
 
 pub async fn run() {
     let mut wallet = String::new();
-    let wallet_file = File::open(format!("/etc/wallet.dat",)).unwrap();
+    let mut wallet_path = "";
+    if OS == "linux" {
+        wallet_path = "/etc/wallet.dat"
+    } else if OS == "windows" {
+        wallet_path = "wallet.dat"
+    };
+    let wallet_file = File::open(wallet_path).unwrap();
     let reader = BufReader::new(wallet_file);
     for addr in reader.lines() {
         let wallet_addr = addr.unwrap();
@@ -83,7 +90,7 @@ pub async fn run() {
         .unwrap()
         .with_swarm_config(|_conf| swarm_config)
         .build();
-    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
+    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/3369".parse().unwrap();
     swarm.listen_on(listener).unwrap();
 
     let mut connections: Vec<PeerId> = Vec::new();

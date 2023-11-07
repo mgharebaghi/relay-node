@@ -25,7 +25,7 @@ async fn send_addr_to_server(full_addr: String) {
     } else if os == "windows" {
         path = "relays.dat"
     } else {
-        ()
+        
     };
     let client = reqwest::Client::new();
     let res = client
@@ -49,23 +49,24 @@ async fn send_addr_to_server(full_addr: String) {
             } //save addresses to prev_addresses for check new addresses
 
             let file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(path)
-            .unwrap();
+                .write(true)
+                .append(true)
+                .open(path)
+                .unwrap();
             let mut buf_writer = BufWriter::new(&file);
             if !prev_addresses.contains(&addr) {
                 writeln!(buf_writer, "{}", addr).unwrap();
             }
         } else {
             File::create(path).unwrap();
-            let file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(path)
-            .unwrap();
-            let mut buf_writer = BufWriter::new(&file);
-            writeln!(buf_writer, "{}", addr).unwrap();
+            let file = OpenOptions::new().write(true).append(true).open(path);
+            match file {
+                Ok(relays_file) => {
+                    let mut buf_writer = BufWriter::new(&relays_file);
+                    writeln!(buf_writer, "{}", addr).unwrap();
+                }
+                Err(e) => println!("{}", e),
+            }
         }
     }
 }
