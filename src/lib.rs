@@ -36,6 +36,7 @@ pub async fn run() {
 
     let relay_topic = IdentTopic::new("relay");
     let clients_topic = IdentTopic::new("client");
+    let wallets_topic = IdentTopic::new("wallet");
 
     //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
@@ -54,12 +55,13 @@ pub async fn run() {
     );
 
     //Definition of behavior
-    let mut behaviour = CustomBehav {
-        gossipsub,
-        req_res,
-    };
+    let mut behaviour = CustomBehav { gossipsub, req_res };
 
     behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
+    behaviour
+        .gossipsub
+        .subscribe(&wallets_topic.clone())
+        .unwrap();
     behaviour
         .gossipsub
         .subscribe(&clients_topic.clone())

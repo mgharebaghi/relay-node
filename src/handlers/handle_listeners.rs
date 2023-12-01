@@ -29,7 +29,7 @@ async fn send_addr_to_server(full_addr: String) {
     };
     let client = reqwest::Client::new();
     let res = client
-        .post("https://centichain.org:3002/relays")
+        .post("https://centichain.org/api/relays")
         .body(full_addr)
         .send()
         .await
