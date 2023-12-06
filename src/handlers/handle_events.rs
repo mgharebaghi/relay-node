@@ -182,6 +182,7 @@ pub async fn events(
                                 swarm,
                                 client_topic_subscriber,
                                 relay_topic_subscribers,
+                                wallet_topic_subscriber
                             );
                         }
                     },
