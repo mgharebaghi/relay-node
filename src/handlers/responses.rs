@@ -11,7 +11,6 @@ pub fn handle_responses(
     relay_topic_subscribers: &mut Vec<PeerId>,
     wallet_topic_subscribers: &mut Vec<PeerId>,
 ) {
-    println!("in reposnse");
     let mut res: ResForReq = serde_json::from_str(&response.res).unwrap();
 
     if res.peer.last().unwrap() == &local_peer_id {
@@ -32,7 +31,6 @@ pub fn handle_responses(
                 .unwrap();
         }
     } else {
-        println!("in sending response...");
         let index = channels
             .iter()
             .position(|channel| channel.peer == res.peer.last().unwrap().clone())
@@ -40,14 +38,12 @@ pub fn handle_responses(
         if client_topic_subscriber.contains(res.peer.last().unwrap())
             || relay_topic_subscribers.contains(res.peer.last().unwrap())
         {
-            println!("reposnse to index: {:?}", channels[index]);
             swarm
                 .behaviour_mut()
                 .req_res
                 .send_response(channels.remove(index).channel, response)
                 .unwrap();
         } else if wallet_topic_subscribers.contains(res.peer.last().unwrap()) {
-            println!("reposnse to index: {:?}", channels[index]);
             swarm
                 .behaviour_mut()
                 .req_res
