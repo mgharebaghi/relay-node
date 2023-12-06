@@ -42,7 +42,8 @@ pub fn send_address(
             .unwrap();
     }
 
-    if topic.to_string() == "tarnsaction" && connections.contains(&peer_id) {
+    if topic.to_string() == "transaction" && connections.contains(&peer_id) {
+        println!("client subscribe to tx topic");
         wallet_topic_subscriber.push(peer_id);
     }
 }
