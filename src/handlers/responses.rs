@@ -31,6 +31,7 @@ pub fn handle_responses(
                 .unwrap();
         }
     } else {
+        println!("in sending response...");
         let index = channels
             .iter()
             .position(|channel| channel.peer == res.peer.last().unwrap().clone())
@@ -38,6 +39,7 @@ pub fn handle_responses(
         if client_topic_subscriber.contains(res.peer.last().unwrap())
             || relay_topic_subscribers.contains(res.peer.last().unwrap())
         {
+            println!("reposnse to index: {}", channels[index]);
             swarm
                 .behaviour_mut()
                 .req_res
