@@ -3,6 +3,7 @@ use libp2p::{Swarm, request_response::ResponseChannel};
 use super::structures::{Req, CustomBehav, Res, ReqForReq, ResForReq};
 
 pub fn send_res(request: Req, swarm: &mut Swarm<CustomBehav>, channel: ResponseChannel<Res>) {
+    println!("{:?}", request);
     let response = Res {
         res: "You Are First Client".to_string(),
     };
