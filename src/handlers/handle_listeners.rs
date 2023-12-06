@@ -41,7 +41,7 @@ async fn send_addr_to_server(full_addr: String) {
 
         if exists {
             let mut prev_addresses = Vec::new();
-            let read = File::create(path).unwrap();
+            let read = File::open(path).unwrap();
             let reader = BufReader::new(read);
             for i in reader.lines() {
                 let addr = i.unwrap();
