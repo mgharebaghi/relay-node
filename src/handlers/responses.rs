@@ -39,7 +39,7 @@ pub fn handle_responses(
         if client_topic_subscriber.contains(res.peer.last().unwrap())
             || relay_topic_subscribers.contains(res.peer.last().unwrap())
         {
-            println!("reposnse to index: {}", channels[index]);
+            println!("reposnse to index: {:?}", channels[index]);
             swarm
                 .behaviour_mut()
                 .req_res
