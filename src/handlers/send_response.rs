@@ -7,7 +7,7 @@ pub fn send_res(request: Req, swarm: &mut Swarm<CustomBehav>, channel: ResponseC
     let response = Res {
         res: "You Are First Client".to_string(),
     };
-    if let Ok(original_request) = serde_json::from_str(&request.req) {
+    if let Ok(original_req) = serde_json::from_str(&request.req) {
         let res = ResForReq {
             peer: original_req.peer,
             res: response,
