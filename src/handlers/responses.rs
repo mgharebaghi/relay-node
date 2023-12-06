@@ -1,6 +1,6 @@
 use libp2p::{PeerId, Swarm};
 
-use super::structures::{Res, Channels, CustomBehav, ResForReq};
+use super::structures::{Channels, CustomBehav, Res, ResForReq};
 
 pub fn handle_responses(
     response: Res,
@@ -8,10 +8,11 @@ pub fn handle_responses(
     channels: &mut Vec<Channels>,
     swarm: &mut Swarm<CustomBehav>,
     client_topic_subscriber: &mut Vec<PeerId>,
-    relay_topic_subscribers: &mut Vec<PeerId>
+    relay_topic_subscribers: &mut Vec<PeerId>,
+    wallet_topic_subscribers: &mut Vec<PeerId>,
 ) {
     println!("in reposnse");
-    let mut res:ResForReq = serde_json::from_str(&response.res).unwrap();
+    let mut res: ResForReq = serde_json::from_str(&response.res).unwrap();
 
     if res.peer.last().unwrap() == &local_peer_id {
         res.peer.pop();
@@ -39,6 +40,13 @@ pub fn handle_responses(
         if client_topic_subscriber.contains(res.peer.last().unwrap())
             || relay_topic_subscribers.contains(res.peer.last().unwrap())
         {
+            println!("reposnse to index: {:?}", channels[index]);
+            swarm
+                .behaviour_mut()
+                .req_res
+                .send_response(channels.remove(index).channel, response)
+                .unwrap();
+        } else if wallet_topic_subscribers.contains(res.peer.last().unwrap()) {
             println!("reposnse to index: {:?}", channels[index]);
             swarm
                 .behaviour_mut()

@@ -98,6 +98,7 @@ pub async fn run() {
     let mut connections: Vec<PeerId> = Vec::new();
     let mut relay_topic_subscribers: Vec<PeerId> = Vec::new();
     let mut client_topic_subscribers: Vec<PeerId> = Vec::new();
+    let mut wallet_topic_subscribers: Vec<PeerId> = Vec::new();
     let mut clients: Vec<PeerId> = Vec::new();
     let mut relays: Vec<PeerId> = Vec::new();
 
@@ -117,6 +118,7 @@ pub async fn run() {
         &mut relay_topic_subscribers,
         &mut client_topic_subscribers,
         &mut wallet,
+        &mut wallet_topic_subscribers
     )
     .await;
 }

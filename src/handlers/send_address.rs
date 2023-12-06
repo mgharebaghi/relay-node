@@ -12,6 +12,8 @@ pub fn send_address(
     connections: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
+    wallet_topic_subscriber: &mut Vec<PeerId>,
+
 ) {
     if topic.to_string() == "relay".to_string() {
         relay_topic_subscribers.push(peer_id);
@@ -38,5 +40,9 @@ pub fn send_address(
             .gossipsub
             .publish(topic.clone(), my_addresses_str.as_bytes())
             .unwrap();
+    }
+
+    if topic.to_string() == "tarnsaction" && connections.contains(&peer_id) {
+        wallet_topic_subscriber.push(peer_id);
     }
 }

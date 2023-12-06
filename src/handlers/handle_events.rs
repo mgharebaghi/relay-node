@@ -30,6 +30,7 @@ pub async fn events(
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
+    wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     loop {
         match swarm.next().await.unwrap() {
@@ -152,6 +153,7 @@ pub async fn events(
                         connections,
                         clients,
                         client_topic_subscriber,
+                        wallet_topic_subscriber
                     ),
                     _ => (),
                 },

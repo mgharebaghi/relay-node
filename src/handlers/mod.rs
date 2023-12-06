@@ -35,7 +35,8 @@ pub async fn handle_streams(
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
-    wallet: &mut String
+    wallet: &mut String,
+    wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     loop {
         let relays_file_exist = fs::metadata("relays.dat").is_ok();
@@ -80,7 +81,8 @@ pub async fn handle_streams(
             &mut connections.clone(),
             relay_topic_subscribers,
             client_topic_subscriber,
-            wallet
+            wallet, 
+            wallet_topic_subscriber
         )
         .await;
     }
