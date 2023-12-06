@@ -10,6 +10,7 @@ pub fn handle_responses(
     client_topic_subscriber: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>
 ) {
+    println!("in reposnse");
     let mut res:ResForReq = serde_json::from_str(&response.res).unwrap();
 
     if res.peer.last().unwrap() == &local_peer_id {
