@@ -54,6 +54,7 @@ pub async fn handle_streams(
                 }
             }
             if dial_addresses.len() > 0 {
+                println!("{:?}", dial_addresses);
                 let rnd_dial_addr = dial_addresses
                     .choose(&mut rand::thread_rng())
                     .unwrap()
