@@ -39,9 +39,9 @@ pub async fn handle_streams(
     wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     loop {
-        let relays_file_exist = fs::metadata("relays.dat").is_ok();
+        let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
         if relays_file_exist {
-            let file = File::open("relays.dat").unwrap();
+            let file = File::open("/etc/relays.dat").unwrap();
             let reader = BufReader::new(&file);
             let mut dial_addresses = Vec::new();
             for i in reader.lines() {
