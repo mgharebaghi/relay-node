@@ -159,8 +159,8 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                     Ok(_) => {
                         return "Your transaction sent.".to_string();
                     }
-                    Err(_) => {
-                        return "Sending failed!".to_string();
+                    Err(e) => {
+                        return e.to_string();
                     }
                 }
             }
