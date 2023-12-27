@@ -101,11 +101,11 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
     let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    // gossipsub.subscribe(&relay_topic.clone()).unwrap();
+    gossipsub.subscribe(&client_topic.clone()).unwrap();
 
     //config swarm
     let swarm_config = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(15));
+        .with_idle_connection_timeout(Duration::from_secs(60 * 60));
 
     let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
