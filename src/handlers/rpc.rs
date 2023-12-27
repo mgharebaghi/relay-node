@@ -100,8 +100,8 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
-    let mut gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    gossipsub.subscribe(&client_topic.clone()).unwrap();
+    let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
+    // gossipsub.subscribe(&client_topic.clone()).unwrap();
 
     //config swarm
     let swarm_config = libp2p::swarm::Config::with_tokio_executor()
@@ -151,19 +151,22 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     loop {
         match swarm.next().await.unwrap() {
-            SwarmEvent::ConnectionEstablished { .. } => {
-                match swarm
-                    .behaviour_mut()
-                    .publish(client_topic, str_transaction.as_bytes())
-                {
-                    Ok(_) => {
-                        return "Your transaction sent.".to_string();
-                    }
-                    Err(e) => {
-                        return e.to_string();
+            SwarmEvent::Behaviour(gossipevent) => match gossipevent {
+                libp2p::gossipsub::Event::Subscribed { .. } => {
+                    match swarm
+                        .behaviour_mut()
+                        .publish(client_topic, str_transaction.as_bytes())
+                    {
+                        Ok(_) => {
+                            return "Your transaction sent.".to_string();
+                        }
+                        Err(e) => {
+                            return e.to_string();
+                        }
                     }
                 }
-            }
+                _ => {}
+            },
             _ => {}
         }
     }
