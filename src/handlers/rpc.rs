@@ -320,6 +320,7 @@ async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> Json
 }
 
 fn handle_response(response: Res) -> Json<UTXO> {
+    println!("response: {:?}", response);
     if let Ok(res) = serde_json::from_str::<ResForReq>(&response.res) {
         if let Ok(utxo) = serde_json::from_str::<UTXO>(&res.res.res) {
             return Json(utxo);
