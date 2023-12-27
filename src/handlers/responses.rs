@@ -11,6 +11,7 @@ pub fn handle_responses(
     relay_topic_subscribers: &mut Vec<PeerId>,
     wallet_topic_subscribers: &mut Vec<PeerId>,
 ) {
+    println!("response: {:?}", response);
     let mut res: ResForReq = serde_json::from_str(&response.res).unwrap();
 
     if res.peer.last().unwrap() == &local_peer_id {
