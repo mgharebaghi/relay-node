@@ -17,6 +17,7 @@ pub fn handle_requests(
     local_peer_id: PeerId,
     wallet: &mut String
 ) {
+    println!("request: {:?}", request);
     if request.req == "handshake".to_string() {
         let response = Res {
             res: wallet.clone(),
