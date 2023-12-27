@@ -9,6 +9,7 @@ use handlers::structures::Channels;
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
+pub use handlers::rpc;
 
 use libp2p::{
     gossipsub::IdentTopic,
