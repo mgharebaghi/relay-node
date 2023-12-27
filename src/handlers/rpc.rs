@@ -105,7 +105,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     //config swarm
     let swarm_config = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(60 * 60));
+        .with_idle_connection_timeout(Duration::from_secs(20));
 
     let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
