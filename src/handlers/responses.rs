@@ -44,7 +44,7 @@ pub fn handle_responses(
                 .req_res
                 .send_response(channels.remove(index).channel, response)
                 .unwrap();
-        } else if wallet_topic_subscribers.contains(res.peer.last().unwrap()) {
+        } else {
             swarm
                 .behaviour_mut()
                 .req_res
