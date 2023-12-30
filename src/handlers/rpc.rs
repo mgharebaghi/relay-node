@@ -138,6 +138,7 @@ struct TxBehaviour {
 
 async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> String {
     let tx_topic = IdentTopic::new("transaction");
+    let node_topic = IdentTopic::new("client");
     //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
     // let local_peer_id = PeerId::from(keypair.public());
@@ -196,6 +197,8 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
 
+    let mut message_sent = false;
+
     loop {
         match swarm.next().await.unwrap() {
             SwarmEvent::ConnectionEstablished { .. } => {
@@ -204,18 +207,20 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
                     libp2p::gossipsub::Event::Subscribed { .. } => {
-                        println!("subscribed");
-                        match swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .publish(tx_topic, str_transaction.as_bytes())
-                        {
-                            Ok(_) => {
-                                println!("{:?}", transaction);
-                                return "Your transaction sent.".to_string();
-                            }
-                            Err(e) => {
-                                return e.to_string();
+                        if !message_sent {
+                            println!("subscribed");
+                            let send_message = swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(node_topic.clone(), str_transaction.as_bytes());
+
+                            match send_message {
+                                Ok(_) => {
+                                    println!("{:?}", transaction);
+                                    message_sent = true;
+                                    return "Your transaction sent.".to_string();
+                                }
+                                Err(_) => {}
                             }
                         }
                     }
