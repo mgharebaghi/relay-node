@@ -132,6 +132,7 @@ pub async fn events(
                         message,
                         ..
                     } => {
+                        println!("get the gossip message: {:?}", message);
                         handle_gossip_message(
                             propagation_source,
                             message,

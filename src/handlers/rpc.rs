@@ -146,7 +146,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     //config swarm
     let swarm_config = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(20));
+        .with_idle_connection_timeout(Duration::from_secs(60));
 
     let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
@@ -192,8 +192,12 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     loop {
         match swarm.next().await.unwrap() {
+            SwarmEvent::ConnectionEstablished { .. } => {
+                println!("connection stablished");
+            }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 libp2p::gossipsub::Event::Subscribed { .. } => {
+                    println!("subscribed");
                     match swarm
                         .behaviour_mut()
                         .publish(tx_topic, str_transaction.as_bytes())
