@@ -52,7 +52,6 @@ pub async fn events(
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                println!("connection stablished with: {}", peer_id);
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
@@ -77,6 +76,7 @@ pub async fn events(
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                println!("remove explicit: {}", peer_id);
                 let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {

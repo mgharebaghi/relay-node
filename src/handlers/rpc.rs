@@ -197,12 +197,10 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
-                println!("connection stablished");
             }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
                     libp2p::gossipsub::Event::Subscribed { .. } => {
-                        println!("subscribed");
                         let send_message = swarm
                             .behaviour_mut()
                             .gossipsub
