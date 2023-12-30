@@ -150,6 +150,9 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
     let behaviour = TxBehaviour { gossipsub };
 
+    let swarm_cfg = libp2p::swarm::Config::with_tokio_executor()
+        .with_idle_connection_timeout(Duration::from_secs(8));
+
     let mut swarm = SwarmBuilder::with_new_identity()
         .with_tokio()
         .with_tcp(
@@ -169,9 +172,14 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         .unwrap()
         .with_behaviour(|_key| behaviour)
         .unwrap()
+        .with_swarm_config(|_cfg| swarm_cfg)
         .build();
 
-    swarm.behaviour_mut().gossipsub.subscribe(&tx_topic).unwrap();
+    swarm
+        .behaviour_mut()
+        .gossipsub
+        .subscribe(&tx_topic)
+        .unwrap();
 
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();
@@ -193,12 +201,15 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
 
-    // let mut msg_sent = false;
+    let mut msg_sent = false;
 
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+            }
+            SwarmEvent::ConnectionClosed { .. } => {
+                break;
             }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
@@ -211,9 +222,11 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                         match send_message {
                             Ok(_) => {
                                 println!("{:?}", str_transaction);
-                                // msg_sent = true;
+                                msg_sent = true;
                             }
-                            Err(_) => {}
+                            Err(_) => {
+                                msg_sent = false;
+                            }
                         }
                     }
                     _ => {}
@@ -221,9 +234,12 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             },
             _ => {}
         }
-        // if msg_sent {
-        //     return "Your transaction sent.".to_string();
-        // }
+    }
+
+    if msg_sent {
+        return "Your transaction sent.".to_string();
+    } else {
+        return "error".to_string();
     }
 }
 
