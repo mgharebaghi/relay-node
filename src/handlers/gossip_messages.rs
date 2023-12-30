@@ -19,6 +19,7 @@ pub fn handle_gossip_message(
     my_addresses: &mut Vec<String>,
 ) {
     let msg = String::from_utf8(message.data.clone()).unwrap(); //convert messages to string
+    println!("get the transaction");
 
     if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
         let mut relay_path = "";
