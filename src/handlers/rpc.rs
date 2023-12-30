@@ -151,7 +151,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let mut behaviour = TxBehaviour { gossipsub };
     behaviour.gossipsub.subscribe(&tx_topic).unwrap();
 
-    let mut swarm = SwarmBuilder::with_existing_identity(keypair)
+    let mut swarm = SwarmBuilder::with_new_identity()
         .with_tokio()
         .with_tcp(
             Default::default(),
