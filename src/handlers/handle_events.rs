@@ -52,6 +52,7 @@ pub async fn events(
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                println!("connection stablished with: {}", peer_id);
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }

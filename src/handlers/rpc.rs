@@ -210,7 +210,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
                         match send_message {
                             Ok(_) => {
-                                println!("{:?}", transaction);
+                                println!("{:?}", str_transaction);
                                 return "Your transaction sent.".to_string();
                             }
                             Err(_) => {}
