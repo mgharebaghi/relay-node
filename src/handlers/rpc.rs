@@ -193,6 +193,8 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
 
+    let mut msg_sent = false;
+
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
@@ -209,7 +211,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                         match send_message {
                             Ok(_) => {
                                 println!("{:?}", str_transaction);
-                                return "Your transaction sent.".to_string();
+                                msg_sent = true;
                             }
                             Err(_) => {}
                         }
@@ -218,6 +220,9 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                 },
             },
             _ => {}
+        }
+        if msg_sent {
+            return "Your transaction sent.".to_string();
         }
     }
 }
