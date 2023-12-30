@@ -205,7 +205,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let start = Instant::now();
     let duration = Duration::from_secs(8);
 
-    while start.elapsed() <= duration {
+    while start.elapsed() >= duration {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
