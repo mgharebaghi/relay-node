@@ -148,8 +148,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
     let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    let mut behaviour = TxBehaviour { gossipsub };
-    behaviour.gossipsub.subscribe(&tx_topic).unwrap();
+    let behaviour = TxBehaviour { gossipsub };
 
     let mut swarm = SwarmBuilder::with_new_identity()
         .with_tokio()
@@ -172,6 +171,8 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         .unwrap()
         .build();
 
+    swarm.behaviour_mut().gossipsub.subscribe(&tx_topic).unwrap();
+
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();
 
@@ -190,11 +191,12 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let dial_multiaddr: Multiaddr = dial_addr.parse().unwrap();
     swarm.dial(dial_multiaddr).unwrap();
 
-    // let str_transaction = serde_json::to_string(&transaction).unwrap();
+    let str_transaction = serde_json::to_string(&transaction).unwrap();
 
     loop {
         match swarm.select_next_some().await {
-            SwarmEvent::ConnectionEstablished { .. } => {
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                 println!("connection stablished");
             }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
@@ -204,7 +206,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                         let send_message = swarm
                             .behaviour_mut()
                             .gossipsub
-                            .publish(node_topic.clone(), "str_transaction".as_bytes());
+                            .publish(node_topic.clone(), str_transaction.as_bytes());
 
                         match send_message {
                             Ok(_) => {
