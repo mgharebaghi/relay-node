@@ -12,7 +12,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use sp_core::ecdsa::{Public, Signature};
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader}, time::Instant,
 };
 use std::{net::SocketAddr, time::Duration};
 
@@ -201,8 +201,11 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
     let mut msg_sent = false;
+    
+    let start = Instant::now();
+    let duration = Duration::from_secs(8);
 
-    while msg_sent {
+    while start.elapsed() <= duration {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
@@ -210,18 +213,13 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
                     libp2p::gossipsub::Event::Subscribed { .. } => {
-                        let send_message = swarm
+                        match swarm
                             .behaviour_mut()
                             .gossipsub
-                            .publish(node_topic.clone(), str_transaction.as_bytes());
-
-                        match send_message {
-                            Ok(_) => {
-                                msg_sent = true;
-                            }
-                            Err(_) => {
-                                msg_sent = false;
-                            }
+                            .publish(node_topic.clone(), str_transaction.as_bytes())
+                        {
+                            Ok(_) => msg_sent = true,
+                            Err(_) => {}
                         }
                     }
                     _ => {}
@@ -232,9 +230,9 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     }
 
     if msg_sent {
-        return "Your transaction sent.".to_string();
+        return "your transaction sent.".to_string();
     } else {
-        return "Error".to_string();
+        return "error".to_string();
     }
 }
 
