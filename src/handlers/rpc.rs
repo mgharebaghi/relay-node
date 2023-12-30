@@ -190,7 +190,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let dial_multiaddr: Multiaddr = dial_addr.parse().unwrap();
     swarm.dial(dial_multiaddr).unwrap();
 
-    let str_transaction = serde_json::to_string(&transaction).unwrap();
+    // let str_transaction = serde_json::to_string(&transaction).unwrap();
 
     loop {
         match swarm.select_next_some().await {
@@ -204,7 +204,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                         let send_message = swarm
                             .behaviour_mut()
                             .gossipsub
-                            .publish(node_topic.clone(), str_transaction.as_bytes());
+                            .publish(node_topic.clone(), "str_transaction".as_bytes());
 
                         match send_message {
                             Ok(_) => {
