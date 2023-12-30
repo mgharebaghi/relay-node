@@ -200,7 +200,6 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     swarm.dial(dial_multiaddr).unwrap();
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
-
     let mut msg_sent = false;
 
     loop {
@@ -224,17 +223,16 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                                 msg_sent = false;
                             }
                         }
-
-                        if msg_sent {
-                            return "Your transaction sent.".to_string();
-                        } else {
-                            return "error".to_string();
-                        }
                     }
                     _ => {}
                 },
             },
             _ => {}
+        }
+        if msg_sent {
+            return "Your transaction sent.".to_string();
+        } else {
+            return "error".to_string();
         }
     }
 }
