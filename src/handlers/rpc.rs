@@ -151,10 +151,6 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let mut behaviour = TxBehaviour { gossipsub };
     behaviour.gossipsub.subscribe(&tx_topic).unwrap();
 
-    //config swarm
-    let swarm_config = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(60));
-
     let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
         .with_tcp(
@@ -174,7 +170,6 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         .unwrap()
         .with_behaviour(|_key| behaviour)
         .unwrap()
-        .with_swarm_config(|_conf| swarm_config)
         .build();
 
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
@@ -197,31 +192,26 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
 
-    let mut message_sent = false;
-
     loop {
-        match swarm.next().await.unwrap() {
+        match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { .. } => {
                 println!("connection stablished");
             }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
                     libp2p::gossipsub::Event::Subscribed { .. } => {
-                        if !message_sent {
-                            println!("subscribed");
-                            let send_message = swarm
-                                .behaviour_mut()
-                                .gossipsub
-                                .publish(node_topic.clone(), str_transaction.as_bytes());
+                        println!("subscribed");
+                        let send_message = swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .publish(node_topic.clone(), str_transaction.as_bytes());
 
-                            match send_message {
-                                Ok(_) => {
-                                    println!("{:?}", transaction);
-                                    message_sent = true;
-                                    return "Your transaction sent.".to_string();
-                                }
-                                Err(_) => {}
+                        match send_message {
+                            Ok(_) => {
+                                println!("{:?}", transaction);
+                                return "Your transaction sent.".to_string();
                             }
+                            Err(_) => {}
                         }
                     }
                     _ => {}
