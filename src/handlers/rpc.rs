@@ -3,7 +3,7 @@ use libp2p::{
     gossipsub::{Behaviour, IdentTopic},
     identity::Keypair,
     request_response::{cbor, Config, Message, ProtocolSupport},
-    swarm::SwarmEvent,
+    swarm::{NetworkBehaviour, SwarmEvent},
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
 use rust_decimal::Decimal;
@@ -131,6 +131,11 @@ pub async fn handle_requests() {
         .unwrap();
 }
 
+#[derive(NetworkBehaviour)]
+struct TxBehaviour {
+    gossipsub: libp2p::gossipsub::Behaviour,
+}
+
 async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> String {
     let tx_topic = IdentTopic::new("transaction");
     //generate peer keys and peer id for network
@@ -141,8 +146,9 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
-    let mut gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    gossipsub.subscribe(&tx_topic).unwrap();
+    let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
+    let mut behaviour = TxBehaviour { gossipsub };
+    behaviour.gossipsub.subscribe(&tx_topic).unwrap();
 
     //config swarm
     let swarm_config = libp2p::swarm::Config::with_tokio_executor()
@@ -165,7 +171,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         )
         .await
         .unwrap()
-        .with_behaviour(|_key| gossipsub)
+        .with_behaviour(|_key| behaviour)
         .unwrap()
         .with_swarm_config(|_conf| swarm_config)
         .build();
@@ -196,22 +202,25 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                 println!("connection stablished");
             }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
-                libp2p::gossipsub::Event::Subscribed { .. } => {
-                    println!("subscribed");
-                    match swarm
-                        .behaviour_mut()
-                        .publish(tx_topic, str_transaction.as_bytes())
-                    {
-                        Ok(_) => {
-                            println!("{:?}", transaction);
-                            return "Your transaction sent.".to_string();
-                        }
-                        Err(e) => {
-                            return e.to_string();
+                TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
+                    libp2p::gossipsub::Event::Subscribed { .. } => {
+                        println!("subscribed");
+                        match swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .publish(tx_topic, str_transaction.as_bytes())
+                        {
+                            Ok(_) => {
+                                println!("{:?}", transaction);
+                                return "Your transaction sent.".to_string();
+                            }
+                            Err(e) => {
+                                return e.to_string();
+                            }
                         }
                     }
-                }
-                _ => {}
+                    _ => {}
+                },
             },
             _ => {}
         }
@@ -311,7 +320,7 @@ async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> Json
                 swarm.behaviour_mut().send_request(&peer_id, req);
             }
             SwarmEvent::Behaviour(req_res) => match req_res {
-                libp2p::request_response::Event::Message {  message, .. } => match message {
+                libp2p::request_response::Event::Message { message, .. } => match message {
                     Message::Response { response, .. } => {
                         return handle_response(response);
                     }
