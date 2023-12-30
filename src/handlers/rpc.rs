@@ -227,15 +227,13 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             },
             _ => {}
         }
-        if start.elapsed() >= duration {
-            break;
+        if start.elapsed() <= duration {
+            if msg_sent {
+                return "your transaction sent.".to_string();
+            } else {
+                return "error".to_string();
+            }
         }
-    }
-
-    if msg_sent {
-        return "your transaction sent.".to_string();
-    } else {
-        return "error".to_string();
     }
 }
 
