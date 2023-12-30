@@ -208,9 +208,6 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
-            SwarmEvent::ConnectionClosed { .. } => {
-                break;
-            }
             SwarmEvent::Behaviour(gossipevent) => match gossipevent {
                 TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
                     libp2p::gossipsub::Event::Subscribed { .. } => {
@@ -221,12 +218,17 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
 
                         match send_message {
                             Ok(_) => {
-                                println!("{:?}", str_transaction);
                                 msg_sent = true;
                             }
                             Err(_) => {
                                 msg_sent = false;
                             }
+                        }
+
+                        if msg_sent {
+                            return "Your transaction sent.".to_string();
+                        } else {
+                            return "error".to_string();
                         }
                     }
                     _ => {}
@@ -234,12 +236,6 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             },
             _ => {}
         }
-    }
-
-    if msg_sent {
-        return "Your transaction sent.".to_string();
-    } else {
-        return "error".to_string();
     }
 }
 

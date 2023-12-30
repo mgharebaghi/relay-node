@@ -40,7 +40,6 @@ pub async fn events(
                 let ip: Ipv4Addr = ipv4.parse().unwrap();
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses).await;
-                    println!("listening start...");
                 } else {
                     execute!(
                         stdout(),
@@ -76,7 +75,6 @@ pub async fn events(
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                println!("remove explicit: {}", peer_id);
                 let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {
@@ -133,7 +131,6 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        println!("get the gossip message: {:?}", message);
                         handle_gossip_message(
                             propagation_source,
                             message,
