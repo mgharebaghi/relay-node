@@ -232,7 +232,7 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         if msg_sent {
             return "Your transaction sent.".to_string();
         } else {
-            return "error".to_string();
+           
         }
     }
 }
