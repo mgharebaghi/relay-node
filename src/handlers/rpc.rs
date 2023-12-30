@@ -132,7 +132,7 @@ pub async fn handle_requests() {
 }
 
 async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> String {
-    let client_topic = IdentTopic::new("client");
+    let client_topic = IdentTopic::new("transaction");
     //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
     // let local_peer_id = PeerId::from(keypair.public());
@@ -142,7 +142,6 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
     let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    // gossipsub.subscribe(&client_topic.clone()).unwrap();
 
     //config swarm
     let swarm_config = libp2p::swarm::Config::with_tokio_executor()
