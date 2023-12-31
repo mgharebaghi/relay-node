@@ -12,7 +12,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use sp_core::ecdsa::{Public, Signature};
 use std::{
     fs::File,
-    io::{BufRead, BufReader}, time::Instant,
+    io::{BufRead, BufReader},
 };
 use std::{net::SocketAddr, time::Duration};
 
@@ -200,12 +200,10 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     swarm.dial(dial_multiaddr).unwrap();
 
     let str_transaction = serde_json::to_string(&transaction).unwrap();
-    let mut msg_sent = false;
-    
-    let mut count = 0;
+
+    let (tx, mut tr) = tokio::sync::mpsc::channel(1);
 
     loop {
-        count += 1;
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
@@ -218,7 +216,10 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                             .gossipsub
                             .publish(node_topic.clone(), str_transaction.as_bytes())
                         {
-                            Ok(_) => msg_sent = true,
+                            Ok(_) => {
+                                tx.send("your transaction sent.".to_string()).await.unwrap();
+                                break;
+                            }
                             Err(_) => {}
                         }
                     }
@@ -227,10 +228,9 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             },
             _ => {}
         }
-        if count >= 10 && msg_sent {
-            return "your transaction sent.".to_string();
-        }
     }
+
+    tr.recv().await.unwrap()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
