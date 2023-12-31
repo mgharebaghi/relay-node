@@ -1,9 +1,8 @@
 use libp2p::{
     futures::StreamExt,
-    gossipsub::{Behaviour, IdentTopic},
     identity::Keypair,
-    request_response::{cbor, Config, Message, ProtocolSupport},
-    swarm::{NetworkBehaviour, SwarmEvent},
+    request_response::{cbor, Config, Event, Message, ProtocolSupport},
+    swarm::SwarmEvent,
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
 use rust_decimal::Decimal;
@@ -97,6 +96,34 @@ pub struct UTXO {
     pub utxos: Vec<UtxoData>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Req {
+    pub req: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Res {
+    pub res: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ResForReq {
+    pub peer: Vec<PeerId>,
+    pub res: Res,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReqForReq {
+    peer: Vec<PeerId>,
+    req: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ReqForUtxo {
+    public_key: String,
+    request: String,
+}
+
 pub async fn handle_requests() {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
@@ -131,29 +158,18 @@ pub async fn handle_requests() {
         .unwrap();
 }
 
-#[derive(NetworkBehaviour)]
-struct TxBehaviour {
-    gossipsub: libp2p::gossipsub::Behaviour,
-}
-
 async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> String {
-    let tx_topic = IdentTopic::new("transaction");
-    let node_topic = IdentTopic::new("client");
-    //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
-    // let local_peer_id = PeerId::from(keypair.public());
+    // let peerid = PeerId::from(keypair.public());
+    let behaviour = cbor::Behaviour::<Req, Res>::new(
+        [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
+        Config::default(),
+    );
 
-    //gossip protocol config
-    let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
-    let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
-    let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
-    let gossipsub: Behaviour = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    let behaviour = TxBehaviour { gossipsub };
-
-    let swarm_cfg = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(8));
-
-    let mut swarm = SwarmBuilder::with_new_identity()
+    //config swarm
+    let swarm_config = libp2p::swarm::Config::with_tokio_executor()
+        .with_idle_connection_timeout(Duration::from_secs(10 * 60));
+    let mut swarm = SwarmBuilder::with_existing_identity(keypair)
         .with_tokio()
         .with_tcp(
             Default::default(),
@@ -172,14 +188,8 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
         .unwrap()
         .with_behaviour(|_key| behaviour)
         .unwrap()
-        .with_swarm_config(|_cfg| swarm_cfg)
+        .with_swarm_config(|_conf| swarm_config)
         .build();
-
-    swarm
-        .behaviour_mut()
-        .gossipsub
-        .subscribe(&tx_topic)
-        .unwrap();
 
     let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
     swarm.listen_on(listener).unwrap();
@@ -199,66 +209,26 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
     let dial_multiaddr: Multiaddr = dial_addr.parse().unwrap();
     swarm.dial(dial_multiaddr).unwrap();
 
-    let str_transaction = serde_json::to_string(&transaction).unwrap();
-
-    let (tx, mut tr) = tokio::sync::mpsc::channel(1);
-
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
+                let request = Req {
+                    req: serde_json::to_string(&transaction).unwrap(),
+                };
+                swarm.behaviour_mut().send_request(&peer_id, request);
             }
-            SwarmEvent::Behaviour(gossipevent) => match gossipevent {
-                TxBehaviourEvent::Gossipsub(gossipsub) => match gossipsub {
-                    libp2p::gossipsub::Event::Subscribed { .. } => {
-                        match swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .publish(node_topic.clone(), str_transaction.as_bytes())
-                        {
-                            Ok(_) => {
-                                tx.send("your transaction sent.".to_string()).await.unwrap();
-                                break;
-                            }
-                            Err(_) => {}
-                        }
+            SwarmEvent::Behaviour(event) => match event {
+                Event::Message { message, .. } => match message {
+                    Message::Response { response, .. } => {
+                        return response.res;
                     }
                     _ => {}
                 },
+                _ => {}
             },
             _ => {}
         }
     }
-
-    tr.recv().await.unwrap()
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Req {
-    pub req: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Res {
-    pub res: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ResForReq {
-    pub peer: Vec<PeerId>,
-    pub res: Res,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ReqForReq {
-    peer: Vec<PeerId>,
-    req: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ReqForUtxo {
-    public_key: String,
-    request: String,
 }
 
 async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> Json<UTXO> {
