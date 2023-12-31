@@ -1,15 +1,16 @@
 mod handlers;
 use std::env::consts::OS;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::fs::{File, OpenOptions, self};
+use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::net::TcpStream;
 use std::time::Duration;
 
 use handlers::handle_streams;
+pub use handlers::rpc;
 use handlers::structures::Channels;
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
-pub use handlers::rpc;
 
 use libp2p::{
     gossipsub::IdentTopic,
@@ -17,6 +18,12 @@ use libp2p::{
     request_response::{cbor, ProtocolSupport},
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Addresses {
+    addr: Vec<String>,
+}
 
 pub async fn run() {
     let mut wallet = String::new();
@@ -59,10 +66,7 @@ pub async fn run() {
     let mut behaviour = CustomBehav { gossipsub, req_res };
 
     behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
-    behaviour
-        .gossipsub
-        .subscribe(&tx_topic.clone())
-        .unwrap();
+    behaviour.gossipsub.subscribe(&tx_topic.clone()).unwrap();
     behaviour
         .gossipsub
         .subscribe(&clients_topic.clone())
@@ -106,6 +110,66 @@ pub async fn run() {
     let mut channels: Vec<Channels> = Vec::new();
     let mut my_addresses = Vec::new();
 
+    let server_address = "www.centichain.org:80";
+    let site_connection = TcpStream::connect(server_address);
+
+    match site_connection {
+        Ok(_) => {
+            let mut relays_path = "";
+            if OS == "windows" {
+                relays_path = "relays.dat"
+            } else if OS == "linux" {
+                relays_path = "/etc/relays.dat"
+            }
+            let addr = reqwest::get("https://centichain.org/api/relays")
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
+            let addresses: Addresses = serde_json::from_str(&addr).unwrap();
+
+            let mut prev_addresses = Vec::new();
+            let path_exist = fs::metadata(relays_path).is_ok();
+            if path_exist {
+                let relays_file = File::open(relays_path).unwrap();
+                let reader = BufReader::new(relays_file);
+                for i in reader.lines() {
+                    let relay_addr = i.unwrap();
+                    prev_addresses.push(relay_addr);
+                }
+
+                let write_file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(relays_path)
+                    .unwrap();
+                let mut writer = BufWriter::new(write_file);
+                for addr in addresses.addr {
+                    if !prev_addresses.contains(&addr) {
+                        writeln!(writer, "{}", addr).unwrap();
+                    }
+                }
+            } else {
+                let relays_file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(relays_path)
+                    .unwrap();
+                let mut writer = BufWriter::new(relays_file);
+
+                for addr in addresses.addr {
+                    writeln!(writer, "{}", addr).unwrap();
+                }
+                
+            }
+        }
+        Err(_) => {
+            
+        }
+    }
+
     handle_streams(
         local_peer_id,
         &mut swarm,
@@ -119,7 +183,7 @@ pub async fn run() {
         &mut relay_topic_subscribers,
         &mut client_topic_subscribers,
         &mut wallet,
-        &mut wallet_topic_subscribers
+        &mut wallet_topic_subscribers,
     )
     .await;
 }

@@ -44,7 +44,7 @@ pub async fn events(
                     execute!(
                         stdout(),
                         SetForegroundColor(Color::Magenta),
-                        Print("Find a local IP!\n"),
+                        Print("local IP!\n"),
                         ResetColor
                     )
                     .unwrap();
