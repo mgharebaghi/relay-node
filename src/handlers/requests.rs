@@ -34,7 +34,7 @@ pub fn handle_requests(
         match send_transaction {
             Ok(_) => {
                 let response = Res {
-                    res: "your transaction sent.".to_string(),
+                    res: "Your transaction sent.".to_string(),
                 };
                 let _ = swarm
                     .behaviour_mut()
