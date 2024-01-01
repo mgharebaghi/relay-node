@@ -75,6 +75,7 @@ pub async fn events(
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                println!("conn closed!");
                 let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {
