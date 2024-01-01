@@ -11,7 +11,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use sp_core::ecdsa::{Public, Signature};
 use std::{
     fs::File,
-    io::{BufRead, BufReader},
+    io::{BufRead, BufReader}, str::FromStr,
 };
 use std::{net::SocketAddr, time::Duration};
 
@@ -124,6 +124,24 @@ struct ReqForUtxo {
     request: String,
 }
 
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+struct Reciept {
+    pub block_number: Option<i64>,
+    pub hash: String,
+    pub from: String,
+    pub to: String,
+    #[serde_as(as = "DisplayFromStr")]
+    pub value: Decimal,
+    pub satatus: String,
+    pub description: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TxReq {
+    tx_hash: String
+}
+
 pub async fn handle_requests() {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
@@ -132,6 +150,7 @@ pub async fn handle_requests() {
     let app: Router = Router::new()
         .route("/tx", post(handle_transaction))
         .route("/utxo", post(handle_utxo))
+        .route("/reciept", post(handle_reciept))
         .layer(cors);
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));
 
@@ -298,7 +317,7 @@ async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> Json
             SwarmEvent::Behaviour(req_res) => match req_res {
                 libp2p::request_response::Event::Message { message, .. } => match message {
                     Message::Response { response, .. } => {
-                        return handle_response(response);
+                        return handle_utxo_response(response);
                     }
                     _ => {}
                 },
@@ -309,7 +328,7 @@ async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> Json
     }
 }
 
-fn handle_response(response: Res) -> Json<UTXO> {
+fn handle_utxo_response(response: Res) -> Json<UTXO> {
     if let Ok(res) = serde_json::from_str::<ResForReq>(&response.res) {
         if let Ok(utxo) = serde_json::from_str::<UTXO>(&res.res.res) {
             return Json(utxo);
@@ -326,5 +345,113 @@ fn handle_response(response: Res) -> Json<UTXO> {
             utxos: Vec::new(),
         };
         return Json(utxo);
+    }
+}
+
+async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json<Reciept> {
+    let keypair = Keypair::generate_ecdsa();
+    let peerid = PeerId::from(keypair.public());
+    let behaviour = cbor::Behaviour::<Req, Res>::new(
+        [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
+        Config::default(),
+    );
+
+    //config swarm
+    let swarm_config = libp2p::swarm::Config::with_tokio_executor()
+        .with_idle_connection_timeout(Duration::from_secs(10 * 60));
+    let mut swarm = SwarmBuilder::with_existing_identity(keypair)
+        .with_tokio()
+        .with_tcp(
+            Default::default(),
+            (libp2p::tls::Config::new, libp2p::noise::Config::new),
+            libp2p::yamux::Config::default,
+        )
+        .unwrap()
+        .with_quic()
+        .with_dns()
+        .unwrap()
+        .with_websocket(
+            (libp2p::tls::Config::new, libp2p::noise::Config::new),
+            libp2p::yamux::Config::default,
+        )
+        .await
+        .unwrap()
+        .with_behaviour(|_key| behaviour)
+        .unwrap()
+        .with_swarm_config(|_conf| swarm_config)
+        .build();
+
+    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
+    swarm.listen_on(listener).unwrap();
+
+    let mut dial_addr = String::new();
+
+    let address_file = File::open("/etc/myaddress.dat").unwrap();
+    let reader = BufReader::new(address_file);
+    for i in reader.lines() {
+        let addr = i.unwrap();
+        if addr.trim().len() > 0 {
+            dial_addr.push_str(&addr);
+            break;
+        }
+    }
+
+    let dial_multiaddr: Multiaddr = dial_addr.parse().unwrap();
+    swarm.dial(dial_multiaddr).unwrap();
+
+    let request = ReqForReq {
+        peer: vec![peerid],
+        req: serde_json::to_string(&tx_req).unwrap(),
+    };
+
+    loop {
+        match swarm.select_next_some().await {
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                let req = Req {
+                    req: serde_json::to_string(&request).unwrap(),
+                };
+                swarm.behaviour_mut().send_request(&peer_id, req);
+            }
+            SwarmEvent::Behaviour(req_res) => match req_res {
+                Event::Message { message, .. } => match message {
+                    Message::Response { response, .. } => {
+                        return handle_reciept_response(response, tx_req.tx_hash);
+                    }
+                    _ => {}
+                }
+                _ => {}
+            }
+            _ => {}
+        }
+    }
+}
+
+fn handle_reciept_response(response: Res, tx_hash: String) -> Json<Reciept> {
+    if let Ok(res) = serde_json::from_str::<ResForReq>(&response.res) {
+        if let Ok(reciept) = serde_json::from_str::<Reciept>(&res.res.res) {
+            return Json(reciept);
+        } else {
+            let reciept = Reciept {
+                block_number: None,
+                hash: tx_hash,
+                from: String::new(),
+                to: String::new(),
+                value: Decimal::from_str("0.0").unwrap(),
+                satatus: "Unconfirmed".to_string(),
+                description: "Transaction not found!".to_string()
+            };
+            return Json(reciept);
+        }
+    } else {
+        let reciept = Reciept {
+            block_number: None,
+            hash: tx_hash,
+            from: String::new(),
+            to: String::new(),
+            value: Decimal::from_str("0.0").unwrap(),
+            satatus: "Unconfirmed".to_string(),
+            description: "Transaction not found!".to_string()
+        };
+        return Json(reciept);
     }
 }
