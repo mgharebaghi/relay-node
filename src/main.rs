@@ -6,5 +6,8 @@ use relay_node::rpc::handle_requests;
 async fn main() {
     let rpc_handler = tokio::spawn(handle_requests());
     let p2p_connections = tokio::spawn(run());
-    let (_, _) = tokio::try_join!(rpc_handler, p2p_connections).unwrap();
+    match tokio::try_join!(rpc_handler, p2p_connections) {
+        Ok(_) => (),
+        Err(_) => {}
+    }
 }
