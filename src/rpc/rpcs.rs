@@ -283,14 +283,14 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
                             let tx_res = TxRes {
                                 hash: transaction.tx_hash,
                                 status: "sent".to_string(),
-                                description: "Wait to submit".to_string(),
+                                description: "Wait for submit".to_string(),
                             };
                             return Json(tx_res);
                         } else {
                             let tx_res = TxRes {
                                 hash: transaction.tx_hash,
                                 status: "Error".to_string(),
-                                description: "try again later".to_string(),
+                                description: "Wrong transaction or no node".to_string(),
                             };
                             return Json(tx_res);
                         }
