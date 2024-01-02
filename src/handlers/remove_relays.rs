@@ -1,16 +1,20 @@
-use std::{fs::File, io::{BufReader, BufRead, Write}, env::consts::OS};
+use std::{
+    env::consts::OS,
+    fs::File,
+    io::{BufRead, BufReader, Write},
+};
 
 use libp2p::PeerId;
 use reqwest::Client;
 
 //remove peer from relays.dat file when it disconnected
-pub async fn remove_peer(peerid: PeerId) {
+pub async fn remove_peer(peerid: PeerId, my_addresses: &mut Vec<String>) {
     let mut relay_path = "";
-        if OS == "linux" {
-            relay_path = "/etc/relays.dat";
-        } else if OS == "windows" {
-            relay_path = "relays.dat";
-        }
+    if OS == "linux" {
+        relay_path = "/etc/relays.dat";
+    } else if OS == "windows" {
+        relay_path = "relays.dat";
+    }
     let file = File::open(relay_path).unwrap();
     let reader = BufReader::new(&file);
     let mut lines = Vec::new();
@@ -20,7 +24,25 @@ pub async fn remove_peer(peerid: PeerId) {
             lines.push(line);
         } else {
             let client = Client::new();
-            client.post("https://centichain.org/api/rmaddr").body(line).send().await.unwrap();
+            client
+                .post("https://centichain.org/api/rmaddr")
+                .body(line.clone())
+                .send()
+                .await
+                .unwrap();
+            let ip = my_addresses[0].trim_start_matches("/ip4/");
+            let ip = ip.split("/").next().unwrap();
+            if !line.contains(ip) {
+                let ip = line.trim_start_matches("/ip4/");
+                let ip = ip.split("/").next().unwrap();
+                println!("{}", ip);
+                client
+                    .post("https://centichain.org/api/rmrpc")
+                    .body(ip.to_string())
+                    .send()
+                    .await
+                    .unwrap();
+            }
         }
     }
     let mut writer = File::create(relay_path).unwrap();

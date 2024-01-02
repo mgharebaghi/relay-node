@@ -63,7 +63,7 @@ pub async fn events(
                 )
                 .unwrap();
                 println!("{}", peer_id.unwrap());
-                remove_peer(peer_id.unwrap()).await;
+                remove_peer(peer_id.unwrap(), my_addresses).await;
                 for i in relays.clone() {
                     if peer_id.unwrap() == i {
                         let i_relay = relays
@@ -92,7 +92,7 @@ pub async fn events(
                         .behaviour_mut()
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
-                    remove_peer(peer_id).await;
+                    remove_peer(peer_id, my_addresses).await;
                     break;
                 }
 
