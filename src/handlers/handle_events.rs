@@ -60,9 +60,10 @@ pub async fn events(
                     SetForegroundColor(Color::Red),
                     Print("Dialing failed with:\n".bold()),
                     ResetColor
-                ).unwrap();
+                )
+                .unwrap();
                 println!("{}", peer_id.unwrap());
-                remove_peer(peer_id.unwrap());
+                remove_peer(peer_id.unwrap()).await;
                 for i in relays.clone() {
                     if peer_id.unwrap() == i {
                         let i_relay = relays
@@ -91,7 +92,7 @@ pub async fn events(
                         .behaviour_mut()
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
-                    remove_peer(peer_id);
+                    remove_peer(peer_id).await;
                     break;
                 }
 
@@ -153,7 +154,7 @@ pub async fn events(
                         connections,
                         clients,
                         client_topic_subscriber,
-                        wallet_topic_subscriber
+                        wallet_topic_subscriber,
                     ),
                     _ => (),
                 },
@@ -172,7 +173,7 @@ pub async fn events(
                                 peer,
                                 local_peer_id,
                                 wallet,
-                                clients_topic.clone()
+                                clients_topic.clone(),
                             );
                         }
                         libp2p::request_response::Message::Response { response, .. } => {

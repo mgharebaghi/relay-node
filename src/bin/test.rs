@@ -16,5 +16,6 @@ async fn main() {
     for _i in 0..2000 {
         let response = client.post("http://45.15.157.62:3390/block").json(&req).send().await.unwrap();
         println!("{:?}", response.text().await.unwrap());
+        println!("{}", _i);
     }
 }
