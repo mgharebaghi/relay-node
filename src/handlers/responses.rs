@@ -24,11 +24,14 @@ pub fn handle_responses(
         if client_topic_subscriber.contains(res.peer.last().unwrap())
             || relay_topic_subscribers.contains(res.peer.last().unwrap())
         {
-            swarm
+            match swarm
                 .behaviour_mut()
                 .req_res
                 .send_response(channels.remove(index).channel, new_response)
-                .unwrap();
+            {
+                Ok(_) => (),
+                Err(_) => (),
+            }
         }
     } else {
         let index = channels
@@ -38,17 +41,23 @@ pub fn handle_responses(
         if client_topic_subscriber.contains(res.peer.last().unwrap())
             || relay_topic_subscribers.contains(res.peer.last().unwrap())
         {
-            swarm
+            match swarm
                 .behaviour_mut()
                 .req_res
                 .send_response(channels.remove(index).channel, response)
-                .unwrap();
+            {
+                Ok(_) => (),
+                Err(_) => (),
+            }
         } else {
-            swarm
+            match swarm
                 .behaviour_mut()
                 .req_res
                 .send_response(channels.remove(index).channel, response)
-                .unwrap();
+            {
+                Ok(_) => (),
+                Err(_) => (),
+            }
         }
     }
 }
