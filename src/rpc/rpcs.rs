@@ -19,7 +19,7 @@ use std::{net::SocketAddr, time::Duration};
 use axum::{extract, http::Method, routing::get, routing::post, Json, Router};
 use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 
-use super::structures::Block;
+use crate::handlers::structures::Block;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum TransactionScript {

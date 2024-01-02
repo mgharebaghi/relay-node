@@ -15,7 +15,6 @@ mod responses;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
-pub mod rpc;
 
 use crossterm::{
     execute,

@@ -1,4 +1,5 @@
 mod handlers;
+pub mod rpc;
 use std::env::consts::OS;
 use std::fs::{File, OpenOptions, self};
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -6,7 +7,6 @@ use std::net::TcpStream;
 use std::time::Duration;
 
 use handlers::handle_streams;
-pub use handlers::rpc;
 use handlers::structures::Channels;
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
