@@ -32,7 +32,6 @@ pub async fn remove_peer(peerid: PeerId, my_addresses: &mut Vec<String>) {
                 .unwrap();
             let ip = my_addresses[0].trim_start_matches("/ip4/");
             let ip = ip.split("/").next().unwrap();
-            println!("{}", ip);
             if !line.contains(ip) {
                 let ip = line.trim_start_matches("/ip4/");
                 let ip = ip.split("/").next().unwrap();

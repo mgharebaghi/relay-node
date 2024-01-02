@@ -168,7 +168,14 @@ struct BlockReq {
 #[derive(Debug, Serialize, Deserialize)]
 struct BlockRes {
     block: Option<Block>,
-    status: String
+    status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct TxRes {
+    hash: String,
+    status: String,
+    description: String,
 }
 
 pub async fn handle_requests() {
@@ -210,7 +217,7 @@ pub async fn handle_requests() {
         .unwrap();
 }
 
-async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> String {
+async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> Json<TxRes> {
     let keypair = Keypair::generate_ecdsa();
     // let peerid = PeerId::from(keypair.public());
     let behaviour = cbor::Behaviour::<Req, Res>::new(
@@ -272,7 +279,21 @@ async fn handle_transaction(extract::Json(transaction): extract::Json<Transactio
             SwarmEvent::Behaviour(event) => match event {
                 Event::Message { message, .. } => match message {
                     Message::Response { response, .. } => {
-                        return response.res;
+                        if response.res == "Your transaction sent.".to_string() {
+                            let tx_res = TxRes {
+                                hash: transaction.tx_hash,
+                                status: "sent".to_string(),
+                                description: "Wait to submit".to_string(),
+                            };
+                            return Json(tx_res);
+                        } else {
+                            let tx_res = TxRes {
+                                hash: transaction.tx_hash,
+                                status: "Error".to_string(),
+                                description: "try again later".to_string(),
+                            };
+                            return Json(tx_res);
+                        }
                     }
                     _ => {}
                 },
@@ -848,20 +869,20 @@ fn handle_block_response(response: Res) -> Json<BlockRes> {
         if let Ok(block) = serde_json::from_str::<Block>(&res.res.res) {
             let block_res = BlockRes {
                 block: Some(block),
-                status: "".to_string()
+                status: "".to_string(),
             };
             return Json(block_res);
         } else {
             let block_res = BlockRes {
                 block: None,
-                status: "Block not found!".to_string()
+                status: "Block not found!".to_string(),
             };
             return Json(block_res);
         }
     } else {
         let block_res = BlockRes {
             block: None,
-            status: "Block not found!".to_string()
+            status: "Block not found!".to_string(),
         };
         return Json(block_res);
     }
