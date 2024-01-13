@@ -1,11 +1,14 @@
 mod handlers;
 pub mod rpc;
 use std::env::consts::OS;
-use std::fs::{File, OpenOptions, self};
-use std::io::{BufRead, BufReader, BufWriter, Write};
+use std::fs::{self, File, OpenOptions};
+use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
+use crossterm::execute;
+use crossterm::style::{Print, ResetColor, SetForegroundColor, Stylize};
+use handlers::create_log::write_log;
 use handlers::handle_streams;
 use handlers::structures::Channels;
 use handlers::structures::CustomBehav;
@@ -18,7 +21,7 @@ use libp2p::{
     request_response::{cbor, ProtocolSupport},
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Addresses {
@@ -33,12 +36,26 @@ pub async fn run() {
     } else if OS == "windows" {
         wallet_path = "wallet.dat"
     };
-    let wallet_file = File::open(wallet_path).unwrap();
-    let reader = BufReader::new(wallet_file);
-    for addr in reader.lines() {
-        let wallet_addr = addr.unwrap();
-        if wallet_addr.trim().len() > 0 {
-            wallet.push_str(&wallet_addr);
+    let wallet_file = File::open(wallet_path);
+    match wallet_file {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            for addr in reader.lines() {
+                let wallet_addr = addr.unwrap();
+                if wallet_addr.trim().len() > 0 {
+                    wallet.push_str(&wallet_addr);
+                }
+            }
+        }
+        Err(_) => {
+            execute!(
+                stdout(),
+                SetForegroundColor(crossterm::style::Color::Red),
+                Print("Could not find the wallet address file!\n".bold()),
+                ResetColor
+            )
+            .ok();
+            std::process::exit(404);
         }
     }
 
@@ -162,12 +179,12 @@ pub async fn run() {
                 for addr in addresses.addr {
                     writeln!(writer, "{}", addr).unwrap();
                 }
-                
             }
         }
-        Err(_) => {
-            
-        }
+        Err(_) => write_log(
+            "Relay could not connect to centichain.org for get latest relays addresses!"
+                .to_string(),
+        ),
     }
 
     handle_streams(
