@@ -15,7 +15,7 @@ use libp2p::{
 };
 use rust_decimal::Decimal;
 
-use super::server::{Reciept, Req, ReqForReq, Res, ResForReq, TxReq, RcptReq, RcptRes};
+use super::server::{RcptReq, RcptRes, Reciept, Req, ReqForReq, Res, ResForReq, TxReq};
 
 pub async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json<Reciept> {
     let keypair = Keypair::generate_ecdsa();
@@ -106,7 +106,7 @@ fn handle_reciept_response(response: Res, tx_hash: String) -> Json<Reciept> {
                 from: String::new(),
                 to: String::new(),
                 value: Decimal::from_str("0.0").unwrap(),
-                satatus: "Unconfirmed".to_string(),
+                satatus: "Error".to_string(),
                 description: "Transaction not found!".to_string(),
             };
             return Json(reciept);
@@ -118,7 +118,7 @@ fn handle_reciept_response(response: Res, tx_hash: String) -> Json<Reciept> {
             from: String::new(),
             to: String::new(),
             value: Decimal::from_str("0.0").unwrap(),
-            satatus: "Unconfirmed".to_string(),
+            satatus: "Error".to_string(),
             description: "Transaction not found!".to_string(),
         };
         return Json(reciept);
