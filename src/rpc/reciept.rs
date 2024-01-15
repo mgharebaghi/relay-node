@@ -106,6 +106,7 @@ fn handle_reciept_response(response: Res, tx_hash: String) -> Json<Reciept> {
                 from: String::new(),
                 to: String::new(),
                 value: Decimal::from_str("0.0").unwrap(),
+                fee: Decimal::from_str("0.0").unwrap(),
                 satatus: "Error".to_string(),
                 description: "Transaction not found!".to_string(),
             };
@@ -118,6 +119,7 @@ fn handle_reciept_response(response: Res, tx_hash: String) -> Json<Reciept> {
             from: String::new(),
             to: String::new(),
             value: Decimal::from_str("0.0").unwrap(),
+            fee: Decimal::from_str("0.0").unwrap(),
             satatus: "Error".to_string(),
             description: "Transaction not found!".to_string(),
         };
