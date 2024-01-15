@@ -134,7 +134,7 @@ pub struct Reciept {
     #[serde_as(as = "DisplayFromStr")]
     pub value: Decimal,
     pub fee: Decimal,
-    pub satatus: String,
+    pub status: String,
     pub description: String,
 }
 
