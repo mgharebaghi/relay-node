@@ -1,11 +1,28 @@
-use std::{time::Duration, fs::File, io::{BufReader, BufRead}};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    time::Duration,
+};
 
 use axum::{extract, Json};
-use libp2p::{identity::Keypair, request_response::{cbor, ProtocolSupport, Config, Event, Message}, StreamProtocol, SwarmBuilder, Multiaddr, futures::StreamExt, swarm::SwarmEvent};
+use libp2p::{
+    futures::StreamExt,
+    identity::Keypair,
+    request_response::{cbor, Config, Event, Message, ProtocolSupport},
+    swarm::SwarmEvent,
+    Multiaddr, StreamProtocol, SwarmBuilder,
+};
 
-use super::{Transaction, server::{TxRes, Req, Res}};
+use crate::handlers::create_log::write_log;
 
-pub async fn handle_transaction(extract::Json(transaction): extract::Json<Transaction>) -> Json<TxRes> {
+use super::{
+    server::{Req, Res, TxRes},
+    Transaction,
+};
+
+pub async fn handle_transaction(
+    extract::Json(transaction): extract::Json<Transaction>,
+) -> Json<TxRes> {
     let keypair = Keypair::generate_ecdsa();
     // let peerid = PeerId::from(keypair.public());
     let behaviour = cbor::Behaviour::<Req, Res>::new(
@@ -46,10 +63,14 @@ pub async fn handle_transaction(extract::Json(transaction): extract::Json<Transa
     let address_file = File::open("/etc/myaddress.dat").unwrap();
     let reader = BufReader::new(address_file);
     for i in reader.lines() {
-        let addr = i.unwrap();
-        if addr.trim().len() > 0 {
-            dial_addr.push_str(&addr);
-            break;
+        match i {
+            Ok(addr) => {
+                if addr.trim().len() > 0 {
+                    dial_addr.push_str(&addr);
+                    break;
+                }
+            }
+            Err(e) => write_log(format!("{}", e)),
         }
     }
 

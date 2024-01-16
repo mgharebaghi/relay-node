@@ -9,7 +9,7 @@ use tower::limit::ConcurrencyLimitLayer;
 use axum::{http::Method, routing::get, routing::post, Router};
 use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 
-use crate::handlers::structures::Block;
+use crate::handlers::{structures::Block, create_log::write_log};
 
 use super::{
     block::{handle_all_blocks, handle_block},
@@ -207,7 +207,7 @@ pub async fn handle_requests() {
         }
         println!("your public ip: {}", ip);
     } else {
-        println!("You dont have public ip, listener: {}", addr);
+        write_log("Can not find public ip for get API requests!".to_string())
     }
 
     axum_server::bind(addr)
