@@ -1,6 +1,9 @@
-use libp2p::{PeerId, Swarm, gossipsub::IdentTopic};
+use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
 
-use super::structures::{CustomBehav, OutNode};
+use super::{
+    create_log::write_log,
+    structures::{CustomBehav, OutNode},
+};
 
 pub fn handle_outnode(
     peerid: PeerId,
@@ -14,18 +17,28 @@ pub fn handle_outnode(
     let outnode = OutNode { peer_id: peerid };
     let serialize_out_node = serde_json::to_string(&outnode).unwrap();
     if client_topic_subscriber.len() > 0 {
-        swarm
+        match swarm
             .behaviour_mut()
             .gossipsub
             .publish(clients_topic, serialize_out_node.as_bytes())
-            .unwrap();
+        {
+            Ok(_) => {}
+            Err(_) => {
+                write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
+            }
+        }
     }
 
     if relays.len() > 0 && clients.len() == 0 {
-        swarm
+        match swarm
             .behaviour_mut()
             .gossipsub
             .publish(relay_topic, "i dont have any clients".as_bytes())
-            .unwrap();
+        {
+            Ok(_) => {}
+            Err(_) => {
+                write_log("gossipsub publish error in handle out node(relay_topic)!".to_string());
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 use crate::rpc::Transaction;
 
 use super::{
+    create_log::write_log,
     send_response::send_res,
     structures::{Channels, CustomBehav, Req, ReqForReq, Res},
 };
@@ -24,11 +25,14 @@ pub fn handle_requests(
         let response = Res {
             res: wallet.clone(),
         };
-        swarm
+        match swarm
             .behaviour_mut()
             .req_res
             .send_response(channel, response)
-            .unwrap();
+        {
+            Ok(_) => {}
+            Err(e) => write_log(format!("{:?}", e)),
+        }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
         let send_transaction = swarm.behaviour_mut().gossipsub.publish(topic, request.req);
         match send_transaction {

@@ -1,9 +1,9 @@
-use std::io::stdout;
 use std::net::Ipv4Addr;
 
 use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
+use super::create_log::write_log;
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::handle;
 use super::outnodes::handle_outnode;
@@ -12,10 +12,6 @@ use super::requests::handle_requests;
 use super::responses::handle_responses;
 use super::send_address::send_address;
 use super::structures::{Channels, CustomBehav, CustomBehavEvent};
-use crossterm::{
-    execute,
-    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
-};
 
 pub async fn events(
     mut swarm: &mut Swarm<CustomBehav>,
@@ -33,21 +29,13 @@ pub async fn events(
     wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     loop {
-        match swarm.next().await.unwrap() {
+        match swarm.select_next_some().await {
             SwarmEvent::NewListenAddr { address, .. } => {
                 let str_addr = address.clone().to_string();
                 let ipv4 = str_addr.split("/").nth(2).unwrap();
                 let ip: Ipv4Addr = ipv4.parse().unwrap();
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses).await;
-                } else {
-                    execute!(
-                        stdout(),
-                        SetForegroundColor(Color::Magenta),
-                        Print("local IP!\n"),
-                        ResetColor
-                    )
-                    .unwrap();
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
@@ -55,22 +43,16 @@ pub async fn events(
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
-                execute!(
-                    stdout(),
-                    SetForegroundColor(Color::Red),
-                    Print("Dialing failed with:\n".bold()),
-                    ResetColor
-                )
-                .unwrap();
-                println!("{}", peer_id.unwrap());
+                write_log(format!("Dialing failed with: {}", peer_id.unwrap()));
                 remove_peer(peer_id.unwrap(), my_addresses).await;
                 for i in relays.clone() {
                     if peer_id.unwrap() == i {
-                        let i_relay = relays
-                            .iter()
-                            .position(|pid| pid == &peer_id.unwrap())
-                            .unwrap();
-                        relays.remove(i_relay);
+                        match relays.iter().position(|pid| pid == &peer_id.unwrap()) {
+                            Some(index) => {
+                                relays.remove(index);
+                            }
+                            None => {}
+                        }
                     }
                 }
                 break;
@@ -85,8 +67,12 @@ pub async fn events(
                 }
 
                 if relays.contains(&peer_id) {
-                    let i_relay = relays.iter().position(|pid| pid == &peer_id).unwrap();
-                    relays.remove(i_relay);
+                    match relays.iter().position(|pid| pid == &peer_id) {
+                        Some(index) => {
+                            relays.remove(index);
+                        }
+                        None => {}
+                    }
 
                     swarm
                         .behaviour_mut()
@@ -120,9 +106,13 @@ pub async fn events(
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
                         .iter()
-                        .position(|pid| *pid == peer_id)
-                        .unwrap();
-                    relay_topic_subscribers.remove(i_relay_subscriber);
+                        .position(|pid| *pid == peer_id);
+                    match i_relay_subscriber {
+                        Some(index) => {
+                            relay_topic_subscribers.remove(index);
+                        }
+                        None => {}
+                    }
                 }
             }
             SwarmEvent::Behaviour(custom_behav) => match custom_behav {

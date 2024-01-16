@@ -55,6 +55,7 @@ pub async fn run() {
                 ResetColor
             )
             .ok();
+            write_log("Could not find the wallet address file!".to_string());
             std::process::exit(404);
         }
     }

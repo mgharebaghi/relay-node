@@ -1,17 +1,20 @@
-use std::{fs::{File, self}, io::{BufReader, BufRead, stdout}};
+use std::{
+    fs::{self, File},
+    io::{stdout, BufRead, BufReader},
+};
 
-use libp2p::{PeerId, Swarm, gossipsub::IdentTopic, Multiaddr};
+use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use rand::seq::SliceRandom;
 
+mod gossip_messages;
 mod handle_events;
 mod handle_listeners;
-mod remove_relays;
 mod outnodes;
-mod gossip_messages;
-mod send_address;
+mod remove_relays;
 mod requests;
-mod send_response;
 mod responses;
+mod send_address;
+mod send_response;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
@@ -21,6 +24,8 @@ use crossterm::{
     execute,
     style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
 };
+
+use crate::handlers::create_log::write_log;
 
 use self::structures::Channels;
 //handle streams that come to swarm events and relays.dat file to add or remove addresses
@@ -59,14 +64,21 @@ pub async fn handle_streams(
                     .choose(&mut rand::thread_rng())
                     .unwrap()
                     .clone();
-                swarm.dial(rnd_dial_addr.clone()).unwrap();
-                execute!(
-                    stdout(),
-                    SetForegroundColor(Color::Blue),
-                    Print("Dialing With:\n".bold()),
-                    ResetColor
-                ).unwrap();
-                println!("{}", rnd_dial_addr);
+                match swarm.dial(rnd_dial_addr.clone()) {
+                    Ok(_) => {
+                        execute!(
+                            stdout(),
+                            SetForegroundColor(Color::Blue),
+                            Print("Dialing With:\n".bold()),
+                            ResetColor
+                        )
+                        .unwrap();
+                        println!("{}", rnd_dial_addr);
+                    }
+                    Err(_) => {
+                        write_log("dialing problem!".to_string());
+                    }
+                }
             }
         }
 
@@ -82,8 +94,8 @@ pub async fn handle_streams(
             &mut connections.clone(),
             relay_topic_subscribers,
             client_topic_subscriber,
-            wallet, 
-            wallet_topic_subscriber
+            wallet,
+            wallet_topic_subscriber,
         )
         .await;
     }

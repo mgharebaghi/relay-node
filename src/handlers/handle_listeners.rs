@@ -27,8 +27,7 @@ async fn send_addr_to_server(full_addr: String) {
         path = "/etc/relays.dat"
     } else if os == "windows" {
         path = "relays.dat"
-    } else {
-    };
+    }
 
     let client = reqwest::Client::new();
     let res = client
@@ -39,45 +38,59 @@ async fn send_addr_to_server(full_addr: String) {
 
     match res {
         Ok(response) => {
-            let deserialize_res: Addresses =
-                serde_json::from_str(&response.text().await.unwrap()).unwrap();
+            let mut addresses = String::new();
+            match response.text().await {
+                Ok(all_addr) => {
+                    addresses.push_str(&all_addr);
+                }
+                Err(_) => {
+                    write_log("Writing addresses from centichain server problem!".to_string());
+                }
+            }
 
-            for addr in deserialize_res.addr {
-                let exists = fs::metadata(path).is_ok();
+            match serde_json::from_str::<Addresses>(&addresses) {
+                Ok(deserialize_res) => {
+                    for addr in deserialize_res.addr {
+                        let exists = fs::metadata(path).is_ok();
 
-                if exists {
-                    let mut prev_addresses = Vec::new();
-                    let read = File::open(path).unwrap();
-                    let reader = BufReader::new(read);
-                    for i in reader.lines() {
-                        let addr = i.unwrap();
-                        prev_addresses.push(addr);
-                    } //save addresses to prev_addresses for check new addresses
+                        if exists {
+                            let mut prev_addresses = Vec::new();
+                            let read = File::open(path).unwrap();
+                            let reader = BufReader::new(read);
+                            for i in reader.lines() {
+                                let addr = i.unwrap();
+                                prev_addresses.push(addr);
+                            } //save addresses to prev_addresses for check new addresses
 
-                    let file = OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .open(path)
-                        .unwrap();
-                    let mut buf_writer = BufWriter::new(&file);
-                    if !prev_addresses.contains(&addr) {
-                        writeln!(buf_writer, "{}", addr).unwrap();
-                    }
-                } else {
-                    File::create(path).unwrap();
-                    let file = OpenOptions::new().write(true).append(true).open(path);
-                    match file {
-                        Ok(relays_file) => {
-                            let mut buf_writer = BufWriter::new(&relays_file);
-                            writeln!(buf_writer, "{}", addr).unwrap();
+                            let file = OpenOptions::new()
+                                .write(true)
+                                .append(true)
+                                .open(path)
+                                .unwrap();
+                            let mut buf_writer = BufWriter::new(&file);
+                            if !prev_addresses.contains(&addr) {
+                                writeln!(buf_writer, "{}", addr).unwrap();
+                            }
+                        } else {
+                            File::create(path).unwrap();
+                            let file = OpenOptions::new().write(true).append(true).open(path);
+                            match file {
+                                Ok(relays_file) => {
+                                    let mut buf_writer = BufWriter::new(&relays_file);
+                                    writeln!(buf_writer, "{}", addr).unwrap();
+                                }
+                                Err(e) => println!("{}", e),
+                            }
                         }
-                        Err(e) => println!("{}", e),
                     }
+                }
+                Err(_) => {
+                    write_log("deserialize addresses that get from server problem!".to_string());
                 }
             }
         }
-        Err(_) => {
-            write_log("coud not get any response for send your address to centichain.org!".to_string())
-        }
+        Err(_) => write_log(
+            "coud not get any response for send your address to centichain.org!".to_string(),
+        ),
     }
 }
