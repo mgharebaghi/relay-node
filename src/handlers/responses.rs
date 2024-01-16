@@ -9,7 +9,7 @@ pub fn handle_responses(
     swarm: &mut Swarm<CustomBehav>,
     client_topic_subscriber: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
-    // wallet_topic_subscribers: &mut Vec<PeerId>,
+    connections: &mut Vec<PeerId>,
 ) {
     let mut res: ResForReq = serde_json::from_str(&response.res).unwrap();
 
@@ -24,6 +24,7 @@ pub fn handle_responses(
                     .position(|channel| channel.peer == res.peer.last().unwrap().clone());
                 if client_topic_subscriber.contains(res.peer.last().unwrap())
                     || relay_topic_subscribers.contains(res.peer.last().unwrap())
+                    || connections.contains(res.peer.last().unwrap())
                 {
                     match i_channels {
                         Some(index) => {
@@ -45,6 +46,7 @@ pub fn handle_responses(
                     .position(|channel| channel.peer == res.peer.last().unwrap().clone());
                 if client_topic_subscriber.contains(res.peer.last().unwrap())
                     || relay_topic_subscribers.contains(res.peer.last().unwrap())
+                    || connections.contains(res.peer.last().unwrap())
                 {
                     match i_channels {
                         Some(index) => {
