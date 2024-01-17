@@ -24,7 +24,6 @@ pub fn handle_responses(
                     .position(|channel| channel.peer == res.peer.last().unwrap().clone());
                 if client_topic_subscriber.contains(res.peer.last().unwrap())
                     || relay_topic_subscribers.contains(res.peer.last().unwrap())
-                    || connections.contains(res.peer.last().unwrap())
                 {
                     match i_channels {
                         Some(index) => {
@@ -46,7 +45,6 @@ pub fn handle_responses(
                     .position(|channel| channel.peer == res.peer.last().unwrap().clone());
                 if client_topic_subscriber.contains(res.peer.last().unwrap())
                     || relay_topic_subscribers.contains(res.peer.last().unwrap())
-                    || connections.contains(res.peer.last().unwrap())
                 {
                     match i_channels {
                         Some(index) => {
