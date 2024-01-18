@@ -48,7 +48,7 @@ pub async fn remove_peer(peerid: PeerId, my_addresses: &mut Vec<String>) {
                             {
                                 Ok(_) => {}
                                 Err(_) => {
-                                    write_log("can not post the ip for remove rpc!".to_string());
+                                    write_log("can not post the ip for remove rpc in remove relay section!".to_string());
                                 }
                             }
                         }

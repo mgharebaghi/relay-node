@@ -98,7 +98,8 @@ pub async fn events(
                             relays,
                             clients,
                             relay_topic.clone(),
-                        );
+                            my_addresses
+                        ).await;
                     }
                     None => {}
                 }
@@ -174,7 +175,6 @@ pub async fn events(
                                 swarm,
                                 client_topic_subscriber,
                                 relay_topic_subscribers,
-                                connections
                             );
                         }
                     },

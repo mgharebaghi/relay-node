@@ -9,7 +9,6 @@ pub fn handle_responses(
     swarm: &mut Swarm<CustomBehav>,
     client_topic_subscriber: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
-    connections: &mut Vec<PeerId>,
 ) {
     let mut res: ResForReq = serde_json::from_str(&response.res).unwrap();
 
