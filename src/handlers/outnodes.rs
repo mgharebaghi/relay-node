@@ -37,24 +37,26 @@ pub async fn handle_outnode(
             .gossipsub
             .publish(relay_topic, "i dont have any clients".as_bytes())
         {
-            Ok(_) => {
-                let client = Client::new();
-                let trim_my_addr = my_addresses[0].trim_start_matches("/ip4/");
-                let my_ip = trim_my_addr.split("/").next().unwrap();
-                match client
-                    .post("https://centichain.org/api/rmrpc")
-                    .body(my_ip.to_string())
-                    .send()
-                    .await
-                {
-                    Ok(_) => {}
-                    Err(_) => {
-                        write_log("can not post the ip for remove rpc in outnodes section!".to_string());
-                    }
-                }
-            }
+            Ok(_) => {}
             Err(_) => {
                 write_log("gossipsub publish error in handle out node(relay_topic)!".to_string());
+            }
+        }
+    }
+
+    if clients.len() < 1 {
+        let client = Client::new();
+        let trim_my_addr = my_addresses[0].trim_start_matches("/ip4/");
+        let my_ip = trim_my_addr.split("/").next().unwrap();
+        match client
+            .post("https://centichain.org/api/rmrpc")
+            .body(my_ip.to_string())
+            .send()
+            .await
+        {
+            Ok(_) => {}
+            Err(_) => {
+                write_log("can not post the ip for remove rpc in outnodes section!".to_string());
             }
         }
     }
