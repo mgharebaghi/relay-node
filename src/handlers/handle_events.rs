@@ -134,7 +134,7 @@ pub async fn events(
                             connections,
                             relay_topic_subscribers,
                             my_addresses,
-                        );
+                        ).await;
                     }
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
                         topic,
@@ -146,7 +146,7 @@ pub async fn events(
                         clients,
                         client_topic_subscriber,
                         wallet_topic_subscriber,
-                    ).await,
+                    ),
                     _ => (),
                 },
                 CustomBehavEvent::ReqRes(req_res) => match req_res {
