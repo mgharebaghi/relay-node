@@ -1,9 +1,10 @@
 use libp2p::{gossipsub::TopicHash, PeerId, Swarm};
+use reqwest::Client;
 
 use super::{create_log::write_log, structures::CustomBehav};
 
 //send listener addresses to another relays and clients
-pub fn send_address(
+pub async fn send_address(
     topic: TopicHash,
     peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,
@@ -47,6 +48,24 @@ pub fn send_address(
         {
             Ok(_) => {}
             Err(e) => write_log(format!("{}", e)),
+        }
+
+        if clients.len() >= 1 {
+            let trim_my_addr = my_addresses[0].trim_start_matches("/ip4/");
+            let my_ip = trim_my_addr.split("/").next().unwrap();
+            let client = Client::new();
+            let res = client
+                .post("https://centichain.org/api/rpc")
+                .body(my_ip.to_string())
+                .send()
+                .await;
+            match res {
+                Ok(_) => {}
+                Err(_) => write_log(
+                    "Can not send your public ip to the server in gossip messages check!"
+                        .to_string(),
+                ),
+            }
         }
     }
 
