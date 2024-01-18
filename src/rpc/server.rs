@@ -9,7 +9,7 @@ use tower::limit::ConcurrencyLimitLayer;
 use axum::{http::Method, routing::get, routing::post, Router};
 use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 
-use crate::handlers::{structures::Block, create_log::write_log};
+use crate::handlers::structures::Block;
 
 use super::{
     block::{handle_all_blocks, handle_block},
@@ -192,23 +192,6 @@ pub async fn handle_requests() {
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100));
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));
-
-    if let Some(ip) = public_ip::addr().await {
-        let full_address = format!("http://{}:3390", ip);
-        let client = reqwest::Client::new();
-        let res = client
-            .post("https://centichain.org/api/rpc")
-            .body(full_address)
-            .send()
-            .await;
-        match res {
-            Ok(_) => println!("Your address sent."),
-            Err(_) => println!("problem to send address!"),
-        }
-        println!("your public ip: {}", ip);
-    } else {
-        write_log("Can not find public ip for get API requests!".to_string())
-    }
 
     axum_server::bind(addr)
         .serve(app.into_make_service())

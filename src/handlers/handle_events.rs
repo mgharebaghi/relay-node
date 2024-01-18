@@ -134,7 +134,7 @@ pub async fn events(
                             connections,
                             relay_topic_subscribers,
                             my_addresses,
-                        );
+                        ).await;
                     }
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
                         topic,

@@ -8,12 +8,13 @@ use libp2p::{
     gossipsub::{IdentTopic, Message},
     PeerId, Swarm,
 };
+use reqwest::Client;
 
 use crate::handlers::structures::ImSync;
 
 use super::{create_log::write_log, structures::CustomBehav};
 
-pub fn handle_gossip_message(
+pub async fn handle_gossip_message(
     propagation_source: PeerId,
     message: Message,
     local_peer_id: PeerId,
@@ -91,6 +92,21 @@ pub fn handle_gossip_message(
             if msg == "i have a client".to_string() && connections.contains(&propagation_source) {
                 if !relays.contains(&propagation_source) {
                     relays.push(propagation_source);
+                }
+                let trim_my_addr = my_addresses[0].trim_start_matches("/ip4/");
+                let my_ip = trim_my_addr.split("/").next().unwrap();
+                let client = Client::new();
+                let res = client
+                    .post("https://centichain.org/api/rpc")
+                    .body(my_ip.to_string())
+                    .send()
+                    .await;
+                match res {
+                    Ok(_) => {}
+                    Err(_) => write_log(
+                        "Can not send your public ip to the server in gossip messages check!"
+                            .to_string(),
+                    ),
                 }
             }
 
