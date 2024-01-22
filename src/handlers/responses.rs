@@ -32,7 +32,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, new_response)
                             {
                                 Ok(_) => (),
-                                Err(_) => (),
+                                Err(e) => println!("Error from response:\n{:#?}", e),
                             }
                         }
                         None => {}
@@ -53,7 +53,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, response)
                             {
                                 Ok(_) => (),
-                                Err(_) => (),
+                                Err(e) => println!("Error from second else resposne:\n{:#?}", e),
                             }
                         }
                         None => {}
@@ -67,7 +67,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, response)
                             {
                                 Ok(_) => (),
-                                Err(_) => (),
+                                Err(_) => println!("error from third else!"),
                             }
                         }
                         None => {}
