@@ -1,6 +1,6 @@
 use libp2p::{PeerId, Swarm};
 
-use super::structures::{Channels, CustomBehav, Res, ResForReq};
+use super::{create_log::write_log, structures::{Channels, CustomBehav, Res, ResForReq}};
 
 pub fn handle_responses(
     response: Res,
@@ -32,7 +32,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, new_response)
                             {
                                 Ok(_) => (),
-                                Err(e) => println!("Error from response:\n{:#?}", e),
+                                Err(e) => write_log(format!("Error from response:\n{:#?}", e)),
                             }
                         }
                         None => {}
@@ -53,7 +53,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, response)
                             {
                                 Ok(_) => (),
-                                Err(e) => println!("Error from second else resposne:\n{:#?}", e),
+                                Err(e) => write_log(format!("Error from second else resposne:\n{:#?}", e)),
                             }
                         }
                         None => {}
@@ -67,7 +67,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, response)
                             {
                                 Ok(_) => (),
-                                Err(_) => println!("error from third else!"),
+                                Err(_) => write_log("error from third else!".to_string()),
                             }
                         }
                         None => {}
