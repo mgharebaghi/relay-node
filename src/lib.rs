@@ -1,5 +1,6 @@
 mod handlers;
 pub mod rpc;
+pub use rpc::handle_requests;
 use std::env::consts::OS;
 use std::fs::{self, File, OpenOptions};
 use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
@@ -21,7 +22,6 @@ use libp2p::{
     request_response::{cbor, ProtocolSupport},
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
-use rpc::handle_requests;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -188,7 +188,7 @@ pub async fn run() {
                 .to_string(),
         ),
     }
-    
+
     handle_streams(
         local_peer_id,
         &mut swarm,
