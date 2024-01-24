@@ -21,6 +21,7 @@ use libp2p::{
     request_response::{cbor, ProtocolSupport},
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
+use rpc::handle_requests;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -187,6 +188,8 @@ pub async fn run() {
                 .to_string(),
         ),
     }
+
+    handle_requests().await;
 
     handle_streams(
         local_peer_id,
