@@ -188,9 +188,7 @@ pub async fn run() {
                 .to_string(),
         ),
     }
-
-    handle_requests().await;
-
+    
     handle_streams(
         local_peer_id,
         &mut swarm,
