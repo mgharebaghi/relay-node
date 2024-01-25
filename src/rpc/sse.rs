@@ -5,7 +5,10 @@ use std::{
     time::Duration,
 };
 
-use axum::response::sse::{Event, Sse};
+use axum::{
+    response::sse::{Event, Sse},
+    Json,
+};
 use futures_util::{stream::Stream, StreamExt};
 use libp2p::{
     gossipsub::{self, Behaviour, IdentTopic, MessageAuthenticity},
@@ -15,6 +18,8 @@ use libp2p::{
 };
 
 use crate::handlers::create_log::write_log;
+
+use super::Transaction;
 
 pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let keys = Keypair::generate_ecdsa();
@@ -82,8 +87,14 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
         loop {
             match swarm.select_next_some().await {
                 SwarmEvent::Behaviour(gossipmsg) => match gossipmsg {
-                    gossipsub::Event::Message { .. } => {
-                        tx.send(Ok(Event::default().data("hi"))).unwrap();
+                    gossipsub::Event::Message { message, .. } => {
+                        let msg = String::from_utf8(message.data).unwrap();
+                        if let Ok(transaction) = serde_json::from_str::<Transaction>(&msg) {
+                            tx.send(Ok(
+                                Event::default().data(serde_json::to_string(&transaction).unwrap())
+                            ))
+                            .unwrap();
+                        }
                     }
                     _ => {}
                 },
