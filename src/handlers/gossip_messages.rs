@@ -128,6 +128,7 @@ pub async fn handle_gossip_message(
 
             //send blocks and transaction of mempool to sse server
             if let Ok(_) = serde_json::from_str::<Transaction>(&msg) {
+                println!("trx");
                 let sse_topic = IdentTopic::new("sse");
                 match swarm.behaviour_mut().gossipsub.publish(sse_topic, msg.as_bytes()) {
                     Ok(_) => {}
@@ -137,6 +138,7 @@ pub async fn handle_gossip_message(
                     }
                 }
             } else if let Ok(_) = serde_json::from_str::<Block>(&msg) {
+                println!("block");
                 let sse_topic = IdentTopic::new("sse");
                 match swarm.behaviour_mut().gossipsub.publish(sse_topic, msg.as_bytes()) {
                     Ok(_) => {}

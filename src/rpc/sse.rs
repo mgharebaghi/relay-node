@@ -87,6 +87,7 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                     gossipsub::Event::Message { message, .. } => {
                         let msg = String::from_utf8(message.data).unwrap();
                         if let Ok(transaction) = serde_json::from_str::<Transaction>(&msg) {
+                            println!("sse trx");
                             match tx
                                 .send(Ok(Event::default()
                                     .data(serde_json::to_string(&transaction).unwrap())))
@@ -98,6 +99,7 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 ),
                             }
                         } else if let Ok(block) = serde_json::from_str::<Block>(&msg) {
+                            println!("sse block");
                             match tx.send(Ok(
                                 Event::default().data(serde_json::to_string(&block).unwrap())
                             )) {
