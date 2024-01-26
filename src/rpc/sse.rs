@@ -87,15 +87,25 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                     gossipsub::Event::Message { message, .. } => {
                         let msg = String::from_utf8(message.data).unwrap();
                         if let Ok(transaction) = serde_json::from_str::<Transaction>(&msg) {
-                            tx.send(Ok(
-                                Event::default().data(serde_json::to_string(&transaction).unwrap())
-                            ))
-                            .unwrap();
+                            match tx
+                                .send(Ok(Event::default()
+                                    .data(serde_json::to_string(&transaction).unwrap())))
+                            {
+                                Ok(_) => {}
+                                Err(_) => write_log(
+                                    "error from send tx channel in transaction section!"
+                                        .to_string(),
+                                ),
+                            }
                         } else if let Ok(block) = serde_json::from_str::<Block>(&msg) {
-                            tx.send(Ok(
+                            match tx.send(Ok(
                                 Event::default().data(serde_json::to_string(&block).unwrap())
-                            ))
-                            .unwrap()
+                            )) {
+                                Ok(_) => {}
+                                Err(_) => write_log(
+                                    "error from send tx channel in block section!".to_string(),
+                                ),
+                            }
                         }
                     }
                     _ => {}

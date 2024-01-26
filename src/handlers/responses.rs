@@ -67,7 +67,7 @@ pub fn handle_responses(
                                 .send_response(channels.remove(index).channel, response)
                             {
                                 Ok(_) => (),
-                                Err(_) => write_log("error from third else!".to_string()),
+                                Err(_) => write_log("error from third else response!".to_string()),
                             }
                         }
                         None => {}
