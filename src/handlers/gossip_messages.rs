@@ -131,13 +131,19 @@ pub async fn handle_gossip_message(
                 let sse_topic = IdentTopic::new("sse");
                 match swarm.behaviour_mut().gossipsub.publish(sse_topic, msg.as_bytes()) {
                     Ok(_) => {}
-                    Err(_) => {}
+                    Err(_) => {
+                        println!("sse trx sending error");
+                        write_log("error from sse gossiping in trx!".to_string());
+                    }
                 }
             } else if let Ok(_) = serde_json::from_str::<Block>(&msg) {
                 let sse_topic = IdentTopic::new("sse");
                 match swarm.behaviour_mut().gossipsub.publish(sse_topic, msg.as_bytes()) {
                     Ok(_) => {}
-                    Err(_) => {}
+                    Err(_) => {
+                        println!("sse block sending error");
+                        write_log("error from sse gossiping in block!".to_string());
+                    }
                 }   
             }
         }
