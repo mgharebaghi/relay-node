@@ -20,7 +20,7 @@ use super::Transaction;
 
 pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let keys = Keypair::generate_ecdsa();
-    let topic = IdentTopic::new("client");
+    let topic = IdentTopic::new("sse");
     let privacy = MessageAuthenticity::Signed(keys.clone());
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
 

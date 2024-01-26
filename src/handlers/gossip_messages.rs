@@ -12,7 +12,7 @@ use reqwest::Client;
 
 use crate::handlers::structures::ImSync;
 
-use super::{create_log::write_log, structures::CustomBehav};
+use super::{create_log::write_log, structures::{Block, CustomBehav, Transaction}};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,
@@ -124,6 +124,21 @@ pub async fn handle_gossip_message(
                     }
                     None => {}
                 }
+            }
+
+            //send blocks and transaction of mempool to sse server
+            if let Ok(_) = serde_json::from_str::<Transaction>(&msg) {
+                let sse_topic = IdentTopic::new("sse");
+                match swarm.behaviour_mut().gossipsub.publish(sse_topic, msg.as_bytes()) {
+                    Ok(_) => {}
+                    Err(_) => {}
+                }
+            } else if let Ok(_) = serde_json::from_str::<Block>(&msg) {
+                let sse_topic = IdentTopic::new("sse");
+                match swarm.behaviour_mut().gossipsub.publish(sse_topic, msg.as_bytes()) {
+                    Ok(_) => {}
+                    Err(_) => {}
+                }   
             }
         }
         Err(_) => write_log("convert gossip message to string problem!".to_string()),

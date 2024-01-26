@@ -64,6 +64,8 @@ pub async fn run() {
     let relay_topic = IdentTopic::new("relay");
     let clients_topic = IdentTopic::new("client");
     let tx_topic = IdentTopic::new("transaction");
+    let sse_topic = IdentTopic::new("sse");
+    
 
     //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
@@ -86,6 +88,7 @@ pub async fn run() {
 
     behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
     behaviour.gossipsub.subscribe(&tx_topic.clone()).unwrap();
+    behaviour.gossipsub.subscribe(&sse_topic.clone()).unwrap();
     behaviour
         .gossipsub
         .subscribe(&clients_topic.clone())
