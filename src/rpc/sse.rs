@@ -5,10 +5,7 @@ use std::{
     time::Duration,
 };
 
-use axum::{
-    response::sse::{Event, Sse},
-    Json,
-};
+use axum::response::sse::{Event, Sse};
 use futures_util::{stream::Stream, StreamExt};
 use libp2p::{
     gossipsub::{self, Behaviour, IdentTopic, MessageAuthenticity},
@@ -17,7 +14,7 @@ use libp2p::{
     Multiaddr, SwarmBuilder,
 };
 
-use crate::handlers::create_log::write_log;
+use crate::handlers::{create_log::write_log, structures::Block};
 
 use super::Transaction;
 
@@ -94,6 +91,11 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 Event::default().data(serde_json::to_string(&transaction).unwrap())
                             ))
                             .unwrap();
+                        } else if let Ok(block) = serde_json::from_str::<Block>(&msg) {
+                            tx.send(Ok(
+                                Event::default().data(serde_json::to_string(&block).unwrap())
+                            ))
+                            .unwrap()
                         }
                     }
                     _ => {}
