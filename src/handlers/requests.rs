@@ -34,6 +34,18 @@ pub fn handle_requests(
             Err(e) => write_log(format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
+        let sse_topic = IdentTopic::new("sse");
+        match swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(sse_topic, request.req.clone())
+        {
+            Ok(_) => {}
+            Err(_) => {
+                println!("sse trx sending error");
+                write_log("error from sse gossiping in trx!".to_string());
+            }
+        }
         let send_transaction = swarm.behaviour_mut().gossipsub.publish(topic, request.req);
         match send_transaction {
             Ok(_) => {
