@@ -175,3 +175,9 @@ pub struct CoinbaseOutput {
     pub utxos: Vec<OutputUtxo>,
     pub number: u8,
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct GossipMessage {
+    pub block: Block,
+    pub next_leader: String,
+}

@@ -14,7 +14,7 @@ use libp2p::{
     Multiaddr, SwarmBuilder,
 };
 
-use crate::handlers::{create_log::write_log, structures::Block};
+use crate::handlers::{create_log::write_log, structures::GossipMessage};
 
 use super::Transaction;
 
@@ -97,10 +97,10 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                         .to_string(),
                                 ),
                             }
-                        } else if let Ok(block) = serde_json::from_str::<Block>(&msg) {
+                        } else if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
                             println!("block sent!");
                             match tx.send(Ok(
-                                Event::default().data(serde_json::to_string(&block).unwrap())
+                                Event::default().data(serde_json::to_string(&gossipmessage).unwrap())
                             )) {
                                 Ok(_) => {}
                                 Err(_) => write_log(
