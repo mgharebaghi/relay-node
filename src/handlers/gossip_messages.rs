@@ -12,7 +12,7 @@ use reqwest::Client;
 
 use crate::handlers::structures::ImSync;
 
-use super::{create_log::write_log, structures::CustomBehav};
+use super::{create_log::write_log, structures::{Block, CustomBehav}};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,
@@ -124,6 +124,10 @@ pub async fn handle_gossip_message(
                     }
                     None => {}
                 }
+            }
+
+            if let Ok(block) = serde_json::from_str::<Block>(&msg) {
+                println!("get block");
             }
         }
         Err(_) => write_log("convert gossip message to string problem!".to_string()),
