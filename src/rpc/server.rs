@@ -185,7 +185,7 @@ pub async fn handle_requests() {
         .allow_origin(Any)
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
-        .route("/tx", post(handle_transaction))
+        .route("/trx", post(handle_transaction))
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))

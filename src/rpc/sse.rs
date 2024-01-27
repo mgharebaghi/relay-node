@@ -14,15 +14,23 @@ use libp2p::{
     Multiaddr, SwarmBuilder,
 };
 
+use serde::{Deserialize, Serialize};
+
 use crate::handlers::{create_log::write_log, structures::GossipMessage};
 
-use super::Transaction;
+use super::{server::Reciept, Transaction};
 
-// struct SseTrx {
-//     event: String,
-//     hash: String,
+#[derive(Debug, Serialize, Deserialize)]
+struct SseResponse {
+    sse: String,
+    body: SseResBody
+}
 
-// }
+#[derive(Debug, Serialize, Deserialize)]
+enum SseResBody {
+    Reciept(Reciept),
+    GossipMessage(GossipMessage)
+}
 
 pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let keys = Keypair::generate_ecdsa();
@@ -93,10 +101,24 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                     gossipsub::Event::Message { message, .. } => {
                         let msg = String::from_utf8(message.data).unwrap();
                         if let Ok(transaction) = serde_json::from_str::<Transaction>(&msg) {
-
+                            let reciept = Reciept {
+                                hash: transaction.tx_hash,
+                                block_number: None,
+                                from: transaction.output.output_data.sigenr_public_keys[0].to_string().clone(),
+                                to: transaction.output.output_data.utxos[0].output_unspent.public_key.clone(),
+                                value: transaction.value,
+                                fee: transaction.output.output_data.fee,
+                                date: transaction.date,
+                                status: "Pending".to_string(),
+                                description: "".to_string(),
+                            };
+                            let sse_response = SseResponse {
+                                sse: "trx".to_string(),
+                                body: SseResBody::Reciept(reciept)
+                            };
                             match tx
                                 .send(Ok(Event::default()
-                                    .data(serde_json::to_string(&transaction).unwrap())))
+                                    .data(serde_json::to_string(&sse_response).unwrap())))
                             {
                                 Ok(_) => {}
                                 Err(_) => write_log(
@@ -105,8 +127,12 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                                 ),
                             }
                         } else if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
+                            let sse_response = SseResponse {
+                                sse: "block".to_string(),
+                                body: SseResBody::GossipMessage(gossipmessage)
+                            };
                             match tx.send(Ok(
-                                Event::default().data(serde_json::to_string(&gossipmessage).unwrap())
+                                Event::default().data(serde_json::to_string(&sse_response).unwrap())
                             )) {
                                 Ok(_) => {}
                                 Err(_) => write_log(
