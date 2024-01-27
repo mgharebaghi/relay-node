@@ -98,7 +98,6 @@ pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 ),
                             }
                         } else if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
-                            println!("block sent!");
                             match tx.send(Ok(
                                 Event::default().data(serde_json::to_string(&gossipmessage).unwrap())
                             )) {

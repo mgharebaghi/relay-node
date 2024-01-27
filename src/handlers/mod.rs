@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{stdout, BufRead, BufReader},
+    io::{BufRead, BufReader},
 };
 
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
@@ -20,11 +20,6 @@ use handle_events::events;
 use structures::CustomBehav;
 pub mod create_log;
 
-use crossterm::{
-    execute,
-    style::{Color, Print, ResetColor, SetForegroundColor, Stylize},
-};
-
 use crate::handlers::create_log::write_log;
 
 use self::structures::Channels;
@@ -42,7 +37,6 @@ pub async fn handle_streams(
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
-    wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     loop {
         let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
@@ -66,14 +60,7 @@ pub async fn handle_streams(
                     .clone();
                 match swarm.dial(rnd_dial_addr.clone()) {
                     Ok(_) => {
-                        execute!(
-                            stdout(),
-                            SetForegroundColor(Color::Blue),
-                            Print("Dialing With:\n".bold()),
-                            ResetColor
-                        )
-                        .unwrap();
-                        println!("{}", rnd_dial_addr);
+                        write_log(format!("Dialing with: {}", rnd_dial_addr));
                     }
                     Err(_) => {
                         write_log("dialing problem!".to_string());
@@ -95,7 +82,6 @@ pub async fn handle_streams(
             relay_topic_subscribers,
             client_topic_subscriber,
             wallet,
-            wallet_topic_subscriber,
         )
         .await;
     }

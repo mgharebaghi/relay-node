@@ -12,7 +12,6 @@ pub fn send_address(
     connections: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
-    wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     if topic.to_string() == "relay".to_string() {
         relay_topic_subscribers.push(peer_id);

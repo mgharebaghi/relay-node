@@ -11,7 +11,7 @@ use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
 use super::responses::handle_responses;
 use super::send_address::send_address;
-use super::structures::{Block, Channels, CustomBehav, CustomBehavEvent};
+use super::structures::{Channels, CustomBehav, CustomBehavEvent};
 
 pub async fn events(
     mut swarm: &mut Swarm<CustomBehav>,
@@ -26,7 +26,6 @@ pub async fn events(
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
-    wallet_topic_subscriber: &mut Vec<PeerId>,
 ) {
     loop {
         match swarm.select_next_some().await {
@@ -144,8 +143,7 @@ pub async fn events(
                         relay_topic_subscribers,
                         connections,
                         clients,
-                        client_topic_subscriber,
-                        wallet_topic_subscriber,
+                        client_topic_subscriber
                     ),
                     _ => (),
                 },
