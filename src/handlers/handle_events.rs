@@ -123,9 +123,7 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        if let Ok(_block) = serde_json::from_str::<Block>(&String::from_utf8(message.data.clone()).unwrap()) {
-                            println!("get block");
-                        }
+                        println!("get a message");
 
                         handle_gossip_message(
                             propagation_source,

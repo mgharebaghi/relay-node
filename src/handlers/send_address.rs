@@ -50,7 +50,7 @@ pub fn send_address(
         }
     }
 
-    if topic.to_string() == "sse" {
+    if topic.to_string() == "sse".to_string() {
         swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
     }
 }

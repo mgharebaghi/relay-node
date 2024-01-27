@@ -12,7 +12,7 @@ use reqwest::Client;
 
 use crate::handlers::structures::ImSync;
 
-use super::{create_log::write_log, structures::{Block, CustomBehav}};
+use super::{create_log::write_log, structures::CustomBehav};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,
