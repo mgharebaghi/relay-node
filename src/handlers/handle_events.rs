@@ -123,7 +123,8 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        println!("get a message");
+                        
+                        println!("{:#?}", String::from_utf8(message.data.clone()).unwrap());
 
                         handle_gossip_message(
                             propagation_source,
