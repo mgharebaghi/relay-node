@@ -12,7 +12,11 @@ use tower_http::cors::{AllowHeaders, Any, CorsLayer};
 use crate::handlers::structures::Block;
 
 use super::{
-    block::{handle_all_blocks, handle_block}, reciept::{handle_all_reciepts, handle_reciept, handle_user_reciepts}, sse::sse_trx, transaction::handle_transaction, utxo::handle_utxo
+    block::{handle_all_blocks, handle_block},
+    reciept::{handle_all_reciepts, handle_reciept, handle_user_reciepts},
+    sse::handle_sse,
+    transaction::handle_transaction,
+    utxo::handle_utxo,
 };
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -186,7 +190,7 @@ pub async fn handle_requests() {
         .route("/allrec", get(handle_all_reciepts))
         .route("/allblocks", get(handle_all_blocks))
         .route("/block", post(handle_block))
-        .route("/trxsse", get(sse_trx))
+        .route("/sse", get(handle_sse))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100));
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));

@@ -18,7 +18,7 @@ use crate::handlers::{create_log::write_log, structures::GossipMessage};
 
 use super::Transaction;
 
-pub async fn sse_trx() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let keys = Keypair::generate_ecdsa();
     let topic = IdentTopic::new("sse");
     let privacy = MessageAuthenticity::Signed(keys.clone());
