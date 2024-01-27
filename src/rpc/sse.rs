@@ -107,9 +107,9 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                                     .clone(),
                                 value: transaction.value,
                                 fee: transaction.fee,
-                                date: transaction.date,
                                 status: "Pending".to_string(),
                                 description: "".to_string(),
+                                date: transaction.date,
                             };
                             let sse_response = SseResponse {
                                 sse: "trx".to_string(),
