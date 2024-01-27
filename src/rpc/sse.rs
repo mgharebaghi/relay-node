@@ -18,6 +18,12 @@ use crate::handlers::{create_log::write_log, structures::GossipMessage};
 
 use super::Transaction;
 
+// struct SseTrx {
+//     event: String,
+//     hash: String,
+
+// }
+
 pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let keys = Keypair::generate_ecdsa();
     let topic = IdentTopic::new("sse");
@@ -87,6 +93,7 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                     gossipsub::Event::Message { message, .. } => {
                         let msg = String::from_utf8(message.data).unwrap();
                         if let Ok(transaction) = serde_json::from_str::<Transaction>(&msg) {
+
                             match tx
                                 .send(Ok(Event::default()
                                     .data(serde_json::to_string(&transaction).unwrap())))
