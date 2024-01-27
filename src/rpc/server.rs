@@ -89,7 +89,7 @@ pub async fn handle_requests() {
         .route("/allrec", get(handle_all_reciepts))
         .route("/allblocks", get(handle_all_blocks))
         .route("/block", post(handle_block))
-        .route("/sse", get(handle_sse))
+        .route("/trxsse", get(handle_sse))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100));
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));

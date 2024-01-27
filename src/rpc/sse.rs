@@ -16,14 +16,14 @@ use libp2p::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::{create_log::write_log, structures::{GossipMessage, Transaction}};
+use crate::handlers::{create_log::write_log, structures::Transaction};
 
 use super::server::Reciept;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SseResponse<T> {
     sse: String,
-    body: T
+    body: T,
 }
 
 pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -98,8 +98,13 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                             let reciept = Reciept {
                                 hash: transaction.tx_hash,
                                 block_number: None,
-                                from: transaction.output.output_data.sigenr_public_keys[0].to_string().clone(),
-                                to: transaction.output.output_data.utxos[0].output_unspent.public_key.clone(),
+                                from: transaction.output.output_data.sigenr_public_keys[0]
+                                    .to_string()
+                                    .clone(),
+                                to: transaction.output.output_data.utxos[0]
+                                    .output_unspent
+                                    .public_key
+                                    .clone(),
                                 value: transaction.value,
                                 fee: transaction.fee,
                                 date: transaction.date,
@@ -108,11 +113,10 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                             };
                             let sse_response = SseResponse {
                                 sse: "trx".to_string(),
-                                body: reciept
+                                body: reciept,
                             };
-                            match tx
-                                .send(Ok(Event::default()
-                                    .data(serde_json::to_string(&sse_response).unwrap())))
+                            match tx.send(Ok(Event::default()
+                                .data(serde_json::to_string(&sse_response).unwrap())))
                             {
                                 Ok(_) => {}
                                 Err(_) => write_log(
@@ -120,14 +124,14 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                                         .to_string(),
                                 ),
                             }
-                        } else if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
+                        } else if let Ok(reciept) = serde_json::from_str::<Reciept>(&msg) {
                             let sse_response = SseResponse {
                                 sse: "block".to_string(),
-                                body: gossipmessage.block
+                                body: reciept,
                             };
-                            match tx.send(Ok(
-                                Event::default().data(serde_json::to_string(&sse_response).unwrap())
-                            )) {
+                            match tx.send(Ok(Event::default()
+                                .data(serde_json::to_string(&sse_response).unwrap())))
+                            {
                                 Ok(_) => {}
                                 Err(_) => write_log(
                                     "error from send tx channel in block section!".to_string(),
