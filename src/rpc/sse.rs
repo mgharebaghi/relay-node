@@ -21,15 +21,9 @@ use crate::handlers::{create_log::write_log, structures::GossipMessage};
 use super::{server::Reciept, Transaction};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct SseResponse {
+struct SseResponse<T> {
     sse: String,
-    body: SseResBody
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-enum SseResBody {
-    Reciept(Reciept),
-    GossipMessage(GossipMessage)
+    body: T
 }
 
 pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
@@ -114,7 +108,7 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                             };
                             let sse_response = SseResponse {
                                 sse: "trx".to_string(),
-                                body: SseResBody::Reciept(reciept)
+                                body: reciept
                             };
                             match tx
                                 .send(Ok(Event::default()
@@ -129,7 +123,7 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                         } else if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
                             let sse_response = SseResponse {
                                 sse: "block".to_string(),
-                                body: SseResBody::GossipMessage(gossipmessage)
+                                body: gossipmessage
                             };
                             match tx.send(Ok(
                                 Event::default().data(serde_json::to_string(&sse_response).unwrap())
