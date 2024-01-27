@@ -33,6 +33,7 @@ pub struct Transaction {
     pub output: TxOutput,
     #[serde_as(as = "DisplayFromStr")]
     pub value: Decimal,
+    pub date: String
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
