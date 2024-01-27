@@ -98,8 +98,6 @@ pub struct OutputData {
     pub number: u8,
     pub utxos: Vec<OutputUtxo>,
     pub sigenr_public_keys: Vec<sp_core::ecdsa::Public>,
-    #[serde_as(as = "DisplayFromStr")]
-    pub fee: Decimal,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -154,6 +152,8 @@ pub struct Transaction {
     pub output: TxOutput,
     #[serde_as(as = "DisplayFromStr")]
     pub value: Decimal,
+    #[serde_as(as = "DisplayFromStr")]
+    pub fee: Decimal,
     pub date: String,
 }
 
