@@ -15,7 +15,9 @@ use libp2p::{
 };
 use rust_decimal::Decimal;
 
-use super::server::{RcptReq, RcptRes, Reciept, Req, ReqForReq, Res, ResForReq, TxReq};
+use crate::handlers::structures::{Req, ReqForReq, Res, ResForReq};
+
+use super::server::{RcptReq, RcptRes, Reciept, TxReq};
 
 pub async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json<Reciept> {
     let keypair = Keypair::generate_ecdsa();

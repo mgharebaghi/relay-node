@@ -13,12 +13,9 @@ use libp2p::{
     Multiaddr, StreamProtocol, SwarmBuilder,
 };
 
-use crate::handlers::create_log::write_log;
+use crate::handlers::{create_log::write_log, structures::{Req, Res, Transaction}};
 
-use super::{
-    server::{Req, Res, TxRes},
-    Transaction,
-};
+use super::server::TxRes;
 
 pub async fn handle_transaction(
     extract::Json(transaction): extract::Json<Transaction>,

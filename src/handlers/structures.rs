@@ -187,3 +187,10 @@ pub struct GossipMessage {
     pub block: Block,
     pub next_leader: String,
 }
+
+//users UTXO structure
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct UTXO {
+    pub public_key: String,
+    pub utxos: Vec<UtxoData>,
+}

@@ -1,9 +1,7 @@
-use crate::rpc::Transaction;
-
 use super::{
     create_log::write_log,
     send_response::send_res,
-    structures::{Channels, CustomBehav, Req, ReqForReq, Res},
+    structures::{Channels, CustomBehav, Req, ReqForReq, Res, Transaction},
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use rand::seq::SliceRandom;

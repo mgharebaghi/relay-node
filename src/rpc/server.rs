@@ -1,8 +1,6 @@
-use libp2p::PeerId;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use sp_core::ecdsa::{Public, Signature};
 use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 
@@ -18,107 +16,6 @@ use super::{
     transaction::handle_transaction,
     utxo::handle_utxo,
 };
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub enum TransactionScript {
-    SingleSig,
-    MultiSig,
-}
-
-#[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct Transaction {
-    pub tx_hash: String,
-    pub input: TxInput,
-    pub output: TxOutput,
-    #[serde_as(as = "DisplayFromStr")]
-    pub value: Decimal,
-    pub date: String
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct TxInput {
-    pub input_hash: String,
-    pub input_data: InputData,
-    pub signatures: Vec<Signature>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct InputData {
-    pub number: u8,
-    pub utxos: Vec<UtxoData>,
-    pub script: TransactionScript,
-}
-
-#[serde_as]
-//a UTXO structure model
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct UtxoData {
-    pub transaction_hash: String,
-    #[serde_as(as = "DisplayFromStr")]
-    pub unspent: Decimal,
-    pub output_hash: String,
-    pub block_number: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct TxOutput {
-    pub output_hash: String,
-    pub output_data: OutputData,
-}
-
-#[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputData {
-    pub number: u8,
-    pub utxos: Vec<OutputUtxo>,
-    pub sigenr_public_keys: Vec<Public>,
-    #[serde_as(as = "DisplayFromStr")]
-    pub fee: Decimal,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputUtxo {
-    pub hash: String,
-    pub output_unspent: OutputUnspent,
-}
-
-#[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct OutputUnspent {
-    pub public_key: String,
-    #[serde_as(as = "DisplayFromStr")]
-    pub unspent: Decimal,
-    pub rnum: u32,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct UTXO {
-    pub public_key: String,
-    pub utxos: Vec<UtxoData>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Req {
-    pub req: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Res {
-    pub res: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ResForReq {
-    pub peer: Vec<PeerId>,
-    pub res: Res,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ReqForReq {
-    pub peer: Vec<PeerId>,
-    pub req: String,
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReqForUtxo {

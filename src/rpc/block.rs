@@ -13,9 +13,9 @@ use libp2p::{
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
 
-use crate::handlers::structures::Block;
+use crate::handlers::structures::{Block, Req, ReqForReq, Res, ResForReq};
 
-use super::server::{ Req, ReqForReq, Res, ResForReq, AllBlocksRes, BlockReq, BlockRes};
+use super::server::{ AllBlocksRes, BlockReq, BlockRes};
 
 pub async fn handle_all_blocks() -> Json<AllBlocksRes> {
     let keypair = Keypair::generate_ecdsa();

@@ -16,9 +16,9 @@ use libp2p::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::{create_log::write_log, structures::GossipMessage};
+use crate::handlers::{create_log::write_log, structures::{GossipMessage, Transaction}};
 
-use super::{server::Reciept, Transaction};
+use super::server::Reciept;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SseResponse<T> {
@@ -101,7 +101,7 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                                 from: transaction.output.output_data.sigenr_public_keys[0].to_string().clone(),
                                 to: transaction.output.output_data.utxos[0].output_unspent.public_key.clone(),
                                 value: transaction.value,
-                                fee: transaction.output.output_data.fee,
+                                fee: transaction.fee,
                                 date: transaction.date,
                                 status: "Pending".to_string(),
                                 description: "".to_string(),

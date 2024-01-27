@@ -3,7 +3,9 @@ use std::{time::Duration, fs::File, io::{BufReader, BufRead}};
 use axum::{extract, Json};
 use libp2p::{identity::Keypair, PeerId, request_response::{cbor, ProtocolSupport, Config, Message}, StreamProtocol, SwarmBuilder, Multiaddr, futures::StreamExt, swarm::SwarmEvent};
 
-use super::server::{ReqForUtxo, UTXO, Req, Res, ReqForReq, ResForReq};
+use crate::handlers::structures::{Req, ReqForReq, Res, ResForReq, UTXO};
+
+use super::server::ReqForUtxo;
 
 pub async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> Json<UTXO> {
     let keypair = Keypair::generate_ecdsa();
