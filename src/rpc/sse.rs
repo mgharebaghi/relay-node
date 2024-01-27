@@ -11,22 +11,17 @@ use libp2p::{
     gossipsub::{self, Behaviour, IdentTopic, MessageAuthenticity},
     identity::Keypair,
     swarm::SwarmEvent,
-    Multiaddr, SwarmBuilder,
+    Multiaddr, Swarm, SwarmBuilder,
 };
 
-use serde::{Deserialize, Serialize};
-
-use crate::handlers::{create_log::write_log, structures::Transaction};
+use crate::handlers::{
+    create_log::write_log,
+    structures::{GossipMessage, Transaction},
+};
 
 use super::server::Reciept;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct SseResponse<T> {
-    sse: String,
-    body: T,
-}
-
-pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+async fn swarm() -> Swarm<gossipsub::Behaviour> {
     let keys = Keypair::generate_ecdsa();
     let topic = IdentTopic::new("sse");
     let privacy = MessageAuthenticity::Signed(keys.clone());
@@ -85,9 +80,13 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
     let dial_multiaddr: Multiaddr = dial_addr.parse().unwrap();
     swarm.dial(dial_multiaddr).unwrap();
 
+    swarm
+}
+
+pub async fn trx_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
-
+    let mut swarm = swarm().await;
     tokio::spawn(async move {
         loop {
             match swarm.select_next_some().await {
@@ -96,8 +95,8 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                         let msg = String::from_utf8(message.data).unwrap();
                         if let Ok(transaction) = serde_json::from_str::<Transaction>(&msg) {
                             let reciept = Reciept {
-                                hash: transaction.tx_hash,
                                 block_number: None,
+                                hash: transaction.tx_hash,
                                 from: transaction.output.output_data.sigenr_public_keys[0]
                                     .to_string()
                                     .clone(),
@@ -111,13 +110,9 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                                 description: "".to_string(),
                                 date: transaction.date,
                             };
-                            let sse_response = SseResponse {
-                                sse: "trx".to_string(),
-                                body: reciept,
-                            };
-                            match tx.send(Ok(Event::default()
-                                .data(serde_json::to_string(&sse_response).unwrap())))
-                            {
+                            match tx.send(Ok(
+                                Event::default().data(serde_json::to_string(&reciept).unwrap())
+                            )) {
                                 Ok(_) => {}
                                 Err(_) => write_log(
                                     "error from send tx channel in transaction section!"
@@ -125,16 +120,44 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                                 ),
                             }
                         } else if let Ok(reciept) = serde_json::from_str::<Reciept>(&msg) {
-                            let sse_response = SseResponse {
-                                sse: "block".to_string(),
-                                body: reciept,
-                            };
-                            match tx.send(Ok(Event::default()
-                                .data(serde_json::to_string(&sse_response).unwrap())))
-                            {
+                            match tx.send(Ok(
+                                Event::default().data(serde_json::to_string(&reciept).unwrap())
+                            )) {
                                 Ok(_) => {}
                                 Err(_) => write_log(
                                     "error from send tx channel in block section!".to_string(),
+                                ),
+                            }
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+    });
+
+    Sse::new(stream)
+}
+
+pub async fn block_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+    let mut swarm = swarm().await;
+    tokio::spawn(async move {
+        loop {
+            match swarm.select_next_some().await {
+                SwarmEvent::Behaviour(gossipmsg) => match gossipmsg {
+                    gossipsub::Event::Message { message, .. } => {
+                        let msg = String::from_utf8(message.data).unwrap();
+                        if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
+                            match tx.send(Ok(Event::default()
+                                .data(serde_json::to_string(&gossipmessage.block).unwrap())))
+                            {
+                                Ok(_) => {}
+                                Err(_) => write_log(
+                                    "error from send tx channel in transaction section!"
+                                        .to_string(),
                                 ),
                             }
                         }

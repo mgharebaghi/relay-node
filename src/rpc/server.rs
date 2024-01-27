@@ -12,7 +12,7 @@ use crate::handlers::structures::Block;
 use super::{
     block::{handle_all_blocks, handle_block},
     reciept::{handle_all_reciepts, handle_reciept, handle_user_reciepts},
-    sse::handle_sse,
+    sse::{block_sse, trx_sse},
     transaction::handle_transaction,
     utxo::handle_utxo,
 };
@@ -89,7 +89,8 @@ pub async fn handle_requests() {
         .route("/allrec", get(handle_all_reciepts))
         .route("/allblocks", get(handle_all_blocks))
         .route("/block", post(handle_block))
-        .route("/trxsse", get(handle_sse))
+        .route("/trxsse", get(trx_sse))
+        .route("/blocksse", get(block_sse))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100));
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));
