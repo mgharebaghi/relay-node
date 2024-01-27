@@ -123,7 +123,7 @@ pub async fn handle_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> 
                         } else if let Ok(gossipmessage) = serde_json::from_str::<GossipMessage>(&msg) {
                             let sse_response = SseResponse {
                                 sse: "block".to_string(),
-                                body: gossipmessage
+                                body: gossipmessage.block
                             };
                             match tx.send(Ok(
                                 Event::default().data(serde_json::to_string(&sse_response).unwrap())
