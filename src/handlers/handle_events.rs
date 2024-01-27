@@ -11,7 +11,7 @@ use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
 use super::responses::handle_responses;
 use super::send_address::send_address;
-use super::structures::{Channels, CustomBehav, CustomBehavEvent};
+use super::structures::{Block, Channels, CustomBehav, CustomBehavEvent};
 
 pub async fn events(
     mut swarm: &mut Swarm<CustomBehav>,
@@ -123,6 +123,10 @@ pub async fn events(
                         message,
                         ..
                     } => {
+                        if let Ok(_block) = serde_json::from_str::<Block>(&String::from_utf8(message.data.clone()).unwrap()) {
+                            println!("get block");
+                        }
+
                         handle_gossip_message(
                             propagation_source,
                             message,

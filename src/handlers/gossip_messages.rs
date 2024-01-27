@@ -126,9 +126,6 @@ pub async fn handle_gossip_message(
                 }
             }
 
-            if let Ok(block) = serde_json::from_str::<Block>(&msg) {
-                println!("get block");
-            }
         }
         Err(_) => write_log("convert gossip message to string problem!".to_string()),
     } //convert messages to string
