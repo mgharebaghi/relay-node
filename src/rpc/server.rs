@@ -137,6 +137,7 @@ pub struct Reciept {
     pub fee: Decimal,
     pub status: String,
     pub description: String,
+    pub date: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]

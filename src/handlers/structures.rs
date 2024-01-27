@@ -1,8 +1,12 @@
-use libp2p::{swarm::NetworkBehaviour, PeerId, request_response::{cbor, ResponseChannel}};
+use libp2p::{
+    request_response::{cbor, ResponseChannel},
+    swarm::NetworkBehaviour,
+    PeerId,
+};
 use rust_decimal::Decimal;
-use serde::{Serialize, Deserialize};
-use sp_core::ecdsa::Signature;
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
+use sp_core::ecdsa::Signature;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Req {
@@ -122,7 +126,7 @@ pub struct BlockHeader {
     pub validator_blocks_number: u64,
     pub merkel_root: String,
     pub block_signature: BlockSign,
-    pub date: String
+    pub date: String,
 }
 
 #[serde_as]
@@ -133,7 +137,7 @@ pub struct UtxoData {
     #[serde_as(as = "DisplayFromStr")]
     pub unspent: Decimal,
     pub output_hash: String,
-    pub block_number: i64
+    pub block_number: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -150,6 +154,7 @@ pub struct Transaction {
     pub output: TxOutput,
     #[serde_as(as = "DisplayFromStr")]
     pub value: Decimal,
+    pub date: String,
 }
 
 #[serde_as]
