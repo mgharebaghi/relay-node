@@ -122,7 +122,7 @@ pub struct BlockHeader {
     pub validator_blocks_number: u64,
     pub merkel_root: String,
     pub block_signature: BlockSign,
-    pub generate_time: String
+    pub date: String
 }
 
 #[serde_as]
