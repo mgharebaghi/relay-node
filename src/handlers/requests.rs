@@ -42,7 +42,6 @@ pub fn handle_requests(
         {
             Ok(_) => {}
             Err(_) => {
-                println!("sse trx sending error");
                 write_log("error from sse gossiping in trx!".to_string());
             }
         }
