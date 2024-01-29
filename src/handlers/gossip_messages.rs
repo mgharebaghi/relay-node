@@ -5,8 +5,7 @@ use std::{
 };
 
 use libp2p::{
-    gossipsub::{IdentTopic, Message},
-    PeerId, Swarm,
+    gossipsub::{IdentTopic, Message}, PeerId, Swarm
 };
 use reqwest::Client;
 

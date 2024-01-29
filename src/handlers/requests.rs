@@ -7,7 +7,7 @@ use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, S
 use rand::seq::SliceRandom;
 
 //handle requests that recieved from clients or relays
-pub fn handle_requests(
+pub async fn handle_requests(
     request: Req,
     clients: &mut Vec<PeerId>,
     swarm: &mut Swarm<CustomBehav>,

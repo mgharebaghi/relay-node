@@ -27,5 +27,6 @@ serde_with = "^3.3"
 rust_decimal = "^1.33"
 futures-util = "0.3.30"
 tokio-stream = "0.1.14"
+mongodb = {version= "^2.4", features= ["tokio-runtime"] }
 # openssl = "0.10.59"
 # openssl-sys = "0.9.95"

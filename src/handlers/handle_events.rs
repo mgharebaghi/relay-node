@@ -163,7 +163,7 @@ pub async fn events(
                                 local_peer_id,
                                 wallet,
                                 clients_topic.clone(),
-                            );
+                            ).await;
                         }
                         libp2p::request_response::Message::Response { response, .. } => {
                             handle_responses(
