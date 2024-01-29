@@ -12,6 +12,7 @@ use mongodb::bson::{doc, from_document, to_document};
 
 pub async fn handle_transactions(message: Message) {
     if let Ok(mut transaction) = serde_json::from_slice::<Transaction>(&message.data) {
+        println!("in transaction gossip");
         transaction.fee = transaction.value * Decimal::from_str("0.01").unwrap();
         //create hash of transaction
         let mut check_hasher = Sha256::new();
