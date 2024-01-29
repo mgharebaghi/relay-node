@@ -28,5 +28,7 @@ rust_decimal = "^1.33"
 futures-util = "0.3.30"
 tokio-stream = "0.1.14"
 mongodb = {version= "^2.4", features= ["tokio-runtime"] }
+sha2 = "^0.10"
+chrono = "^0.4"
 # openssl = "0.10.59"
 # openssl-sys = "0.9.95"

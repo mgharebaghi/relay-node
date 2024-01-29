@@ -19,11 +19,17 @@ pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
 pub mod create_log;
+mod db_connection;
+mod handle_messages;
+mod recieved_block;
+mod check_trx;
+mod reciept;
+mod nodes_sync_announce;
 
 
 use crate::handlers::create_log::write_log;
 
-use self::structures::Channels;
+use self::structures::{Channels, FullNodes};
 //handle streams that come to swarm events and relays.dat file to add or remove addresses
 pub async fn handle_streams(
     local_peer_id: PeerId,
@@ -38,6 +44,8 @@ pub async fn handle_streams(
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
+    leader: &mut String, 
+    fullnodes: Vec<FullNodes>
 ) {
     loop {
         let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
@@ -83,6 +91,8 @@ pub async fn handle_streams(
             relay_topic_subscribers,
             client_topic_subscriber,
             wallet,
+            leader,
+            fullnodes.clone()
         )
         .await;
     }

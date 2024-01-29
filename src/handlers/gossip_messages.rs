@@ -11,7 +11,7 @@ use reqwest::Client;
 
 use crate::handlers::structures::ImSync;
 
-use super::{create_log::write_log, structures::CustomBehav};
+use super::{create_log::write_log, handle_messages::msg_check, structures::{CustomBehav, FullNodes}};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,
@@ -24,6 +24,8 @@ pub async fn handle_gossip_message(
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     my_addresses: &mut Vec<String>,
+    leader: &mut String, 
+    fullnodes: Vec<FullNodes>
 ) {
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
@@ -124,6 +126,8 @@ pub async fn handle_gossip_message(
                     None => {}
                 }
             }
+
+            msg_check(message, leader, fullnodes).await;
 
         }
         Err(_) => write_log("convert gossip message to string problem!".to_string()),

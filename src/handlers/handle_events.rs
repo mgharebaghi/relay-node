@@ -11,7 +11,7 @@ use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
 use super::responses::handle_responses;
 use super::send_address::send_address;
-use super::structures::{Channels, CustomBehav, CustomBehavEvent};
+use super::structures::{Channels, CustomBehav, CustomBehavEvent, FullNodes};
 
 pub async fn events(
     mut swarm: &mut Swarm<CustomBehav>,
@@ -26,6 +26,8 @@ pub async fn events(
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
+    leader: &mut String, 
+    fullnodes: Vec<FullNodes>
 ) {
     loop {
         match swarm.select_next_some().await {
@@ -133,6 +135,8 @@ pub async fn events(
                             connections,
                             relay_topic_subscribers,
                             my_addresses,
+                            leader,
+                            fullnodes.clone()
                         ).await;
                     }
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(

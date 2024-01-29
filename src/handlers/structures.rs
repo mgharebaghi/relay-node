@@ -6,7 +6,7 @@ use libp2p::{
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use sp_core::ecdsa::Signature;
+use sp_core::ecdsa::{Public, Signature};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Req {
@@ -193,4 +193,32 @@ pub struct GossipMessage {
 pub struct UTXO {
     pub public_key: String,
     pub utxos: Vec<UtxoData>,
+}
+
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Reciept {
+    pub block_number: Option<i64>,
+    pub hash: String,
+    pub from: String,
+    pub to: String,
+    #[serde_as(as = "DisplayFromStr")]
+    pub value: Decimal,
+    pub fee: Decimal,
+    pub status: String,
+    pub description: String,
+    pub date: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NextLeader {
+    pub identifier_peer_id: PeerId,
+    pub next_leader: PeerId,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
+pub struct FullNodes {
+    pub peer_id: PeerId,
+    pub waiting: i64,
+    pub public_key: Public,
 }

@@ -11,7 +11,7 @@ use crossterm::execute;
 use crossterm::style::{Print, ResetColor, SetForegroundColor, Stylize};
 use handlers::create_log::write_log;
 use handlers::handle_streams;
-use handlers::structures::Channels;
+use handlers::structures::{Channels, FullNodes};
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
@@ -189,6 +189,11 @@ pub async fn run() {
         ),
     }
 
+
+    
+    let mut leader = String::new();
+    let fullnode_subs: Vec<FullNodes> = Vec::new();
+
     handle_streams(
         local_peer_id,
         &mut swarm,
@@ -202,6 +207,8 @@ pub async fn run() {
         &mut relay_topic_subscribers,
         &mut client_topic_subscribers,
         &mut wallet,
+        &mut leader,
+        fullnode_subs
     )
     .await;
 }
