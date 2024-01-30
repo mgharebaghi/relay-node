@@ -28,6 +28,7 @@ pub async fn handle_gossip_message(
     fullnodes: &mut Vec<FullNodes>
 ) {
 
+    println!("full nodes in new gossip: {:?}", fullnodes);
     msg_check(message.clone(), leader, fullnodes).await;
 
     match String::from_utf8(message.data.clone()) {
