@@ -18,6 +18,7 @@ use mongodb::{
 pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_subs: Vec<FullNodes>) {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
+            println!("fullnodes: {:#?}", fullnode_subs);
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
             println!("validator peer id: {}", validator_peerid);
             //check leader that is equal with curren leader in our leader or not

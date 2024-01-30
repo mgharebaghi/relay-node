@@ -27,8 +27,9 @@ pub async fn handle_gossip_message(
     leader: &mut String, 
     fullnodes: Vec<FullNodes>
 ) {
+
     msg_check(message.clone(), leader, fullnodes).await;
-    
+
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
             if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
