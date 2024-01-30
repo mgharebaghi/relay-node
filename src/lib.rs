@@ -125,7 +125,8 @@ pub async fn run() {
     let mut client_topic_subscribers: Vec<PeerId> = Vec::new();
     let mut clients: Vec<PeerId> = Vec::new();
     let mut relays: Vec<PeerId> = Vec::new();
-
+    let mut leader = String::new();
+    let mut fullnode_subs: Vec<FullNodes> = Vec::new();
     let mut channels: Vec<Channels> = Vec::new();
     let mut my_addresses = Vec::new();
 
@@ -188,11 +189,6 @@ pub async fn run() {
                 .to_string(),
         ),
     }
-
-
-    
-    let mut leader = String::new();
-    let mut fullnode_subs: Vec<FullNodes> = Vec::new();
 
     handle_streams(
         local_peer_id,
