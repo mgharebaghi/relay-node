@@ -23,6 +23,7 @@ pub async fn verifying_block(
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
+            println!("validator peer id: {}", validator_peerid);
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
             if leader.len() > 0 {
