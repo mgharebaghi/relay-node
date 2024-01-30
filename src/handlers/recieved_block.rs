@@ -23,7 +23,6 @@ pub async fn verifying_block(
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
-            println!("in block verify");
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
             if leader.len() > 0 {
@@ -65,12 +64,18 @@ pub async fn verifying_block(
                             if verify_block_sign {
                                 submit_block(gossip_message, leader).await;
                             } else {
+                                println!("verify block sign error!");
                             }
                         } else {
+                            println!("check pid with public key error!");
                         }
                     }
-                    Err(_) => {}
+                    Err(_) => {
+                        println!("validator public key error!");
+                    }
                 }
+            } else {
+                println!("validate leader error!");
             }
         }
         Err(_) => {

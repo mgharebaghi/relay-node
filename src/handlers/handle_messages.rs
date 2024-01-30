@@ -9,8 +9,6 @@ use super::{
 pub async fn msg_check(message: Message, mut leader: &mut String, fullnodes: Vec<FullNodes>) {
     let str_msg = String::from_utf8(message.data.clone()).unwrap();
 
-    println!("msg check fn");
-
     handle_sync_message(&mut fullnodes.clone(), &str_msg);
 
     // handle_transactions(message.clone()).await;
