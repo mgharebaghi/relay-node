@@ -108,35 +108,88 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
 
             let last_block_filter = doc! {"_id": -1};
             let last_block_find_opt = FindOneOptions::builder().sort(last_block_filter).build();
-            let last_block_doc = blocks_coll
-                .find_one(None, last_block_find_opt)
-                .await
-                .unwrap();
-            let last_block: Block = from_document(last_block_doc.unwrap()).unwrap();
+            let last_block_doc = blocks_coll.find_one(None, last_block_find_opt).await;
 
-            let block_verify = check_txs(gossip_message.clone(), utxos_coll.clone()).await; //remove transaction if it is in mempool or remove from UTXOs collection if it is not in mempool
+            match last_block_doc {
+                Ok(doc) => {
+                    match doc {
+                        Some(last_block_document) => {
+                            let last_block: Block = from_document(last_block_document).unwrap();
 
-            if block_verify && gossip_message.next_leader != gossip_message.block.header.validator {
-                match same_block {
-                    None => {
-                        if last_block.header.blockhash == gossip_message.block.header.prevhash {
-                            let new_block_doc = to_document(&gossip_message.block).unwrap();
-                            blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+                            let block_verify =
+                                check_txs(gossip_message.clone(), utxos_coll.clone()).await; //remove transaction if it is in mempool or remove from UTXOs collection if it is not in mempool
 
-                            handle_block_reward(gossip_message.clone(), utxos_coll.clone()).await; //insert or update node utxos for rewards and fees
+                            if block_verify
+                                && gossip_message.next_leader
+                                    != gossip_message.block.header.validator
+                            {
+                                match same_block {
+                                    None => {
+                                        if last_block.header.blockhash
+                                            == gossip_message.block.header.prevhash
+                                        {
+                                            let new_block_doc =
+                                                to_document(&gossip_message.block).unwrap();
+                                            blocks_coll
+                                                .insert_one(new_block_doc, None)
+                                                .await
+                                                .unwrap(); //insert block to DB
 
-                            handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
-                            //update utxos in database for transactions
-                            //check next leader
-                            leader.clear();
-                            leader.push_str(&gossip_message.next_leader);
-                        } else {
-                            println!("block prev hash problem!");
+                                            handle_block_reward(
+                                                gossip_message.clone(),
+                                                utxos_coll.clone(),
+                                            )
+                                            .await; //insert or update node utxos for rewards and fees
+
+                                            handle_tx_utxos(
+                                                gossip_message.clone(),
+                                                utxos_coll.clone(),
+                                            )
+                                            .await;
+                                            //update utxos in database for transactions
+                                            //check next leader
+                                            leader.clear();
+                                            leader.push_str(&gossip_message.next_leader);
+                                        } else {
+                                            println!("block prev hash problem!");
+                                        }
+                                    }
+                                    Some(_) => println!("find same block!"),
+                                }
+                            } else {
+                            }
+                        }
+                        None => {
+                            if gossip_message.block.header.prevhash
+                                == "This block is Genesis".to_string()
+                            {
+                                let new_block_doc = to_document(&gossip_message.block).unwrap();
+                                blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+                                handle_block_reward(gossip_message.clone(), utxos_coll.clone())
+                                    .await;
+                                handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
+                                //update utxos in database for transactions
+                                //check next leader
+                                leader.clear();
+                                leader.push_str(&gossip_message.next_leader);
+                                println!("rewards in none block add");
+                            }
                         }
                     }
-                    Some(_) => println!("find same block!"),
                 }
-            } else {
+                Err(_) => {
+                    if gossip_message.block.header.prevhash == "This block is Genesis".to_string() {
+                        let new_block_doc = to_document(&gossip_message.block).unwrap();
+                        blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+                        handle_block_reward(gossip_message.clone(), utxos_coll.clone()).await;
+                        handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
+                        //update utxos in database for transactions
+                        //check next leader
+                        leader.clear();
+                        leader.push_str(&gossip_message.next_leader);
+                        println!("rewards in err block add");
+                    }
+                }
             }
         }
         Err(_e) => {}
