@@ -30,7 +30,6 @@ pub async fn handle_gossip_message(
 
     println!("full nodes in new gossip: {:?}", fullnodes);
     msg_check(message.clone(), leader, fullnodes).await;
-
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
             if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
@@ -134,4 +133,5 @@ pub async fn handle_gossip_message(
         }
         Err(_) => write_log("convert gossip message to string problem!".to_string()),
     } //convert messages to string
+    println!("full nodes after new gossip: {:?}", fullnodes);
 }
