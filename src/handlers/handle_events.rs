@@ -27,7 +27,7 @@ pub async fn events(
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
     leader: &mut String, 
-    fullnodes: Vec<FullNodes>
+    fullnodes: &mut Vec<FullNodes>
 ) {
     loop {
         match swarm.select_next_some().await {
@@ -136,7 +136,7 @@ pub async fn events(
                             relay_topic_subscribers,
                             my_addresses,
                             leader,
-                            fullnodes.clone()
+                            fullnodes
                         ).await;
                     }
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(

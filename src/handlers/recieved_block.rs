@@ -15,7 +15,7 @@ use mongodb::{
 };
 
 //interpreter of messages.................................................................................
-pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_subs: Vec<FullNodes>) {
+pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_subs: &mut Vec<FullNodes>) {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             println!("fullnodes: {:#?}", fullnode_subs);

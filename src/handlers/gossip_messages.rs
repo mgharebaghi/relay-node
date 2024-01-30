@@ -25,7 +25,7 @@ pub async fn handle_gossip_message(
     relay_topic_subscribers: &mut Vec<PeerId>,
     my_addresses: &mut Vec<String>,
     leader: &mut String, 
-    fullnodes: Vec<FullNodes>
+    fullnodes: &mut Vec<FullNodes>
 ) {
 
     msg_check(message.clone(), leader, fullnodes).await;

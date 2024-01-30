@@ -192,7 +192,7 @@ pub async fn run() {
 
     
     let mut leader = String::new();
-    let fullnode_subs: Vec<FullNodes> = Vec::new();
+    let mut fullnode_subs: Vec<FullNodes> = Vec::new();
 
     handle_streams(
         local_peer_id,
@@ -208,7 +208,7 @@ pub async fn run() {
         &mut client_topic_subscribers,
         &mut wallet,
         &mut leader,
-        fullnode_subs
+        &mut fullnode_subs
     )
     .await;
 }

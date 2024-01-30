@@ -45,7 +45,7 @@ pub async fn handle_streams(
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
     leader: &mut String, 
-    fullnodes: Vec<FullNodes>
+    fullnodes: &mut Vec<FullNodes>
 ) {
     loop {
         let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
@@ -92,7 +92,7 @@ pub async fn handle_streams(
             client_topic_subscriber,
             wallet,
             leader,
-            fullnodes.clone()
+            fullnodes
         )
         .await;
     }
