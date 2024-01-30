@@ -48,6 +48,7 @@ pub async fn handle_streams(
     fullnodes: &mut Vec<FullNodes>
 ) {
     loop {
+        println!("full nodes in handle stream loop:\n{:?}", fullnodes);
         let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
         if relays_file_exist {
             let file = File::open("/etc/relays.dat").unwrap();

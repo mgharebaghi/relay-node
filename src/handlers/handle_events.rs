@@ -30,6 +30,7 @@ pub async fn events(
     fullnodes: &mut Vec<FullNodes>
 ) {
     loop {
+        println!("full nodes in events loop:\n{:?}", fullnodes);
         match swarm.select_next_some().await {
             SwarmEvent::NewListenAddr { address, .. } => {
                 let str_addr = address.clone().to_string();
