@@ -15,11 +15,7 @@ use mongodb::{
 };
 
 //interpreter of messages.................................................................................
-pub async fn verifying_block(
-    str_msg: &String,
-    leader: &mut String,
-    fullnode_subs: Vec<FullNodes>
-) {
+pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_subs: Vec<FullNodes>) {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
@@ -50,16 +46,22 @@ pub async fn verifying_block(
                         let mut verify_block_sign = false;
                         let str_block_body_for_verify =
                             gossip_message.block.body.coinbase.tx_hash.clone();
+                        let mut fullnodes_pid = Vec::new();
                         for i in fullnode_subs.clone() {
-                            if i.peer_id == validator_peerid {
-                                verify_block_sign = sp_core::ecdsa::Pair::verify(
-                                    &gossip_message.block.header.block_signature.signature[0],
-                                    str_block_body_for_verify,
-                                    &i.public_key,
-                                );
-                                println!("verify sign: {}", verify_block_sign);
-                                break;
-                            }
+                            fullnodes_pid.push(i.peer_id);
+                        }
+
+                        if fullnodes_pid.contains(&validator_peerid) {
+                            verify_block_sign = sp_core::ecdsa::Pair::verify(
+                                &gossip_message.block.header.block_signature.signature[0],
+                                str_block_body_for_verify,
+                                &i.public_key,
+                            );
+                            println!("verify sign: {}", verify_block_sign);
+                        } else {
+                            println!("*****************//error from fullnodes contains");
+                            println!("validator pids: {}", validator_peerid);
+                            println!("full nods pids: {:#?}", fullnodes_pid);
                         }
 
                         if check_pid_with_public_key {
