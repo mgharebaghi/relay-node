@@ -56,6 +56,7 @@ pub async fn verifying_block(
                                     str_block_body_for_verify,
                                     &i.public_key,
                                 );
+                                println!("verify sign: {}", verify_block_sign);
                                 break;
                             }
                         }

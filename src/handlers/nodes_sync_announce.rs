@@ -14,6 +14,7 @@ pub fn handle_sync_message(fullnode_subs: &mut Vec<FullNodes>, str_msg: &String)
         }
         if !fullnodes_pid.contains(&new_fullnode.peer_id) {
             fullnode_subs.push(new_fullnode);
+            println!("full node:{:#?}", fullnode_subs);
         }
     }
 }
