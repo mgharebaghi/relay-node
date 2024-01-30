@@ -13,7 +13,7 @@ pub async fn msg_check(message: Message, mut leader: &mut String, fullnodes: Vec
 
     handle_sync_message(&mut fullnodes.clone(), &str_msg);
 
-    handle_transactions(message.clone()).await;
+    // handle_transactions(message.clone()).await;
 
     verifying_block(&str_msg, &mut leader, fullnodes).await;
 }

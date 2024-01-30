@@ -1,7 +1,5 @@
 use super::{
-    create_log::write_log,
-    send_response::send_res,
-    structures::{Channels, CustomBehav, Req, ReqForReq, Res, Transaction},
+    check_trx::handle_transactions, create_log::write_log, send_response::send_res, structures::{Channels, CustomBehav, Req, ReqForReq, Res, Transaction}
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use rand::seq::SliceRandom;
@@ -32,6 +30,7 @@ pub async fn handle_requests(
             Err(e) => write_log(format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
+        handle_transactions(request.req.clone()).await;
         let sse_topic = IdentTopic::new("sse");
         match swarm
             .behaviour_mut()

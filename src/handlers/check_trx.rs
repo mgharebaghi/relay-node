@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use chrono::{SubsecRound, Utc};
-use libp2p::gossipsub::Message;
+// use libp2p::gossipsub::Message;
 use rust_decimal::Decimal;
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
@@ -10,8 +10,8 @@ use super::{db_connection::blockchain_db, reciept::insert_reciept, structures::{
 
 use mongodb::bson::{doc, from_document, to_document};
 
-pub async fn handle_transactions(message: Message) {
-    if let Ok(mut transaction) = serde_json::from_slice::<Transaction>(&message.data) {
+pub async fn handle_transactions(message: String) {
+    if let Ok(mut transaction) = serde_json::from_str::<Transaction>(&message) {
         println!("in transaction gossip");
         transaction.fee = transaction.value * Decimal::from_str("0.01").unwrap();
         //create hash of transaction
