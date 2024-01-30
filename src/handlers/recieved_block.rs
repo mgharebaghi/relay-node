@@ -52,10 +52,14 @@ pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_sub
                         }
 
                         if fullnodes_pid.contains(&validator_peerid) {
+                            let fullnode_index = fullnode_subs
+                                .iter()
+                                .position(|fullnode| fullnode.peer_id == validator_peerid)
+                                .unwrap();
                             verify_block_sign = sp_core::ecdsa::Pair::verify(
                                 &gossip_message.block.header.block_signature.signature[0],
                                 str_block_body_for_verify,
-                                &i.public_key,
+                                &fullnode_subs[fullnode_index].public_key,
                             );
                             println!("verify sign: {}", verify_block_sign);
                         } else {
