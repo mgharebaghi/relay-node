@@ -15,7 +15,11 @@ use mongodb::{
 };
 
 //interpreter of messages.................................................................................
-pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_subs: &mut Vec<FullNodes>) {
+pub async fn verifying_block(
+    str_msg: &String,
+    leader: &mut String,
+    fullnode_subs: &mut Vec<FullNodes>,
+) {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             println!("fullnodes: {:#?}", fullnode_subs);
@@ -62,11 +66,6 @@ pub async fn verifying_block(str_msg: &String, leader: &mut String, fullnode_sub
                                 str_block_body_for_verify,
                                 &fullnode_subs[fullnode_index].public_key,
                             );
-                            println!("verify sign: {}", verify_block_sign);
-                        } else {
-                            println!("*****************//error from fullnodes contains");
-                            println!("validator pids: {}", validator_peerid);
-                            println!("full nods pids: {:#?}", fullnodes_pid);
                         }
 
                         if check_pid_with_public_key {
@@ -118,21 +117,25 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
             let block_verify = check_txs(gossip_message.clone(), utxos_coll.clone()).await; //remove transaction if it is in mempool or remove from UTXOs collection if it is not in mempool
 
             if block_verify && gossip_message.next_leader != gossip_message.block.header.validator {
-                if let None = same_block {
-                    if last_block.header.blockhash == gossip_message.block.header.prevhash {
-                        let new_block_doc = to_document(&gossip_message.block).unwrap();
-                        blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+                match same_block {
+                    None => {
+                        if last_block.header.blockhash == gossip_message.block.header.prevhash {
+                            let new_block_doc = to_document(&gossip_message.block).unwrap();
+                            blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
 
-                        handle_block_reward(gossip_message.clone(), utxos_coll.clone()).await; //insert or update node utxos for rewards and fees
+                            handle_block_reward(gossip_message.clone(), utxos_coll.clone()).await; //insert or update node utxos for rewards and fees
 
-                        handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
-                        //update utxos in database for transactions
+                            handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
+                            //update utxos in database for transactions
+                            //check next leader
+                            leader.clear();
+                            leader.push_str(&gossip_message.next_leader);
+                        } else {
+                            println!("block prev hash problem!");
+                        }
                     }
+                    Some(_) => println!("find same block!"),
                 }
-
-                //check next leader
-                leader.clear();
-                leader.push_str(&gossip_message.next_leader);
             } else {
             }
         }
