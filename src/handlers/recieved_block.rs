@@ -48,19 +48,23 @@ pub async fn verifying_block(
                             PeerId::from_public_key(&pubkey) == validator_peerid;
 
                         //check block signature
-                        //check block signature
                         let mut verify_block_sign = false;
-                        let str_block_body_for_verify =
-                            gossip_message.block.body.coinbase.tx_hash.clone();
-                        for i in fullnode_subs.clone() {
-                            if i.peer_id == validator_peerid {
-                                verify_block_sign = sp_core::ecdsa::Pair::verify(
-                                    &gossip_message.block.header.block_signature.signature[0],
-                                    str_block_body_for_verify,
-                                    &i.public_key,
-                                );
-                                break;
+
+                        if gossip_message.block.header.prevhash != "This block is Genesis" {
+                            let str_block_body_for_verify =
+                                gossip_message.block.body.coinbase.tx_hash.clone();
+                            for i in fullnode_subs.clone() {
+                                if i.peer_id == validator_peerid {
+                                    verify_block_sign = sp_core::ecdsa::Pair::verify(
+                                        &gossip_message.block.header.block_signature.signature[0],
+                                        str_block_body_for_verify,
+                                        &i.public_key,
+                                    );
+                                    break;
+                                }
                             }
+                        } else {
+                            verify_block_sign = true;
                         }
 
                         if check_pid_with_public_key {
