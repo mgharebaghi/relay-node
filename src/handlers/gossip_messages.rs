@@ -9,7 +9,7 @@ use libp2p::{
 };
 use reqwest::Client;
 
-use crate::handlers::structures::ImSync;
+use crate::handlers::structures::{ImSync, OutNode};
 
 use super::{create_log::write_log, handle_messages::msg_check, structures::{CustomBehav, FullNodes}};
 
@@ -128,6 +128,15 @@ pub async fn handle_gossip_message(
                     }
                     None => {}
                 }
+            }
+
+            if let Ok(outnode) = serde_json::from_str::<OutNode>(&msg) {
+                if let Some(index) = fullnodes
+                .iter()
+                .position(|x| x.peer_id == outnode.peer_id)
+                    {
+                        fullnodes.remove(index);
+                    }
             }
 
         }

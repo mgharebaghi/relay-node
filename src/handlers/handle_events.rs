@@ -26,8 +26,8 @@ pub async fn events(
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
-    leader: &mut String, 
-    fullnodes: &mut Vec<FullNodes>
+    leader: &mut String,
+    fullnodes: &mut Vec<FullNodes>,
 ) {
     loop {
         match swarm.select_next_some().await {
@@ -99,8 +99,10 @@ pub async fn events(
                             relays,
                             clients,
                             relay_topic.clone(),
-                            my_addresses
-                        ).await;
+                            my_addresses,
+                            fullnodes
+                        )
+                        .await;
                     }
                     None => {}
                 }
@@ -136,8 +138,9 @@ pub async fn events(
                             relay_topic_subscribers,
                             my_addresses,
                             leader,
-                            fullnodes
-                        ).await;
+                            fullnodes,
+                        )
+                        .await;
                     }
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
                         topic,
@@ -147,7 +150,7 @@ pub async fn events(
                         relay_topic_subscribers,
                         connections,
                         clients,
-                        client_topic_subscriber
+                        client_topic_subscriber,
                     ),
                     _ => (),
                 },
@@ -167,7 +170,8 @@ pub async fn events(
                                 local_peer_id,
                                 wallet,
                                 clients_topic.clone(),
-                            ).await;
+                            )
+                            .await;
                         }
                         libp2p::request_response::Message::Response { response, .. } => {
                             handle_responses(

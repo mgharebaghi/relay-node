@@ -3,7 +3,7 @@ use reqwest::Client;
 
 use super::{
     create_log::write_log,
-    structures::{CustomBehav, OutNode},
+    structures::{CustomBehav, FullNodes, OutNode},
 };
 
 pub async fn handle_outnode(
@@ -15,7 +15,11 @@ pub async fn handle_outnode(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
+    fullnodes: &mut Vec<FullNodes>
 ) {
+    if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
+        fullnodes.remove(index);
+    }
     let outnode = OutNode { peer_id: peerid };
     let serialize_out_node = serde_json::to_string(&outnode).unwrap();
     if client_topic_subscriber.len() > 0 {

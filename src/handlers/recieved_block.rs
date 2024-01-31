@@ -48,24 +48,19 @@ pub async fn verifying_block(
                             PeerId::from_public_key(&pubkey) == validator_peerid;
 
                         //check block signature
+                        //check block signature
                         let mut verify_block_sign = false;
                         let str_block_body_for_verify =
                             gossip_message.block.body.coinbase.tx_hash.clone();
-                        let mut fullnodes_pid = Vec::new();
                         for i in fullnode_subs.clone() {
-                            fullnodes_pid.push(i.peer_id);
-                        }
-
-                        if fullnodes_pid.contains(&validator_peerid) {
-                            let fullnode_index = fullnode_subs
-                                .iter()
-                                .position(|fullnode| fullnode.peer_id == validator_peerid)
-                                .unwrap();
-                            verify_block_sign = sp_core::ecdsa::Pair::verify(
-                                &gossip_message.block.header.block_signature.signature[0],
-                                str_block_body_for_verify,
-                                &fullnode_subs[fullnode_index].public_key,
-                            );
+                            if i.peer_id == validator_peerid {
+                                verify_block_sign = sp_core::ecdsa::Pair::verify(
+                                    &gossip_message.block.header.block_signature.signature[0],
+                                    str_block_body_for_verify,
+                                    &i.public_key,
+                                );
+                                break;
+                            }
                         }
 
                         if check_pid_with_public_key {
