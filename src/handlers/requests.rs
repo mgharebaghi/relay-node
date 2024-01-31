@@ -39,7 +39,7 @@ pub async fn handle_requests(
         {
             Ok(_) => {}
             Err(_) => {
-                write_log("error from sse gossiping in trx!".to_string());
+                
             }
         }
         let send_transaction = swarm.behaviour_mut().gossipsub.publish(topic, request.req);
