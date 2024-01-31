@@ -25,11 +25,18 @@ pub async fn handle_gossip_message(
     relay_topic_subscribers: &mut Vec<PeerId>,
     my_addresses: &mut Vec<String>,
     leader: &mut String, 
-    fullnodes: &mut Vec<FullNodes>
+    fullnodes: &mut Vec<FullNodes>,
+    clients_topic: IdentTopic,
+    client_topic_subscriber: &mut Vec<PeerId>,
 ) {
+    
+    msg_check(message.clone(), leader, fullnodes, swarm, propagation_source,clients_topic,
+    client_topic_subscriber,
+    relays,
+    clients,
+    relay_topic.clone(),
+    my_addresses,).await;
 
-    println!("full nodes in new gossip: {:?}", fullnodes);
-    msg_check(message.clone(), leader, fullnodes).await;
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
             if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {

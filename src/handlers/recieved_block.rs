@@ -1,11 +1,14 @@
-use libp2p::{identity::PublicKey, PeerId};
+use libp2p::{gossipsub::IdentTopic, identity::PublicKey, PeerId, Swarm};
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
 
+use crate::handlers::create_log::write_log;
+
 use super::{
     db_connection::blockchain_db,
+    outnodes::handle_outnode,
     reciept::{coinbase_reciept, insert_reciept},
-    structures::{Block, FullNodes, GossipMessage, NextLeader, UtxoData, UTXO},
+    structures::{Block, CustomBehav, FullNodes, GossipMessage, NextLeader, UtxoData, UTXO},
 };
 
 use mongodb::{
@@ -19,12 +22,18 @@ pub async fn verifying_block(
     str_msg: &String,
     leader: &mut String,
     fullnode_subs: &mut Vec<FullNodes>,
+    swarm: &mut Swarm<CustomBehav>,
+    propagation_source: PeerId,
+    clients_topic: IdentTopic,
+    client_topic_subscriber: &mut Vec<PeerId>,
+    relays: &mut Vec<PeerId>,
+    clients: &mut Vec<PeerId>,
+    relay_topic: IdentTopic,
+    my_addresses: &mut Vec<String>,
 ) {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
-            println!("fullnodes: {:#?}", fullnode_subs);
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
-            println!("validator peer id: {}", validator_peerid);
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
             if leader.len() > 0 {
@@ -69,20 +78,92 @@ pub async fn verifying_block(
 
                         if check_pid_with_public_key {
                             if verify_block_sign {
-                                submit_block(gossip_message, leader).await;
+                                submit_block(
+                                    gossip_message,
+                                    leader,
+                                    swarm,
+                                    propagation_source,
+                                    fullnode_subs,
+                                    clients_topic,
+                                    client_topic_subscriber,
+                                    relays,
+                                    clients,
+                                    relay_topic,
+                                    my_addresses,
+                                )
+                                .await;
                             } else {
-                                println!("verify block sign error!");
+                                swarm.disconnect_peer_id(propagation_source).unwrap();
+                                handle_outnode(
+                                    propagation_source,
+                                    swarm,
+                                    clients_topic,
+                                    client_topic_subscriber,
+                                    relays,
+                                    clients,
+                                    relay_topic,
+                                    my_addresses,
+                                    fullnode_subs,
+                                )
+                                .await;
+                                write_log(
+                                    "verify block sign error! recieved block (line 76)".to_string(),
+                                );
                             }
                         } else {
-                            println!("check pid with public key error!");
+                            swarm.disconnect_peer_id(propagation_source).unwrap();
+                            handle_outnode(
+                                propagation_source,
+                                swarm,
+                                clients_topic,
+                                client_topic_subscriber,
+                                relays,
+                                clients,
+                                relay_topic,
+                                my_addresses,
+                                fullnode_subs,
+                            )
+                            .await;
+                            write_log(
+                                "check pid with public key error! recieved block (line 79)"
+                                    .to_string(),
+                            );
                         }
                     }
                     Err(_) => {
-                        println!("validator public key error!");
+                        swarm.disconnect_peer_id(propagation_source).unwrap();
+                        handle_outnode(
+                            propagation_source,
+                            swarm,
+                            clients_topic,
+                            client_topic_subscriber,
+                            relays,
+                            clients,
+                            relay_topic,
+                            my_addresses,
+                            fullnode_subs,
+                        )
+                        .await;
+                        write_log(
+                            "validator public key error! recieved block (line 83)".to_string(),
+                        );
                     }
                 }
             } else {
-                println!("validate leader error!");
+                swarm.disconnect_peer_id(propagation_source).unwrap();
+                handle_outnode(
+                    propagation_source,
+                    swarm,
+                    clients_topic,
+                    client_topic_subscriber,
+                    relays,
+                    clients,
+                    relay_topic,
+                    my_addresses,
+                    fullnode_subs,
+                )
+                .await;
+                write_log("validate leader error! recieved block (line 87)".to_string());
             }
         }
         Err(_) => {
@@ -90,6 +171,8 @@ pub async fn verifying_block(
                 if leader.len() > 0 && identifier.identifier_peer_id.to_string() == leader.clone() {
                     leader.clear();
                     leader.push_str(&identifier.next_leader.to_string());
+                } else {
+                    write_log("identifier is not true! recieved block (line 96)".to_string())
                 }
             }
         }
@@ -97,7 +180,19 @@ pub async fn verifying_block(
 }
 
 //check block in database and check transactions in mempool and then instert it to database
-async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
+async fn submit_block(
+    gossip_message: GossipMessage,
+    leader: &mut String,
+    swarm: &mut Swarm<CustomBehav>,
+    propagation_source: PeerId,
+    fullnode_subs: &mut Vec<FullNodes>,
+    clients_topic: IdentTopic,
+    client_topic_subscriber: &mut Vec<PeerId>,
+    relays: &mut Vec<PeerId>,
+    clients: &mut Vec<PeerId>,
+    relay_topic: IdentTopic,
+    my_addresses: &mut Vec<String>,
+) {
     match blockchain_db().await {
         Ok(db) => {
             let blocks_coll: Collection<Document> = db.collection("Blocks");
@@ -147,13 +242,46 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
                                             leader.clear();
                                             leader.push_str(&gossip_message.next_leader);
                                         } else {
-                                            println!("block prev hash problem!");
+                                            write_log("block prev hash problem! recieved block (line 154)".to_string());
                                         }
                                     }
-                                    Some(_) => println!("find same block!"),
+                                    Some(_) => {
+                                        swarm.disconnect_peer_id(propagation_source).unwrap();
+                                        handle_outnode(
+                                            propagation_source,
+                                            swarm,
+                                            clients_topic,
+                                            client_topic_subscriber,
+                                            relays,
+                                            clients,
+                                            relay_topic,
+                                            my_addresses,
+                                            fullnode_subs,
+                                        )
+                                        .await;
+                                        write_log(
+                                            "find same block! recieved block (line 157)"
+                                                .to_string(),
+                                        )
+                                    }
                                 }
                             } else {
-                                println!("check trx in block verify problem!");
+                                handle_outnode(
+                                    propagation_source,
+                                    swarm,
+                                    clients_topic,
+                                    client_topic_subscriber,
+                                    relays,
+                                    clients,
+                                    relay_topic,
+                                    my_addresses,
+                                    fullnode_subs,
+                                )
+                                .await;
+                                write_log(
+                                    "check trx in block verify problem! recieved block (line 160)"
+                                        .to_string(),
+                                );
                             }
                         }
                         None => {
@@ -169,7 +297,6 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
                                 //check next leader
                                 leader.clear();
                                 leader.push_str(&gossip_message.next_leader);
-                                println!("rewards in none block add");
                             }
                         }
                     }
@@ -184,7 +311,6 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
                         //check next leader
                         leader.clear();
                         leader.push_str(&gossip_message.next_leader);
-                        println!("rewards in err block add");
                     }
                 }
             }

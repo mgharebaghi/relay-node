@@ -139,6 +139,8 @@ pub async fn events(
                             my_addresses,
                             leader,
                             fullnodes,
+                            clients_topic.clone(),
+                            client_topic_subscriber
                         )
                         .await;
                     }
