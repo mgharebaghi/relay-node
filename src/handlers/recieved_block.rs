@@ -118,10 +118,7 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
                             let block_verify =
                                 check_txs(gossip_message.clone(), utxos_coll.clone()).await; //remove transaction if it is in mempool or remove from UTXOs collection if it is not in mempool
 
-                            if block_verify
-                                && gossip_message.next_leader
-                                    != gossip_message.block.header.validator
-                            {
+                            if block_verify {
                                 match same_block {
                                     None => {
                                         if last_block.header.blockhash
@@ -156,6 +153,7 @@ async fn submit_block(gossip_message: GossipMessage, leader: &mut String) {
                                     Some(_) => println!("find same block!"),
                                 }
                             } else {
+                                println!("check trx in block verify problem!");
                             }
                         }
                         None => {
