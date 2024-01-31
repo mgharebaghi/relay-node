@@ -149,5 +149,4 @@ pub async fn handle_gossip_message(
         }
         Err(_) => write_log("convert gossip message to string problem!".to_string()),
     } //convert messages to string
-    println!("full nodes after new gossip: {:?}", fullnodes);
 }

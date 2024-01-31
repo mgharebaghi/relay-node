@@ -6,7 +6,12 @@ use rust_decimal::Decimal;
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
 
-use super::{db_connection::blockchain_db, reciept::insert_reciept, structures::{Transaction, UTXO}};
+use super::{
+    create_log::write_log,
+    db_connection::blockchain_db,
+    reciept::insert_reciept,
+    structures::{Transaction, UTXO},
+};
 
 use mongodb::bson::{doc, from_document, to_document};
 
@@ -99,6 +104,7 @@ pub async fn handle_transactions(message: String) {
                             )
                             .await;
                         } else {
+                            write_log("discorrect trx in check trx line(102)".to_string());
                             insert_reciept(
                                 transaction,
                                 None,
@@ -108,6 +114,7 @@ pub async fn handle_transactions(message: String) {
                             .await;
                         }
                     } else {
+                        write_log("discorrect trx in check trx line(117)".to_string());
                         insert_reciept(
                             transaction,
                             None,
@@ -120,6 +127,7 @@ pub async fn handle_transactions(message: String) {
                 Err(_) => {}
             }
         } else {
+            write_log("discorrect trx in check trx line(130)".to_string());
             insert_reciept(
                 transaction,
                 None,
