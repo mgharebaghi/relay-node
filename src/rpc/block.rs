@@ -4,7 +4,12 @@ use std::{
     time::Duration,
 };
 
-use axum::{extract, Json};
+use axum::{
+    extract,
+    response::{IntoResponse, Response},
+    body::Body,
+    Json,
+};
 use libp2p::{
     futures::StreamExt,
     identity::Keypair,
@@ -12,88 +17,15 @@ use libp2p::{
     swarm::SwarmEvent,
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
+use tokio_util::io::StreamReader;
 
 use crate::handlers::structures::{Block, Req, ReqForReq, Res, ResForReq};
 
-use super::server::{ AllBlocksRes, BlockReq, BlockRes};
+use super::server::{AllBlocksRes, BlockReq, BlockRes};
 
-pub async fn handle_all_blocks() -> Json<AllBlocksRes> {
-    let keypair = Keypair::generate_ecdsa();
-    let peerid = PeerId::from(keypair.public());
-    let behaviour = cbor::Behaviour::<Req, Res>::new(
-        [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
-        Config::default(),
-    );
-
-    //config swarm
-    let swarm_config = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(10 * 60));
-    let mut swarm = SwarmBuilder::with_existing_identity(keypair)
-        .with_tokio()
-        .with_tcp(
-            Default::default(),
-            (libp2p::tls::Config::new, libp2p::noise::Config::new),
-            libp2p::yamux::Config::default,
-        )
-        .unwrap()
-        .with_quic()
-        .with_dns()
-        .unwrap()
-        .with_websocket(
-            (libp2p::tls::Config::new, libp2p::noise::Config::new),
-            libp2p::yamux::Config::default,
-        )
-        .await
-        .unwrap()
-        .with_behaviour(|_key| behaviour)
-        .unwrap()
-        .with_swarm_config(|_conf| swarm_config)
-        .build();
-
-    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
-    swarm.listen_on(listener).unwrap();
-
-    let mut dial_addr = String::new();
-
-    let address_file = File::open("/etc/myaddress.dat").unwrap();
-    let reader = BufReader::new(address_file);
-    for i in reader.lines() {
-        let addr = i.unwrap();
-        if addr.trim().len() > 0 {
-            dial_addr.push_str(&addr);
-            break;
-        }
-    }
-
-    let dial_multiaddr: Multiaddr = dial_addr.parse().unwrap();
-    swarm.dial(dial_multiaddr).unwrap();
-
-    let request = ReqForReq {
-        peer: vec![peerid],
-        req: "allblocks".to_string(),
-    };
-
-    loop {
-        match swarm.select_next_some().await {
-            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                let req = Req {
-                    req: serde_json::to_string(&request).unwrap(),
-                };
-                swarm.behaviour_mut().send_request(&peer_id, req);
-            }
-            SwarmEvent::Behaviour(req_res) => match req_res {
-                Event::Message { message, .. } => match message {
-                    Message::Response { response, .. } => {
-                        return handle_allblocks_response(response);
-                    }
-                    _ => {}
-                },
-                _ => {}
-            },
-            _ => {}
-        }
-    }
-}
+// pub async fn handle_all_blocks() -> Response<()> {
+    
+// }
 
 fn handle_allblocks_response(response: Res) -> Json<AllBlocksRes> {
     if let Ok(res) = serde_json::from_str::<ResForReq>(&response.res) {

@@ -4874,6 +4874,7 @@ dependencies = [
  "sp-core",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "tower",
  "tower-http",
  "windows-service",

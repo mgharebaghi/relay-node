@@ -26,9 +26,10 @@ public-ip = "0.2.2"
 serde_with = "^3.3"
 rust_decimal = "^1.33"
 futures-util = "0.3.30"
-tokio-stream = "0.1.14"
+tokio-stream = {version = "0.1.14", features = ["fs"]}
 mongodb = {version= "^2.4", features= ["tokio-runtime"] }
 sha2 = "^0.10"
 chrono = "^0.4"
+tokio-util = "0.7.10"
 # openssl = "0.10.59"
 # openssl-sys = "0.9.95"
