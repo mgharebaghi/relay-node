@@ -251,7 +251,9 @@ async fn submit_block(
                                                 .arg("/etc/dump")
                                                 .output()
                                             {
-                                                Ok(_) => {}
+                                                Ok(_) => {
+                                                    
+                                                }
                                                 Err(e) => write_log(format!("{:?}", e)),
                                             }
                                         } else {

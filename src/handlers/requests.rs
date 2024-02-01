@@ -1,3 +1,5 @@
+use std::fs;
+
 use super::{
     check_trx::handle_transactions, create_log::write_log, send_response::send_res, structures::{Channels, CustomBehav, Req, ReqForReq, Res, Transaction}
 };
@@ -7,7 +9,8 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Handshake {
-    wallet: String
+    wallet: String,
+    first_node: String
 }
 
 //handle requests that recieved from clients or relays
@@ -24,9 +27,19 @@ pub async fn handle_requests(
     topic: IdentTopic,
 ) {
     if request.req.clone() == "handshake".to_string() {
-        let handshake_res = Handshake {
-            wallet: wallet.clone()
+        let is_dump_data = fs::metadata("/etc/dump/Blockchain").is_ok();
+
+        let mut handshake_res = Handshake {
+            wallet: wallet.clone(),
+            first_node: String::new()
         };
+
+        if is_dump_data {
+            handshake_res.first_node.push_str(&"no".to_string());
+        } else {
+            handshake_res.first_node.push_str(&"yes".to_string());
+        }
+        
         let str_handshake_res = serde_json::to_string(&handshake_res).unwrap();
         let response = Res {
             res: str_handshake_res,
