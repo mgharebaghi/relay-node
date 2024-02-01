@@ -257,7 +257,7 @@ async fn submit_block(
                                                 Err(e) => write_log(format!("{:?}", e)),
                                             }
                                         } else {
-                                            write_log("block prev hash problem! recieved block (line 154)".to_string());
+                                            write_log("block prev hash problem! recieved block (line 206)".to_string());
                                         }
                                     }
                                     Some(_) => {
