@@ -96,7 +96,7 @@ pub async fn handle_requests() {
         .layer(ConcurrencyLimitLayer::new(100))
         .nest_service(
             "/blockchain",
-            ServeDir::new("/home/Downloads/dump/Blockchain"),
+            ServeDir::new("/etc/dump/Blockchain"),
         );
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));
 

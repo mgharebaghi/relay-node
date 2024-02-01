@@ -3,6 +3,12 @@ use super::{
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use rand::seq::SliceRandom;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Handshake {
+    wallet: String
+}
 
 //handle requests that recieved from clients or relays
 pub async fn handle_requests(
@@ -18,8 +24,12 @@ pub async fn handle_requests(
     topic: IdentTopic,
 ) {
     if request.req.clone() == "handshake".to_string() {
+        let handshake_res = Handshake {
+            wallet: wallet.clone()
+        };
+        let str_handshake_res = serde_json::to_string(&handshake_res).unwrap();
         let response = Res {
-            res: wallet.clone(),
+            res: str_handshake_res,
         };
         match swarm
             .behaviour_mut()

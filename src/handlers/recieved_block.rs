@@ -251,8 +251,8 @@ async fn submit_block(
                                                 .arg("/etc/dump")
                                                 .output()
                                             {
-                                                Ok(command) => println!("db save.\n{:?}", command),
-                                                Err(e) => println!("{:?}", e),
+                                                Ok(_) => {}
+                                                Err(e) => write_log(format!("{:?}", e)),
                                             }
                                         } else {
                                             write_log("block prev hash problem! recieved block (line 154)".to_string());
@@ -307,7 +307,7 @@ async fn submit_block(
                                     .await;
                                 //update utxos in database for transactions
                                 handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
-                
+
                                 //check next leader
                                 leader.clear();
                                 leader.push_str(&gossip_message.next_leader);
@@ -319,8 +319,8 @@ async fn submit_block(
                                     .arg("/etc/dump")
                                     .output()
                                 {
-                                    Ok(command) => println!("db save.\n{:?}", command),
-                                    Err(e) => println!("{:?}", e),
+                                    Ok(_) => {},
+                                    Err(e) => write_log(format!("{:?}", e)),
                                 }
                             }
                         }
@@ -343,8 +343,8 @@ async fn submit_block(
                             .arg("/etc/dump")
                             .output()
                         {
-                            Ok(_) => println!("db save."),
-                            Err(e) => println!("{:?}", e),
+                            Ok(_) => {},
+                            Err(e) => write_log(format!("{:?}", e)),
                         }
                     }
                 }
