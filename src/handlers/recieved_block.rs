@@ -251,7 +251,7 @@ async fn submit_block(
                                                 .arg("/etc/dump")
                                                 .output()
                                             {
-                                                Ok(command) => println!("db save.\n{}", command),
+                                                Ok(command) => println!("db save.\n{:?}", command),
                                                 Err(e) => println!("{:?}", e),
                                             }
                                         } else {
@@ -319,7 +319,7 @@ async fn submit_block(
                                     .arg("/etc/dump")
                                     .output()
                                 {
-                                    Ok(command) => println!("db save.\n{}", command),
+                                    Ok(command) => println!("db save.\n{:?}", command),
                                     Err(e) => println!("{:?}", e),
                                 }
                             }
