@@ -5,13 +5,16 @@ use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 
 use axum::{http::Method, routing::get, routing::post, Router};
-use tower_http::{cors::{AllowHeaders, Any, CorsLayer}, services::ServeDir};
+use tower_http::{
+    cors::{AllowHeaders, Any, CorsLayer},
+    services::ServeDir,
+};
 
 use crate::handlers::structures::Block;
 
 use super::{
-    block:: handle_block,
-    reciept::{handle_all_reciepts, handle_reciept, handle_user_reciepts},
+    block::handle_block,
+    reciept::{handle_reciept, handle_user_reciepts},
     sse::{block_sse, trx_sse},
     transaction::handle_transaction,
     utxo::handle_utxo,
@@ -35,7 +38,7 @@ pub struct Reciept {
     pub fee: Decimal,
     pub status: String,
     pub description: String,
-    pub date: String
+    pub date: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -86,14 +89,15 @@ pub async fn handle_requests() {
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))
-        .route("/allrec", get(handle_all_reciepts))
-        // .route("/allblocks", get(handle_all_blocks))
         .route("/block", post(handle_block))
         .route("/trxsse", get(trx_sse))
         .route("/blocksse", get(block_sse))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100))
-        .nest_service("/blockchain", ServeDir::new("/home/Downloads/dump/Blockchain"));
+        .nest_service(
+            "/blockchain",
+            ServeDir::new("/home/Downloads/dump/Blockchain"),
+        );
     let addr = SocketAddr::from(([0, 0, 0, 0], 3390));
 
     axum_server::bind(addr)

@@ -1,3 +1,5 @@
+use std::process::Command;
+
 use libp2p::{gossipsub::IdentTopic, identity::PublicKey, PeerId, Swarm};
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
@@ -241,6 +243,17 @@ async fn submit_block(
                                             //check next leader
                                             leader.clear();
                                             leader.push_str(&gossip_message.next_leader);
+
+                                            match Command::new("mongodump")
+                                                .arg("--db")
+                                                .arg("Blockchain")
+                                                .arg("--out")
+                                                .arg("/etc/dump")
+                                                .output()
+                                            {
+                                                Ok(_) => println!("db save."),
+                                                Err(e) => println!("{:?}", e),
+                                            }
                                         } else {
                                             write_log("block prev hash problem! recieved block (line 154)".to_string());
                                         }
@@ -292,11 +305,23 @@ async fn submit_block(
                                 blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
                                 handle_block_reward(gossip_message.clone(), utxos_coll.clone())
                                     .await;
-                                handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
                                 //update utxos in database for transactions
+                                handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
+                
                                 //check next leader
                                 leader.clear();
                                 leader.push_str(&gossip_message.next_leader);
+
+                                match Command::new("mongodump")
+                                    .arg("--db")
+                                    .arg("Blockchain")
+                                    .arg("--out")
+                                    .arg("/etc/dump")
+                                    .output()
+                                {
+                                    Ok(_) => println!("db save."),
+                                    Err(e) => println!("{:?}", e),
+                                }
                             }
                         }
                     }
@@ -311,6 +336,16 @@ async fn submit_block(
                         //check next leader
                         leader.clear();
                         leader.push_str(&gossip_message.next_leader);
+                        match Command::new("mongodump")
+                            .arg("--db")
+                            .arg("Blockchain")
+                            .arg("--out")
+                            .arg("/etc/dump")
+                            .output()
+                        {
+                            Ok(_) => println!("db save."),
+                            Err(e) => println!("{:?}", e),
+                        }
                     }
                 }
             }

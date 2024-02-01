@@ -6,8 +6,6 @@ use std::{
 
 use axum::{
     extract,
-    response::{IntoResponse, Response},
-    body::Body,
     Json,
 };
 use libp2p::{
@@ -17,29 +15,9 @@ use libp2p::{
     swarm::SwarmEvent,
     Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
 };
-use tokio_util::io::StreamReader;
-
 use crate::handlers::structures::{Block, Req, ReqForReq, Res, ResForReq};
 
-use super::server::{AllBlocksRes, BlockReq, BlockRes};
-
-// pub async fn handle_all_blocks() -> Response<()> {
-    
-// }
-
-fn handle_allblocks_response(response: Res) -> Json<AllBlocksRes> {
-    if let Ok(res) = serde_json::from_str::<ResForReq>(&response.res) {
-        if let Ok(allblocks_res) = serde_json::from_str::<AllBlocksRes>(&res.res.res) {
-            return Json(allblocks_res);
-        } else {
-            let allblocks_res = AllBlocksRes { all: Vec::new() };
-            return Json(allblocks_res);
-        }
-    } else {
-        let allblocks_res = AllBlocksRes { all: Vec::new() };
-        return Json(allblocks_res);
-    }
-}
+use super::server::{BlockReq, BlockRes};
 
 pub async fn handle_block(extract::Json(block_req): extract::Json<BlockReq>) -> Json<BlockRes> {
     let keypair = Keypair::generate_ecdsa();
