@@ -222,3 +222,9 @@ pub struct FullNodes {
     pub waiting: i64,
     pub public_key: Public,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GetGossipMsg {
+    pub gossip: GossipMessage,
+    pub propagation_source: PeerId
+}

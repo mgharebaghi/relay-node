@@ -129,6 +129,8 @@ pub async fn run() {
     let mut fullnode_subs: Vec<FullNodes> = Vec::new();
     let mut channels: Vec<Channels> = Vec::new();
     let mut my_addresses = Vec::new();
+    let mut sync = false;
+    let mut syncing_blocks = Vec::new();
 
     let server_address = "www.centichain.org:80";
     let site_connection = TcpStream::connect(server_address);
@@ -204,7 +206,9 @@ pub async fn run() {
         &mut client_topic_subscribers,
         &mut wallet,
         &mut leader,
-        &mut fullnode_subs
+        &mut fullnode_subs,
+        &mut sync,
+        &mut syncing_blocks
     )
     .await;
 }

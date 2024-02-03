@@ -16,11 +16,10 @@ struct Addresses {
 pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<String>) {
     let my_full_addr = format!("{}/p2p/{}", address, local_peer_id);
     fs::write("/etc/myaddress.dat", my_full_addr.clone()).unwrap();
-    send_addr_to_server(my_full_addr.clone()).await;
     my_addresses.push(my_full_addr);
 }
 
-async fn send_addr_to_server(full_addr: String) {
+pub async fn send_addr_to_server(full_addr: String) {
     let os = std::env::consts::OS;
     let mut path = "";
     if os == "linux" {

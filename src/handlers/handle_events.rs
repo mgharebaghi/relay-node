@@ -5,21 +5,25 @@ use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, 
 
 use super::create_log::write_log;
 use super::gossip_messages::handle_gossip_message;
-use super::handle_listeners::handle;
+use super::handle_listeners::{handle, send_addr_to_server};
 use super::outnodes::handle_outnode;
+use super::recieved_block::verifying_block;
 use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
 use super::responses::handle_responses;
 use super::send_address::send_address;
-use super::structures::{Channels, CustomBehav, CustomBehavEvent, FullNodes};
+use super::structures::{
+    Channels, CustomBehav, CustomBehavEvent, FullNodes, GetGossipMsg, GossipMessage, Req,
+};
+use super::syncing::syncing;
 
 pub async fn events(
-    mut swarm: &mut Swarm<CustomBehav>,
+    swarm: &mut Swarm<CustomBehav>,
     local_peer_id: PeerId,
     my_addresses: &mut Vec<String>,
-    mut clients: &mut Vec<PeerId>,
-    mut channels: &mut Vec<Channels>,
-    mut relays: &mut Vec<PeerId>,
+    clients: &mut Vec<PeerId>,
+    channels: &mut Vec<Channels>,
+    relays: &mut Vec<PeerId>,
     clients_topic: IdentTopic,
     relay_topic: IdentTopic,
     connections: &mut Vec<PeerId>,
@@ -28,6 +32,9 @@ pub async fn events(
     wallet: &mut String,
     leader: &mut String,
     fullnodes: &mut Vec<FullNodes>,
+    sync: &mut bool,
+    dialed_addr: String,
+    syncing_blocks: &mut Vec<GetGossipMsg>,
 ) {
     loop {
         match swarm.select_next_some().await {
@@ -40,6 +47,20 @@ pub async fn events(
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                if !*sync && dialed_addr.contains(&peer_id.to_string()) {
+                    match syncing(dialed_addr.clone()).await {
+                        Ok(_) => {
+                            let fullnodes_req = Req {
+                                req: "fullnodes".to_string(),
+                            };
+                            swarm
+                                .behaviour_mut()
+                                .req_res
+                                .send_request(&peer_id, fullnodes_req);
+                        }
+                        Err(_) => break,
+                    }
+                }
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
@@ -100,7 +121,7 @@ pub async fn events(
                             clients,
                             relay_topic.clone(),
                             my_addresses,
-                            fullnodes
+                            fullnodes,
                         )
                         .await;
                     }
@@ -126,28 +147,39 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        handle_gossip_message(
-                            propagation_source,
-                            message,
-                            local_peer_id,
-                            clients,
-                            relays,
-                            swarm,
-                            relay_topic.clone(),
-                            connections,
-                            relay_topic_subscribers,
-                            my_addresses,
-                            leader,
-                            fullnodes,
-                            clients_topic.clone(),
-                            client_topic_subscriber
-                        )
-                        .await;
+                        if *sync {
+                            handle_gossip_message(
+                                propagation_source,
+                                message,
+                                local_peer_id,
+                                clients,
+                                relays,
+                                swarm,
+                                relay_topic.clone(),
+                                connections,
+                                relay_topic_subscribers,
+                                my_addresses,
+                                leader,
+                                fullnodes,
+                                clients_topic.clone(),
+                                client_topic_subscriber,
+                            )
+                            .await;
+                        } else {
+                            let str_msg = String::from_utf8(message.data).unwrap();
+                            if let Ok(gossipmsg) = serde_json::from_str::<GossipMessage>(&str_msg) {
+                                let new_gossip = GetGossipMsg {
+                                    gossip: gossipmsg,
+                                    propagation_source: propagation_source,
+                                };
+                                syncing_blocks.push(new_gossip);
+                            }
+                        }
                     }
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
                         topic,
                         peer_id,
-                        &mut swarm,
+                        swarm,
                         my_addresses.clone(),
                         relay_topic_subscribers,
                         connections,
@@ -163,28 +195,61 @@ pub async fn events(
                         } => {
                             handle_requests(
                                 request,
-                                &mut clients,
-                                &mut swarm,
-                                &mut channels,
+                                clients,
+                                swarm,
+                                channels,
                                 channel,
-                                &mut relays,
+                                relays,
                                 peer,
                                 local_peer_id,
                                 wallet,
                                 clients_topic.clone(),
-                                fullnodes
+                                fullnodes,
                             )
                             .await;
                         }
                         libp2p::request_response::Message::Response { response, .. } => {
-                            handle_responses(
-                                response,
-                                local_peer_id,
-                                channels,
-                                swarm,
-                                client_topic_subscriber,
-                                relay_topic_subscribers,
-                            );
+                            if let Ok(fullnode_subs) =
+                                serde_json::from_str::<Vec<FullNodes>>(&response.res)
+                            {
+                                for fullnode in fullnode_subs.clone() {
+                                    fullnodes.push(fullnode)
+                                }
+
+                                if syncing_blocks.len() > 0 {
+                                    for gossipmsg in syncing_blocks.clone() {
+                                        let str_msg =
+                                            &serde_json::to_string(&gossipmsg.gossip).unwrap();
+                                        verifying_block(
+                                            str_msg,
+                                            leader,
+                                            &mut fullnode_subs.clone(),
+                                            swarm,
+                                            gossipmsg.propagation_source,
+                                            clients_topic.clone(),
+                                            client_topic_subscriber,
+                                            relays,
+                                            clients,
+                                            relay_topic.clone(),
+                                            my_addresses,
+                                        )
+                                        .await;
+                                    }
+                                }
+
+                                *sync = true;
+                                send_addr_to_server(my_addresses[0].clone()).await;
+                            } else {
+                                handle_responses(
+                                    response,
+                                    local_peer_id,
+                                    channels,
+                                    swarm,
+                                    client_topic_subscriber,
+                                    relay_topic_subscribers,
+                                )
+                                .await;
+                            }
                         }
                     },
                     _ => (),
