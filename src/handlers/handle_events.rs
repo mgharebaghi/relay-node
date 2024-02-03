@@ -172,6 +172,7 @@ pub async fn events(
                                 local_peer_id,
                                 wallet,
                                 clients_topic.clone(),
+                                fullnodes
                             )
                             .await;
                         }

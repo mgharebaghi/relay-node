@@ -1,7 +1,10 @@
 use std::fs;
 
 use super::{
-    check_trx::handle_transactions, create_log::write_log, send_response::send_res, structures::{Channels, CustomBehav, Req, ReqForReq, Res, Transaction}
+    check_trx::handle_transactions,
+    create_log::write_log,
+    send_response::send_res,
+    structures::{Channels, CustomBehav, FullNodes, Req, ReqForReq, Res, Transaction},
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use rand::seq::SliceRandom;
@@ -10,7 +13,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 struct Handshake {
     wallet: String,
-    first_node: String
+    first_node: String,
 }
 
 //handle requests that recieved from clients or relays
@@ -25,13 +28,14 @@ pub async fn handle_requests(
     local_peer_id: PeerId,
     wallet: &mut String,
     topic: IdentTopic,
+    fullnode_subs: &mut Vec<FullNodes>,
 ) {
     if request.req.clone() == "handshake".to_string() {
         let is_dump_data = fs::metadata("/etc/dump/Blockchain").is_ok();
 
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
-            first_node: String::new()
+            first_node: String::new(),
         };
 
         if is_dump_data {
@@ -39,7 +43,7 @@ pub async fn handle_requests(
         } else {
             handshake_res.first_node.push_str(&"yes".to_string());
         }
-        
+
         let str_handshake_res = serde_json::to_string(&handshake_res).unwrap();
         let response = Res {
             res: str_handshake_res,
@@ -61,9 +65,7 @@ pub async fn handle_requests(
             .publish(sse_topic, request.req.clone())
         {
             Ok(_) => {}
-            Err(_) => {
-                
-            }
+            Err(_) => {}
         }
         let send_transaction = swarm.behaviour_mut().gossipsub.publish(topic, request.req);
         match send_transaction {
@@ -86,6 +88,13 @@ pub async fn handle_requests(
                     .send_response(channel, response);
             }
         }
+    } else if request.req.clone() == "fullnodes".to_string() {
+        let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();
+        let response = Res { res: str_fullnodes };
+        let _ = swarm
+            .behaviour_mut()
+            .req_res
+            .send_response(channel, response);
     } else {
         if clients.len() > 0 {
             let chnl = Channels { peer, channel };
