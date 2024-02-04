@@ -44,6 +44,9 @@ pub async fn events(
                 let ip: Ipv4Addr = ipv4.parse().unwrap();
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses).await;
+                    if *sync {
+                        send_addr_to_server(my_addresses[0].clone()).await;
+                    }
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
