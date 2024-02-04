@@ -56,8 +56,9 @@ pub struct OutNode {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct BlockSign {
-    pub public: Vec<u8>,
+    pub wallet_public: Public,
     pub signature: Vec<Signature>,
+    pub peer_public: Vec<u8>
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

@@ -50,7 +50,7 @@ pub async fn verifying_block(
             if validate_leader {
                 //get validator public key
                 let validator_publickey = PublicKey::try_decode_protobuf(
-                    &gossip_message.block.header.block_signature.public,
+                    &gossip_message.block.header.block_signature.peer_public,
                 );
                 match validator_publickey {
                     Ok(pubkey) => {
@@ -59,24 +59,14 @@ pub async fn verifying_block(
                             PeerId::from_public_key(&pubkey) == validator_peerid;
 
                         //check block signature
-                        let mut verify_block_sign = false;
+                        let str_block_body_for_verify =
+                            gossip_message.block.body.coinbase.tx_hash.clone();
 
-                        if gossip_message.block.header.prevhash != "This block is Genesis" {
-                            let str_block_body_for_verify =
-                                gossip_message.block.body.coinbase.tx_hash.clone();
-                            for i in fullnode_subs.clone() {
-                                if i.peer_id == validator_peerid {
-                                    verify_block_sign = sp_core::ecdsa::Pair::verify(
-                                        &gossip_message.block.header.block_signature.signature[0],
-                                        str_block_body_for_verify,
-                                        &i.public_key,
-                                    );
-                                    break;
-                                }
-                            }
-                        } else {
-                            verify_block_sign = true;
-                        }
+                        let verify_block_sign = sp_core::ecdsa::Pair::verify(
+                            &gossip_message.block.header.block_signature.signature[0],
+                            str_block_body_for_verify,
+                            &gossip_message.block.header.block_signature.wallet_public,
+                        );
 
                         if check_pid_with_public_key {
                             if verify_block_sign {
@@ -251,9 +241,7 @@ async fn submit_block(
                                                 .arg("/etc/dump")
                                                 .output()
                                             {
-                                                Ok(_) => {
-                                                    
-                                                }
+                                                Ok(_) => {}
                                                 Err(e) => write_log(format!("{:?}", e)),
                                             }
                                         } else {
@@ -321,7 +309,7 @@ async fn submit_block(
                                     .arg("/etc/dump")
                                     .output()
                                 {
-                                    Ok(_) => {},
+                                    Ok(_) => {}
                                     Err(e) => write_log(format!("{:?}", e)),
                                 }
                             }
@@ -345,7 +333,7 @@ async fn submit_block(
                             .arg("/etc/dump")
                             .output()
                         {
-                            Ok(_) => {},
+                            Ok(_) => {}
                             Err(e) => write_log(format!("{:?}", e)),
                         }
                     }
