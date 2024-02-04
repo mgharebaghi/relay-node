@@ -47,7 +47,7 @@ pub async fn handle_streams(
     leader: &mut String,
     fullnodes: &mut Vec<FullNodes>,
     sync: &mut bool,
-    syncing_blocks: &mut Vec<GetGossipMsg>
+    syncing_blocks: &mut Vec<GetGossipMsg>,
 ) {
     loop {
         let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
@@ -93,6 +93,9 @@ pub async fn handle_streams(
             *sync = true
         }
 
+        let listener: Multiaddr = "/ip4/0.0.0.0/tcp/3369".parse().unwrap();
+        swarm.listen_on(listener).unwrap();
+
         events(
             swarm,
             local_peer_id,
@@ -110,7 +113,7 @@ pub async fn handle_streams(
             fullnodes,
             sync,
             dialed_addr,
-            syncing_blocks
+            syncing_blocks,
         )
         .await;
     }

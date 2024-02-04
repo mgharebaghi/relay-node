@@ -19,8 +19,7 @@ use handlers::structures::Res;
 use libp2p::{
     gossipsub::IdentTopic,
     identity::Keypair,
-    request_response::{cbor, ProtocolSupport},
-    Multiaddr, PeerId, StreamProtocol, SwarmBuilder,
+    request_response::{cbor, ProtocolSupport}, PeerId, StreamProtocol, SwarmBuilder,
 };
 use serde::{Deserialize, Serialize};
 
@@ -117,8 +116,6 @@ pub async fn run() {
         .unwrap()
         .with_swarm_config(|_conf| swarm_config)
         .build();
-    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/3369".parse().unwrap();
-    swarm.listen_on(listener).unwrap();
 
     let mut connections: Vec<PeerId> = Vec::new();
     let mut relay_topic_subscribers: Vec<PeerId> = Vec::new();
