@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, process::Command};
 
 use super::{
     check_trx::handle_transactions,
@@ -39,6 +39,16 @@ pub async fn handle_requests(
         };
 
         if is_dump_data {
+            match Command::new("mongodump")
+                .arg("--db")
+                .arg("Blockchain")
+                .arg("--out")
+                .arg("/etc/dump")
+                .output()
+            {
+                Ok(_) => {}
+                Err(e) => write_log(format!("{:?}", e)),
+            }
             handshake_res.first_node.push_str(&"no".to_string());
         } else {
             handshake_res.first_node.push_str(&"yes".to_string());
