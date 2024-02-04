@@ -31,24 +31,12 @@ pub async fn handle_requests(
     fullnode_subs: &mut Vec<FullNodes>,
 ) {
     if request.req.clone() == "handshake".to_string() {
-        let is_dump_data = fs::metadata("/etc/dump/Blockchain").is_ok();
-
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
         };
 
-        if is_dump_data {
-            match Command::new("mongodump")
-                .arg("--db")
-                .arg("Blockchain")
-                .arg("--out")
-                .arg("/etc/dump")
-                .output()
-            {
-                Ok(_) => {}
-                Err(e) => write_log(format!("{:?}", e)),
-            }
+        if fullnode_subs.len() > 0 {
             handshake_res.first_node.push_str(&"no".to_string());
         } else {
             handshake_res.first_node.push_str(&"yes".to_string());
