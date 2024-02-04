@@ -31,6 +31,7 @@ pub async fn handle_requests(
     fullnode_subs: &mut Vec<FullNodes>,
 ) {
     if request.req.clone() == "handshake".to_string() {
+        println!("in handshake request");
         let is_dump_data = fs::metadata("/etc/dump/Blockchain").is_ok();
 
         let mut handshake_res = Handshake {
@@ -89,6 +90,7 @@ pub async fn handle_requests(
             }
         }
     } else if request.req.clone() == "fullnodes".to_string() {
+        println!("in fullnodes request");
         let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();
         let response = Res { res: str_fullnodes };
         let _ = swarm

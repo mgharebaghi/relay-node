@@ -20,6 +20,7 @@ pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mu
 }
 
 pub async fn send_addr_to_server(full_addr: String) {
+    println!("my full address: {}", full_addr);
     let os = std::env::consts::OS;
     let mut path = "";
     if os == "linux" {

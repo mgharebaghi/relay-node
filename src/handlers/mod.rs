@@ -85,9 +85,11 @@ pub async fn handle_streams(
                     }
                 }
             } else {
+                println!("sync in dialing else");
                 *sync = true
             }
         } else {
+            println!("sync in relay exist else");
             *sync = true
         }
 

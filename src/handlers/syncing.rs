@@ -13,6 +13,7 @@ use super::{create_log::write_log, db_connection::blockchain_db, recieved_block:
 pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
     match blockchain_db().await {
         Ok(db) => {
+            println!("in syncing function");
             let trim_addr = dialed_addr.trim_start_matches("/ip4/");
             let split_addr = trim_addr.split("/").next().unwrap();
             let blocks_addr = format!("http://{}:3390/blockchain/Blocks.bson", split_addr);
@@ -29,6 +30,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
             //get reciepts from server and insert it to db
             match reciepts_response {
                 Ok(res) => {
+                    println!("in reciept response");
                     let mut body = res.bytes_stream();
 
                     loop {
@@ -50,8 +52,10 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                     while let Ok(doc) = Document::from_reader(&mut reader) {
                         reciept_coll.insert_one(doc, None).await.unwrap();
                     }
+                    println!("reciepts insert");
                 }
                 Err(_) => {
+                    println!("insert reciept problem and change connection!");
                     write_log("insert reciept problem and change connection!".to_string());
                     return Err(());
                 }
@@ -60,6 +64,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
             //get utxos from server and insert it to db
             match utxos_response {
                 Ok(res) => {
+                    println!("in utxos response");
                     let mut body = res.bytes_stream();
 
                     loop {
@@ -81,8 +86,10 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                     while let Ok(doc) = Document::from_reader(&mut reader) {
                         utxos_coll.insert_one(doc, None).await.unwrap();
                     }
+                    println!("utxo response inserted");
                 }
                 Err(_) => {
+                    println!("utxo response problem!");
                     write_log("insert utxos problem and change connection!".to_string());
                     return Err(());
                 }
@@ -91,6 +98,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
             //get blocks from server and insert it to db if it is correct blockchain
             match blocks_response {
                 Ok(res) => {
+                    println!("in blocks response");
                     let mut body = res.bytes_stream();
 
                     loop {
@@ -131,8 +139,10 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             return Err(());
                         }
                     }
+                    println!("blocks inserted");
                 }
                 Err(_) => {
+                    println!("blocks response problem!");
                     return Err(());
                 }
             }

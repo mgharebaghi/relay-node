@@ -45,12 +45,14 @@ pub async fn events(
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses).await;
                     if *sync {
+                        println!("send address to server while im sync.");
                         send_addr_to_server(my_addresses[0].clone()).await;
                     }
                 }
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 if !*sync && dialed_addr.contains(&peer_id.to_string()) {
+                    println!("in connection stablish syncing...");
                     match syncing(dialed_addr.clone()).await {
                         Ok(_) => {
                             let fullnodes_req = Req {
@@ -60,6 +62,7 @@ pub async fn events(
                                 .behaviour_mut()
                                 .req_res
                                 .send_request(&peer_id, fullnodes_req);
+                            println!("send fullnode response");
                         }
                         Err(_) => break,
                     }
@@ -215,11 +218,13 @@ pub async fn events(
                             if let Ok(fullnode_subs) =
                                 serde_json::from_str::<Vec<FullNodes>>(&response.res)
                             {
+                                println!("in fullnode response");
                                 for fullnode in fullnode_subs.clone() {
                                     fullnodes.push(fullnode)
                                 }
-
+                                println!("fullnodes insert");
                                 if syncing_blocks.len() > 0 {
+                                    println!("in syncing blocks...");
                                     for gossipmsg in syncing_blocks.clone() {
                                         let str_msg =
                                             &serde_json::to_string(&gossipmsg.gossip).unwrap();
