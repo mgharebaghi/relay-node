@@ -188,7 +188,8 @@ async fn submit_block(
     match blockchain_db().await {
         Ok(db) => {
             let blocks_coll: Collection<Document> = db.collection("Blocks");
-            let utxos_coll = db.collection("UTXOs");
+            let utxos_coll: Collection<Document> = db.collection("UTXOs");
+            let reciept_coll: Collection<Document> = db.collection("reciept");
             let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
             let same_block = blocks_coll.find_one(filter, None).await.unwrap();
 
@@ -290,51 +291,114 @@ async fn submit_block(
                         None => {
                             if gossip_message.block.header.prevhash
                                 == "This block is Genesis".to_string()
+                                && fullnode_subs.len() < 1
                             {
-                                let new_block_doc = to_document(&gossip_message.block).unwrap();
-                                blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
-                                handle_block_reward(gossip_message.clone(), utxos_coll.clone())
-                                    .await;
-                                //update utxos in database for transactions
-                                handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
+                                match blocks_coll.delete_many(doc! {}, None).await {
+                                    Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
+                                        Ok(_) => {
+                                            match reciept_coll.delete_many(doc! {}, None).await {
+                                                Ok(_) => {
+                                                    let new_block_doc =
+                                                        to_document(&gossip_message.block).unwrap();
+                                                    blocks_coll
+                                                        .insert_one(new_block_doc, None)
+                                                        .await
+                                                        .unwrap(); //insert block to DB
+                                                    handle_block_reward(
+                                                        gossip_message.clone(),
+                                                        utxos_coll.clone(),
+                                                    )
+                                                    .await;
+                                                    //update utxos in database for transactions
+                                                    handle_tx_utxos(
+                                                        gossip_message.clone(),
+                                                        utxos_coll.clone(),
+                                                    )
+                                                    .await;
 
-                                //check next leader
-                                leader.clear();
-                                leader.push_str(&gossip_message.next_leader);
+                                                    //check next leader
+                                                    leader.clear();
+                                                    leader.push_str(&gossip_message.next_leader);
 
-                                match Command::new("mongodump")
-                                    .arg("--db")
-                                    .arg("Blockchain")
-                                    .arg("--out")
-                                    .arg("/etc/dump")
-                                    .output()
-                                {
-                                    Ok(_) => {}
-                                    Err(e) => write_log(format!("{:?}", e)),
+                                                    match Command::new("mongodump")
+                                                        .arg("--db")
+                                                        .arg("Blockchain")
+                                                        .arg("--out")
+                                                        .arg("/etc/dump")
+                                                        .output()
+                                                    {
+                                                        Ok(_) => {}
+                                                        Err(e) => write_log(format!("{:?}", e)),
+                                                    }
+                                                }
+                                                Err(_) => write_log(
+                                                    "remove reciept collection problem!"
+                                                        .to_string(),
+                                                ),
+                                            }
+                                        }
+                                        Err(_) => write_log(
+                                            "remove utxos collection problem!".to_string(),
+                                        ),
+                                    },
+                                    Err(_) => {
+                                        write_log("remove bocks collection problem!".to_string())
+                                    }
                                 }
                             }
                         }
                     }
                 }
                 Err(_) => {
-                    if gossip_message.block.header.prevhash == "This block is Genesis".to_string() {
-                        let new_block_doc = to_document(&gossip_message.block).unwrap();
-                        blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
-                        handle_block_reward(gossip_message.clone(), utxos_coll.clone()).await;
-                        handle_tx_utxos(gossip_message.clone(), utxos_coll.clone()).await;
-                        //update utxos in database for transactions
-                        //check next leader
-                        leader.clear();
-                        leader.push_str(&gossip_message.next_leader);
-                        match Command::new("mongodump")
-                            .arg("--db")
-                            .arg("Blockchain")
-                            .arg("--out")
-                            .arg("/etc/dump")
-                            .output()
-                        {
-                            Ok(_) => {}
-                            Err(e) => write_log(format!("{:?}", e)),
+                    if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
+                        && fullnode_subs.len() < 1
+                    {
+                        match blocks_coll.delete_many(doc! {}, None).await {
+                            Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
+                                Ok(_) => {
+                                    match reciept_coll.delete_many(doc! {}, None).await {
+                                        Ok(_) => {
+                                            let new_block_doc =
+                                                to_document(&gossip_message.block).unwrap();
+                                            blocks_coll
+                                                .insert_one(new_block_doc, None)
+                                                .await
+                                                .unwrap(); //insert block to DB
+                                            handle_block_reward(
+                                                gossip_message.clone(),
+                                                utxos_coll.clone(),
+                                            )
+                                            .await;
+                                            //update utxos in database for transactions
+                                            handle_tx_utxos(
+                                                gossip_message.clone(),
+                                                utxos_coll.clone(),
+                                            )
+                                            .await;
+
+                                            //check next leader
+                                            leader.clear();
+                                            leader.push_str(&gossip_message.next_leader);
+
+                                            match Command::new("mongodump")
+                                                .arg("--db")
+                                                .arg("Blockchain")
+                                                .arg("--out")
+                                                .arg("/etc/dump")
+                                                .output()
+                                            {
+                                                Ok(_) => {}
+                                                Err(e) => write_log(format!("{:?}", e)),
+                                            }
+                                        }
+                                        Err(_) => write_log(
+                                            "remove reciept collection problem!".to_string(),
+                                        ),
+                                    }
+                                }
+                                Err(_) => write_log("remove utxos collection problem!".to_string()),
+                            },
+                            Err(_) => write_log("remove bocks collection problem!".to_string()),
                         }
                     }
                 }

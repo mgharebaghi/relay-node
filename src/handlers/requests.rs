@@ -1,5 +1,3 @@
-use std::{fs, process::Command};
-
 use super::{
     check_trx::handle_transactions,
     create_log::write_log,
