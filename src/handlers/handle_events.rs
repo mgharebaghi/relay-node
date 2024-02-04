@@ -91,6 +91,19 @@ pub async fn events(
                         Err(_) => break,
                     }
                 }
+
+                if *sync {
+                    match Command::new("mongodump")
+                        .arg("--db")
+                        .arg("Blockchain")
+                        .arg("--out")
+                        .arg("/etc/dump")
+                        .output()
+                    {
+                        Ok(_) => {}
+                        Err(e) => write_log(format!("{:?}", e)),
+                    }
+                }
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
