@@ -9,6 +9,7 @@ use super::create_log::write_log;
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::{handle, send_addr_to_server};
 use super::outnodes::handle_outnode;
+use super::reciept::insert_reciept;
 use super::recieved_block::verifying_block;
 use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
@@ -16,6 +17,7 @@ use super::responses::handle_responses;
 use super::send_address::send_address;
 use super::structures::{
     Channels, CustomBehav, CustomBehavEvent, FullNodes, GetGossipMsg, GossipMessage, Req,
+    Transaction,
 };
 use super::syncing::syncing;
 
@@ -208,6 +210,16 @@ pub async fn events(
                                     propagation_source: propagation_source,
                                 };
                                 syncing_blocks.push(new_gossip);
+                            } else if let Ok(transaction) =
+                                serde_json::from_str::<Transaction>(&str_msg)
+                            {
+                                insert_reciept(
+                                    transaction,
+                                    None,
+                                    "pending".to_string(),
+                                    "".to_string(),
+                                )
+                                .await;
                             }
                         }
                     }
