@@ -45,6 +45,7 @@ pub async fn events(
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses).await;
                     if *sync {
+                        println!("sync new listener");
                         send_addr_to_server(my_addresses[0].clone()).await;
                     }
                 }

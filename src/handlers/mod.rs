@@ -85,9 +85,11 @@ pub async fn handle_streams(
                     }
                 }
             } else {
+                println!("sync true in no dial address");
                 *sync = true
             }
         } else {
+            println!("sync true in no relay file");
             *sync = true
         }
 
