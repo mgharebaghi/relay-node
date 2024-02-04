@@ -1,4 +1,5 @@
 use std::net::Ipv4Addr;
+use std::process::Command;
 
 use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
@@ -70,6 +71,16 @@ pub async fn events(
                             let fullnodes_req = Req {
                                 req: "fullnodes".to_string(),
                             };
+                            match Command::new("mongodump")
+                                .arg("--db")
+                                .arg("Blockchain")
+                                .arg("--out")
+                                .arg("/etc/dump")
+                                .output()
+                            {
+                                Ok(_) => {}
+                                Err(e) => write_log(format!("{:?}", e)),
+                            }
                             swarm
                                 .behaviour_mut()
                                 .req_res
