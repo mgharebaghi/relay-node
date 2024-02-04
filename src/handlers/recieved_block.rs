@@ -185,6 +185,7 @@ async fn submit_block(
     relay_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
 ) {
+    println!("in submit block");
     match blockchain_db().await {
         Ok(db) => {
             let blocks_coll: Collection<Document> = db.collection("Blocks");
