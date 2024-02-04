@@ -1,5 +1,6 @@
 use std::net::Ipv4Addr;
 
+use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
@@ -16,6 +17,11 @@ use super::structures::{
     Channels, CustomBehav, CustomBehavEvent, FullNodes, GetGossipMsg, GossipMessage, Req,
 };
 use super::syncing::syncing;
+
+#[derive(Debug)]
+struct Listeners {
+    id: Vec<ListenerId>,
+}
 
 pub async fn events(
     swarm: &mut Swarm<CustomBehav>,
@@ -36,9 +42,14 @@ pub async fn events(
     dialed_addr: String,
     syncing_blocks: &mut Vec<GetGossipMsg>,
 ) {
+    let mut listeners = Listeners { id: Vec::new() };
+
     loop {
         match swarm.select_next_some().await {
-            SwarmEvent::NewListenAddr { address, .. } => {
+            SwarmEvent::NewListenAddr {
+                address,
+                listener_id,
+            } => {
                 let str_addr = address.clone().to_string();
                 let ipv4 = str_addr.split("/").nth(2).unwrap();
                 let ip: Ipv4Addr = ipv4.parse().unwrap();
@@ -49,6 +60,8 @@ pub async fn events(
                         send_addr_to_server(my_addresses[0].clone()).await;
                     }
                 }
+
+                listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 if !*sync && dialed_addr.contains(&peer_id.to_string()) {
@@ -81,6 +94,10 @@ pub async fn events(
                         }
                     }
                 }
+
+                for listener in listeners.id {
+                    swarm.remove_listener(listener);
+                }
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
@@ -105,6 +122,9 @@ pub async fn events(
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
                     remove_peer(peer_id, my_addresses).await;
+                    for listener in listeners.id {
+                        swarm.remove_listener(listener);
+                    }
                     break;
                 }
 
