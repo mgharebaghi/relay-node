@@ -293,6 +293,7 @@ async fn submit_block(
                                 == "This block is Genesis".to_string()
                                 && fullnode_subs.len() < 1
                             {
+                                println!("genesis block insert section in none");
                                 match blocks_coll.delete_many(doc! {}, None).await {
                                     Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
                                         Ok(_) => {
@@ -353,6 +354,7 @@ async fn submit_block(
                     if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
                         && fullnode_subs.len() < 1
                     {
+                        println!("genesis block insert section");
                         match blocks_coll.delete_many(doc! {}, None).await {
                             Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
                                 Ok(_) => {
