@@ -18,9 +18,9 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
             let blocks_addr = format!("http://{}:3390/blockchain/Blocks.bson", split_addr);
             let utxos_addr = format!("http://{}:3390/blockchain/UTXOs.bson", split_addr);
             let reciepts_addr = format!("http://{}:3390/blockchain/reciept.bson", split_addr);
-            let mut blocks_output = fs::File::create("Blocks.bson").unwrap();
-            let mut utxos_output = fs::File::create("UTXOs.bson").unwrap();
-            let mut reciepts_output = fs::File::create("reciept.bson").unwrap();
+            let mut blocks_output = fs::File::create("/etc/Blocks.bson").unwrap();
+            let mut utxos_output = fs::File::create("/etc/UTXOs.bson").unwrap();
+            let mut reciepts_output = fs::File::create("/etc/reciept.bson").unwrap();
 
             let blocks_response = reqwest::get(blocks_addr).await;
             let utxos_response = reqwest::get(utxos_addr).await;
@@ -41,7 +41,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                         }
                     }
 
-                    let bson_file = fs::File::open("reciept.bson").unwrap();
+                    let bson_file = fs::File::open("/etc/reciept.bson").unwrap();
                     let mut reader = BufReader::new(bson_file);
 
                     let reciept_coll: Collection<Document> = db.collection("reciept");
@@ -72,7 +72,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                         }
                     }
 
-                    let bson_file = fs::File::open("UTXOs.bson").unwrap();
+                    let bson_file = fs::File::open("/etc/UTXOs.bson").unwrap();
                     let mut reader = BufReader::new(bson_file);
 
                     let utxos_coll: Collection<Document> = db.collection("UTXOs");
@@ -103,7 +103,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                         }
                     }
 
-                    let bson_file = fs::File::open("Blocks.bson").unwrap();
+                    let bson_file = fs::File::open("/etc/Blocks.bson").unwrap();
                     let mut reader = BufReader::new(bson_file);
 
                     let block_coll: Collection<Document> = db.collection("Blocks");
