@@ -30,7 +30,7 @@ pub async fn handle_requests(
     relay_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
 ) {
-    if request.req.clone() == "handshake".to_string() {
+    if request.req == "handshake".to_string() {
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
