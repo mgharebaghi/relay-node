@@ -89,7 +89,7 @@ pub async fn handle_streams(
             *sync = true
         }
 
-        let listener: Multiaddr = "/ip4/0.0.0.0/tcp/3369".parse().unwrap();
+        let listener: Multiaddr = "/ip4/0.0.0.0/tcp/33390".parse().unwrap();
         swarm.listen_on(listener).unwrap();
 
         events(
