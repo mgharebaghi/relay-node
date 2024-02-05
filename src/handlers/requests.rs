@@ -94,6 +94,7 @@ pub async fn handle_requests(
             .req_res
             .send_response(channel, response);
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req.clone()) {
+        println!("in block request");
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
         match verifying_block(&request.req, leader, fullnode_subs).await {
             Ok(_) => {

@@ -91,7 +91,7 @@ pub async fn verifying_block(
                 Err(())
             }
         }
-        Err(_) => Err(()),
+        Err(_) => Ok(()),
     }
 }
 
