@@ -98,7 +98,7 @@ pub async fn handle_requests() {
             "/blockchain",
             ServeDir::new("/etc/dump/Blockchain"),
         );
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3390));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3369));
 
     axum_server::bind(addr)
         .serve(app.into_make_service())
