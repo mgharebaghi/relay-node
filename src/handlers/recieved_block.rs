@@ -63,7 +63,10 @@ pub async fn verifying_block(
                         if check_pid_with_public_key {
                             if verify_block_sign {
                                 match submit_block(gossip_message, leader, fullnode_subs).await {
-                                    Ok(_) => Ok(()),
+                                    Ok(_) => {
+                                        println!("block submit");
+                                        Ok(())
+                                    },
                                     Err(_) => Err(()),
                                 }
                             } else {
@@ -104,6 +107,7 @@ async fn submit_block(
 ) -> Result<(), ()> {
     match blockchain_db().await {
         Ok(db) => {
+            println!("in block submit");
             let blocks_coll: Collection<Document> = db.collection("Blocks");
             let utxos_coll: Collection<Document> = db.collection("UTXOs");
             let reciept_coll: Collection<Document> = db.collection("reciept");
@@ -205,7 +209,7 @@ async fn submit_block(
                         None => {
                             if gossip_message.block.header.prevhash
                                 == "This block is Genesis".to_string()
-                                && fullnode_subs.len() < 1
+                                && fullnode_subs.len() < 2
                             {
                                 match blocks_coll.delete_many(doc! {}, None).await {
                                     Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
@@ -277,7 +281,7 @@ async fn submit_block(
                 }
                 Err(_) => {
                     if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
-                        && fullnode_subs.len() < 1
+                        && fullnode_subs.len() < 2
                     {
                         match blocks_coll.delete_many(doc! {}, None).await {
                             Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {

@@ -96,7 +96,7 @@ pub async fn events(
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
                 write_log(format!("Dialing failed with: {}", peer_id.unwrap()));
-                remove_peer(peer_id.unwrap(), my_addresses).await;
+                remove_peer(peer_id.unwrap()).await;
                 for i in relays.clone() {
                     if peer_id.unwrap() == i {
                         match relays.iter().position(|pid| pid == &peer_id.unwrap()) {
@@ -134,7 +134,7 @@ pub async fn events(
                         .behaviour_mut()
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
-                    remove_peer(peer_id, my_addresses).await;
+                    remove_peer(peer_id).await;
 
                     //check relays number and if it's 0 break for dial to others and
                     //remove listener for open new listener without conflict

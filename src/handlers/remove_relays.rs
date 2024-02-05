@@ -10,7 +10,7 @@ use reqwest::Client;
 use super::create_log::write_log;
 
 //remove peer from relays.dat file when it disconnected
-pub async fn remove_peer(peerid: PeerId, my_addresses: &mut Vec<String>) {
+pub async fn remove_peer(peerid: PeerId) {
     let mut relay_path = "";
     if OS == "linux" {
         relay_path = "/etc/relays.dat";
