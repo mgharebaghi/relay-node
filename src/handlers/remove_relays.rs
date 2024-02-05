@@ -35,7 +35,16 @@ pub async fn remove_peer(peerid: PeerId, my_addresses: &mut Vec<String>) {
                         .is_ok();
 
                     if post_rm_addr {
-                        if !line.contains(&my_addresses[0]) {
+                        let myaddr_file = File::open("/etc/myaddress.dat").unwrap();
+                        let addr_read = BufReader::new(myaddr_file);
+                        let mut my_ip = String::new();
+                        for i in addr_read.lines() {
+                            let addr = i.unwrap();
+                            let ip = addr.trim_start_matches("/ip4/");
+                            let ip = ip.split("/").next().unwrap();
+                            my_ip.push_str(ip);
+                        }
+                        if !line.contains(&my_ip) {
                             let ip = line.trim_start_matches("/ip4/");
                             let ip = ip.split("/").next().unwrap();
                             match client
