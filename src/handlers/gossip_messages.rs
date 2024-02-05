@@ -1,22 +1,15 @@
-use std::{
-    env::consts::OS,
-    fs::{File, OpenOptions},
-    io::{BufRead, BufReader, BufWriter, Write},
-};
-
 use libp2p::{
     gossipsub::{IdentTopic, Message}, PeerId, Swarm
 };
-use reqwest::Client;
 
 use crate::handlers::structures::{ImSync, OutNode};
 
-use super::{create_log::write_log, handle_messages::msg_check, structures::{CustomBehav, FullNodes}};
+use super::{create_log::write_log, get_addresses::get_addresses, handle_messages::msg_check, structures::{CustomBehav, FullNodes, NextLeader}};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,
-    message: Message,
     local_peer_id: PeerId,
+    message: Message,
     clients: &mut Vec<PeerId>,
     relays: &mut Vec<PeerId>,
     swarm: &mut Swarm<CustomBehav>,
@@ -26,53 +19,29 @@ pub async fn handle_gossip_message(
     my_addresses: &mut Vec<String>,
     leader: &mut String, 
     fullnodes: &mut Vec<FullNodes>,
-    clients_topic: IdentTopic,
-    client_topic_subscriber: &mut Vec<PeerId>,
 ) {
     
-    msg_check(message.clone(), leader, fullnodes, swarm, propagation_source,clients_topic,
-    client_topic_subscriber,
-    relays,
-    clients,
-    relay_topic.clone(),
-    my_addresses,).await;
+    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections).await;
 
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
+
+            //handle next leader msg
+            let mut fpids = Vec::new();
+            for fullnode in fullnodes.clone() {
+                fpids.push(fullnode.peer_id);
+            }
+            if let Ok(identifier) = serde_json::from_str::<NextLeader>(&msg) {
+                if leader.len() > 0 && fpids.contains(&identifier.identifier_peer_id) && fpids.contains(&identifier.next_leader) {
+                    leader.clear();
+                    leader.push_str(&identifier.next_leader.to_string());
+                } else {
+                    write_log("identifier is not true! recieved block (line 96)".to_string())
+                }
+            }
+            //get new realay addresses and add it to relays file
             if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
-                let mut relay_path = "";
-                if OS == "linux" {
-                    relay_path = "/etc/relays.dat";
-                } else if OS == "windows" {
-                    relay_path = "relays.dat";
-                }
-
-                let r_relay_file = File::open(relay_path).unwrap();
-                let reader = BufReader::new(r_relay_file);
-                let mut old_addresses = Vec::new();
-                for i in reader.lines() {
-                    match i {
-                        Ok(line) => {
-                            old_addresses.push(line);
-                        }
-                        Err(_) => {}
-                    }
-                }
-                let relays_file = OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open(relay_path)
-                    .unwrap();
-                let mut buf_writer = BufWriter::new(relays_file);
-                for i in addresses {
-                    if !i.contains(&local_peer_id.to_string()) && !old_addresses.contains(&i) {
-                        writeln!(buf_writer, "{}", i).unwrap();
-                    }
-
-                    if !my_addresses.contains(&i) {
-                        my_addresses.push(i);
-                    }
-                }
+                get_addresses(addresses, local_peer_id, my_addresses);
             }
 
             //Relay announcement
@@ -100,24 +69,6 @@ pub async fn handle_gossip_message(
                             }
                     }
                 }
-
-                if clients.len() >= 1 {
-                    let trim_my_addr = my_addresses[0].trim_start_matches("/ip4/");
-                    let my_ip = trim_my_addr.split("/").next().unwrap();
-                    let client = Client::new();
-                    let res = client
-                        .post("https://centichain.org/api/rpc")
-                        .body(my_ip.to_string())
-                        .send()
-                        .await;
-                    match res {
-                        Ok(_) => {}
-                        Err(_) => write_log(
-                            "Can not send your public ip to the server in gossip messages check!"
-                                .to_string(),
-                        ),
-                    }
-                }
             }
 
             if msg == "i have a client".to_string() && connections.contains(&propagation_source) {
@@ -137,6 +88,7 @@ pub async fn handle_gossip_message(
                 }
             }
 
+            //handle left nodes
             if let Ok(outnode) = serde_json::from_str::<OutNode>(&msg) {
                 if let Some(index) = fullnodes
                 .iter()

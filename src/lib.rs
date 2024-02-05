@@ -11,15 +11,16 @@ use crossterm::execute;
 use crossterm::style::{Print, ResetColor, SetForegroundColor, Stylize};
 use handlers::create_log::write_log;
 use handlers::handle_streams;
-use handlers::structures::{Channels, FullNodes};
 use handlers::structures::CustomBehav;
 use handlers::structures::Req;
 use handlers::structures::Res;
+use handlers::structures::FullNodes;
 
 use libp2p::{
     gossipsub::IdentTopic,
     identity::Keypair,
-    request_response::{cbor, ProtocolSupport}, PeerId, StreamProtocol, SwarmBuilder,
+    request_response::{cbor, ProtocolSupport},
+    PeerId, StreamProtocol, SwarmBuilder,
 };
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +64,6 @@ pub async fn run() {
     let relay_topic = IdentTopic::new("relay");
     let clients_topic = IdentTopic::new("client");
     let sse_topic = IdentTopic::new("sse");
-    
 
     //generate peer keys and peer id for network
     let keypair = Keypair::generate_ecdsa();
@@ -124,7 +124,6 @@ pub async fn run() {
     let mut relays: Vec<PeerId> = Vec::new();
     let mut leader = String::new();
     let mut fullnode_subs: Vec<FullNodes> = Vec::new();
-    let mut channels: Vec<Channels> = Vec::new();
     let mut my_addresses = Vec::new();
     let mut sync = false;
     let mut syncing_blocks = Vec::new();
@@ -194,7 +193,6 @@ pub async fn run() {
         &mut swarm,
         clients_topic,
         &mut my_addresses,
-        &mut channels,
         &mut relays,
         &mut clients,
         relay_topic,
@@ -205,7 +203,7 @@ pub async fn run() {
         &mut leader,
         &mut fullnode_subs,
         &mut sync,
-        &mut syncing_blocks
+        &mut syncing_blocks,
     )
     .await;
 }

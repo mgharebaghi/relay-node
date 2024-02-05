@@ -1,6 +1,6 @@
 use std::process::Command;
 
-use libp2p::{gossipsub::IdentTopic, identity::PublicKey, PeerId, Swarm};
+use libp2p::{identity::PublicKey, PeerId};
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
 
@@ -8,9 +8,8 @@ use crate::handlers::create_log::write_log;
 
 use super::{
     db_connection::blockchain_db,
-    outnodes::handle_outnode,
     reciept::{coinbase_reciept, insert_reciept},
-    structures::{Block, CustomBehav, FullNodes, GossipMessage, NextLeader, UtxoData, UTXO},
+    structures::{Block, FullNodes, GossipMessage, UtxoData, UTXO},
 };
 
 use mongodb::{
@@ -24,15 +23,7 @@ pub async fn verifying_block(
     str_msg: &String,
     leader: &mut String,
     fullnode_subs: &mut Vec<FullNodes>,
-    swarm: &mut Swarm<CustomBehav>,
-    propagation_source: PeerId,
-    clients_topic: IdentTopic,
-    client_topic_subscriber: &mut Vec<PeerId>,
-    relays: &mut Vec<PeerId>,
-    clients: &mut Vec<PeerId>,
-    relay_topic: IdentTopic,
-    my_addresses: &mut Vec<String>,
-) {
+) -> Result<(), ()> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
@@ -70,104 +61,37 @@ pub async fn verifying_block(
 
                         if check_pid_with_public_key {
                             if verify_block_sign {
-                                submit_block(
-                                    gossip_message,
-                                    leader,
-                                    swarm,
-                                    propagation_source,
-                                    fullnode_subs,
-                                    clients_topic,
-                                    client_topic_subscriber,
-                                    relays,
-                                    clients,
-                                    relay_topic,
-                                    my_addresses,
-                                )
-                                .await;
+                                match submit_block(gossip_message, leader, fullnode_subs).await {
+                                    Ok(_) => Ok(()),
+                                    Err(_) => Err(()),
+                                }
                             } else {
-                                swarm.disconnect_peer_id(propagation_source).unwrap();
-                                handle_outnode(
-                                    propagation_source,
-                                    swarm,
-                                    clients_topic,
-                                    client_topic_subscriber,
-                                    relays,
-                                    clients,
-                                    relay_topic,
-                                    my_addresses,
-                                    fullnode_subs,
-                                )
-                                .await;
                                 write_log(
-                                    "verify block sign error! recieved block (line 76)".to_string(),
+                                    "verify block sign error! recieved block (line 90)".to_string(),
                                 );
+                                Err(())
                             }
                         } else {
-                            swarm.disconnect_peer_id(propagation_source).unwrap();
-                            handle_outnode(
-                                propagation_source,
-                                swarm,
-                                clients_topic,
-                                client_topic_subscriber,
-                                relays,
-                                clients,
-                                relay_topic,
-                                my_addresses,
-                                fullnode_subs,
-                            )
-                            .await;
                             write_log(
-                                "check pid with public key error! recieved block (line 79)"
+                                "check pid with public key error! recieved block (line 96)"
                                     .to_string(),
                             );
+                            Err(())
                         }
                     }
                     Err(_) => {
-                        swarm.disconnect_peer_id(propagation_source).unwrap();
-                        handle_outnode(
-                            propagation_source,
-                            swarm,
-                            clients_topic,
-                            client_topic_subscriber,
-                            relays,
-                            clients,
-                            relay_topic,
-                            my_addresses,
-                            fullnode_subs,
-                        )
-                        .await;
                         write_log(
-                            "validator public key error! recieved block (line 83)".to_string(),
+                            "validator public key error! recieved block (line 104)".to_string(),
                         );
+                        Err(())
                     }
                 }
             } else {
-                swarm.disconnect_peer_id(propagation_source).unwrap();
-                handle_outnode(
-                    propagation_source,
-                    swarm,
-                    clients_topic,
-                    client_topic_subscriber,
-                    relays,
-                    clients,
-                    relay_topic,
-                    my_addresses,
-                    fullnode_subs,
-                )
-                .await;
-                write_log("validate leader error! recieved block (line 87)".to_string());
+                write_log("validate leader error! recieved block (line 110)".to_string());
+                Err(())
             }
         }
-        Err(_) => {
-            if let Ok(identifier) = serde_json::from_str::<NextLeader>(&str_msg) {
-                if leader.len() > 0 && identifier.identifier_peer_id.to_string() == leader.clone() {
-                    leader.clear();
-                    leader.push_str(&identifier.next_leader.to_string());
-                } else {
-                    write_log("identifier is not true! recieved block (line 96)".to_string())
-                }
-            }
-        }
+        Err(_) => Err(()),
     }
 }
 
@@ -175,17 +99,8 @@ pub async fn verifying_block(
 async fn submit_block(
     gossip_message: GossipMessage,
     leader: &mut String,
-    swarm: &mut Swarm<CustomBehav>,
-    propagation_source: PeerId,
     fullnode_subs: &mut Vec<FullNodes>,
-    clients_topic: IdentTopic,
-    client_topic_subscriber: &mut Vec<PeerId>,
-    relays: &mut Vec<PeerId>,
-    clients: &mut Vec<PeerId>,
-    relay_topic: IdentTopic,
-    my_addresses: &mut Vec<String>,
-) {
-    println!("in submit block");
+) -> Result<(), ()> {
     match blockchain_db().await {
         Ok(db) => {
             let blocks_coll: Collection<Document> = db.collection("Blocks");
@@ -231,6 +146,22 @@ async fn submit_block(
                                                 utxos_coll.clone(),
                                             )
                                             .await;
+
+                                            //set block generator waiting for next round
+                                            for i in 0..fullnode_subs.len() {
+                                                if fullnode_subs[i].peer_id.to_string()
+                                                    == gossip_message.block.header.validator
+                                                {
+                                                    fullnode_subs[i].waiting =
+                                                        fullnode_subs.len() as i64;
+                                                } else {
+                                                    if fullnode_subs[i].waiting > 0 {
+                                                        fullnode_subs[i].waiting =
+                                                            fullnode_subs[i].waiting - 1;
+                                                    }
+                                                }
+                                            }
+
                                             //update utxos in database for transactions
                                             //check next leader
                                             leader.clear();
@@ -243,50 +174,31 @@ async fn submit_block(
                                                 .arg("/etc/dump")
                                                 .output()
                                             {
-                                                Ok(_) => {}
-                                                Err(e) => write_log(format!("{:?}", e)),
+                                                Ok(_) => Ok(()),
+                                                Err(e) => {
+                                                    write_log(format!("{:?}", e));
+                                                    Err(())
+                                                }
                                             }
                                         } else {
                                             write_log("block prev hash problem! recieved block (line 206)".to_string());
+                                            Err(())
                                         }
                                     }
                                     Some(_) => {
-                                        swarm.disconnect_peer_id(propagation_source).unwrap();
-                                        handle_outnode(
-                                            propagation_source,
-                                            swarm,
-                                            clients_topic,
-                                            client_topic_subscriber,
-                                            relays,
-                                            clients,
-                                            relay_topic,
-                                            my_addresses,
-                                            fullnode_subs,
-                                        )
-                                        .await;
                                         write_log(
                                             "find same block! recieved block (line 157)"
                                                 .to_string(),
-                                        )
+                                        );
+                                        Err(())
                                     }
                                 }
                             } else {
-                                handle_outnode(
-                                    propagation_source,
-                                    swarm,
-                                    clients_topic,
-                                    client_topic_subscriber,
-                                    relays,
-                                    clients,
-                                    relay_topic,
-                                    my_addresses,
-                                    fullnode_subs,
-                                )
-                                .await;
                                 write_log(
                                     "check trx in block verify problem! recieved block (line 160)"
                                         .to_string(),
                                 );
+                                Err(())
                             }
                         }
                         None => {
@@ -294,7 +206,6 @@ async fn submit_block(
                                 == "This block is Genesis".to_string()
                                 && fullnode_subs.len() < 1
                             {
-                                println!("genesis block insert section in none");
                                 match blocks_coll.delete_many(doc! {}, None).await {
                                     Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
                                         Ok(_) => {
@@ -329,24 +240,36 @@ async fn submit_block(
                                                         .arg("/etc/dump")
                                                         .output()
                                                     {
-                                                        Ok(_) => {}
-                                                        Err(e) => write_log(format!("{:?}", e)),
+                                                        Ok(_) => Ok(()),
+                                                        Err(e) => {
+                                                            write_log(format!("{:?}", e));
+                                                            Err(())
+                                                        }
                                                     }
                                                 }
-                                                Err(_) => write_log(
-                                                    "remove reciept collection problem!"
-                                                        .to_string(),
-                                                ),
+                                                Err(_) => {
+                                                    write_log(
+                                                        "remove reciept collection problem!"
+                                                            .to_string(),
+                                                    );
+                                                    Err(())
+                                                }
                                             }
                                         }
-                                        Err(_) => write_log(
-                                            "remove utxos collection problem!".to_string(),
-                                        ),
+                                        Err(_) => {
+                                            write_log(
+                                                "remove utxos collection problem!".to_string(),
+                                            );
+                                            Err(())
+                                        }
                                     },
                                     Err(_) => {
-                                        write_log("remove bocks collection problem!".to_string())
+                                        write_log("remove bocks collection problem!".to_string());
+                                        Err(())
                                     }
                                 }
+                            } else {
+                                Err(())
                             }
                         }
                     }
@@ -355,7 +278,6 @@ async fn submit_block(
                     if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
                         && fullnode_subs.len() < 1
                     {
-                        println!("genesis block insert section");
                         match blocks_coll.delete_many(doc! {}, None).await {
                             Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
                                 Ok(_) => {
@@ -390,24 +312,38 @@ async fn submit_block(
                                                 .arg("/etc/dump")
                                                 .output()
                                             {
-                                                Ok(_) => {}
-                                                Err(e) => write_log(format!("{:?}", e)),
+                                                Ok(_) => Ok(()),
+                                                Err(e) => {
+                                                    write_log(format!("{:?}", e));
+                                                    Err(())
+                                                }
                                             }
                                         }
-                                        Err(_) => write_log(
-                                            "remove reciept collection problem!".to_string(),
-                                        ),
+                                        Err(_) => {
+                                            write_log(
+                                                "remove reciept collection problem!".to_string(),
+                                            );
+                                            Err(())
+                                        }
                                     }
                                 }
-                                Err(_) => write_log("remove utxos collection problem!".to_string()),
+                                Err(_) => {
+                                    write_log("remove utxos collection problem!".to_string());
+                                    Err(())
+                                }
                             },
-                            Err(_) => write_log("remove bocks collection problem!".to_string()),
+                            Err(_) => {
+                                write_log("remove bocks collection problem!".to_string());
+                                Err(())
+                            }
                         }
+                    } else {
+                        Err(())
                     }
                 }
             }
         }
-        Err(_e) => {}
+        Err(_e) => Ok(()),
     }
 }
 

@@ -4,6 +4,7 @@ use std::{
 };
 
 use libp2p::{Multiaddr, PeerId};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use super::create_log::write_log;
@@ -31,7 +32,7 @@ pub async fn send_addr_to_server(full_addr: String) {
     let client = reqwest::Client::new();
     let res = client
         .post("https://centichain.org/api/relays")
-        .body(full_addr)
+        .body(full_addr.clone())
         .send()
         .await;
 
@@ -78,7 +79,7 @@ pub async fn send_addr_to_server(full_addr: String) {
                                     let mut buf_writer = BufWriter::new(&relays_file);
                                     writeln!(buf_writer, "{}", addr).unwrap();
                                 }
-                                Err(e) => println!("{}", e),
+                                Err(e) => write_log(format!("{}", e)),
                             }
                         }
                     }
@@ -90,6 +91,22 @@ pub async fn send_addr_to_server(full_addr: String) {
         }
         Err(_) => write_log(
             "coud not get any response for send your address to centichain.org!".to_string(),
+        ),
+    }
+
+    //send ip address for get rpc requests
+    let trim_my_addr = full_addr.trim_start_matches("/ip4/");
+    let my_ip = trim_my_addr.split("/").next().unwrap();
+    let client = Client::new();
+    let res = client
+        .post("https://centichain.org/api/rpc")
+        .body(my_ip.to_string())
+        .send()
+        .await;
+    match res {
+        Ok(_) => {}
+        Err(_) => write_log(
+            "Can not send your public ip to the server in gossip messages check!".to_string(),
         ),
     }
 }

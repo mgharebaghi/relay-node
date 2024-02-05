@@ -6,6 +6,7 @@ use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
 use super::create_log::write_log;
+use super::get_addresses::get_addresses;
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::{handle, send_addr_to_server};
 use super::outnodes::handle_outnode;
@@ -13,11 +14,9 @@ use super::reciept::insert_reciept;
 use super::recieved_block::verifying_block;
 use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
-use super::responses::handle_responses;
 use super::send_address::send_address;
 use super::structures::{
-    Channels, CustomBehav, CustomBehavEvent, FullNodes, GetGossipMsg, GossipMessage, Req,
-    Transaction,
+    CustomBehav, CustomBehavEvent, FullNodes, GetGossipMsg, GossipMessage, Req, Transaction,
 };
 use super::syncing::syncing;
 
@@ -31,7 +30,6 @@ pub async fn events(
     local_peer_id: PeerId,
     my_addresses: &mut Vec<String>,
     clients: &mut Vec<PeerId>,
-    channels: &mut Vec<Channels>,
     relays: &mut Vec<PeerId>,
     clients_topic: IdentTopic,
     relay_topic: IdentTopic,
@@ -59,7 +57,6 @@ pub async fn events(
                 if !ip.is_private() && ipv4 != "127.0.0.1" {
                     handle(address, local_peer_id, my_addresses).await;
                     if *sync {
-                        println!("sync new listener");
                         send_addr_to_server(my_addresses[0].clone()).await;
                     }
                 }
@@ -73,16 +70,6 @@ pub async fn events(
                             let fullnodes_req = Req {
                                 req: "fullnodes".to_string(),
                             };
-                            match Command::new("mongodump")
-                                .arg("--db")
-                                .arg("Blockchain")
-                                .arg("--out")
-                                .arg("/etc/dump")
-                                .output()
-                            {
-                                Ok(_) => {}
-                                Err(e) => write_log(format!("{:?}", e)),
-                            }
                             swarm
                                 .behaviour_mut()
                                 .req_res
@@ -148,12 +135,19 @@ pub async fn events(
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
                     remove_peer(peer_id, my_addresses).await;
-                    for listener in listeners.id {
-                        swarm.remove_listener(listener);
+
+                    //check relays number and if it's 0 break for dial to others and
+                    //remove listener for open new listener without conflict
+                    if relays.len() < 1 {
+                        for listener in listeners.id {
+                            swarm.remove_listener(listener);
+                        }
+                        break;
                     }
-                    break;
                 }
 
+                //check clients and if it's 0 send my address to rpc server for remove from it if close connection
+                //was a client and propagate its address to network
                 let index = clients.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {
@@ -178,6 +172,7 @@ pub async fn events(
                     None => {}
                 }
 
+                //remove from relay topic subscribers
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
                         .iter()
@@ -200,8 +195,8 @@ pub async fn events(
                         if *sync {
                             handle_gossip_message(
                                 propagation_source,
-                                message,
                                 local_peer_id,
+                                message,
                                 clients,
                                 relays,
                                 swarm,
@@ -211,16 +206,19 @@ pub async fn events(
                                 my_addresses,
                                 leader,
                                 fullnodes,
-                                clients_topic.clone(),
-                                client_topic_subscriber,
                             )
                             .await;
                         } else {
                             let str_msg = String::from_utf8(message.data).unwrap();
                             if let Ok(gossipmsg) = serde_json::from_str::<GossipMessage>(&str_msg) {
                                 let new_gossip = GetGossipMsg {
-                                    gossip: gossipmsg,
-                                    propagation_source: propagation_source,
+                                    gossip: gossipmsg.clone(),
+                                    propagation_source: gossipmsg
+                                        .block
+                                        .header
+                                        .validator
+                                        .parse()
+                                        .unwrap(),
                                 };
                                 syncing_blocks.push(new_gossip);
                             } else if let Ok(transaction) =
@@ -233,6 +231,10 @@ pub async fn events(
                                     "".to_string(),
                                 )
                                 .await;
+                            } else if let Ok(addresses) =
+                                serde_json::from_str::<Vec<String>>(&str_msg)
+                            {
+                                get_addresses(addresses, local_peer_id, my_addresses);
                             }
                         }
                     }
@@ -249,24 +251,28 @@ pub async fn events(
                     _ => (),
                 },
                 CustomBehavEvent::ReqRes(req_res) => match req_res {
-                    Event::Message { peer, message } => match message {
+                    Event::Message { message, .. } => match message {
                         libp2p::request_response::Message::Request {
                             channel, request, ..
                         } => {
-                            handle_requests(
-                                request,
-                                clients,
-                                swarm,
-                                channels,
-                                channel,
-                                relays,
-                                peer,
-                                local_peer_id,
-                                wallet,
-                                clients_topic.clone(),
-                                fullnodes,
-                            )
-                            .await;
+                            if *sync {
+                                handle_requests(
+                                    request,
+                                    swarm,
+                                    channel,
+                                    wallet,
+                                    clients_topic.clone(),
+                                    fullnodes,
+                                    leader,
+                                    clients_topic.clone(),
+                                    client_topic_subscriber,
+                                    relays,
+                                    clients,
+                                    relay_topic.clone(),
+                                    my_addresses,
+                                )
+                                .await;
+                            }
                         }
                         libp2p::request_response::Message::Response { response, .. } => {
                             if let Ok(fullnode_subs) =
@@ -279,35 +285,39 @@ pub async fn events(
                                     for gossipmsg in syncing_blocks.clone() {
                                         let str_msg =
                                             &serde_json::to_string(&gossipmsg.gossip).unwrap();
-                                        verifying_block(
+                                        match verifying_block(
                                             str_msg,
                                             leader,
                                             &mut fullnode_subs.clone(),
-                                            swarm,
-                                            gossipmsg.propagation_source,
-                                            clients_topic.clone(),
-                                            client_topic_subscriber,
-                                            relays,
-                                            clients,
-                                            relay_topic.clone(),
-                                            my_addresses,
                                         )
-                                        .await;
+                                        .await
+                                        {
+                                            Ok(_) => {}
+                                            Err(_) => {
+                                                //remove node from fullnodes list because its block is wrong!
+                                                let index = fullnodes.iter().position(|node| {
+                                                    node.peer_id
+                                                        == gossipmsg
+                                                            .gossip
+                                                            .block
+                                                            .header
+                                                            .validator
+                                                            .parse()
+                                                            .unwrap()
+                                                });
+                                                match index {
+                                                    Some(i) => {
+                                                        fullnodes.remove(i);
+                                                    }
+                                                    None => {}
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
                                 *sync = true;
                                 send_addr_to_server(my_addresses[0].clone()).await;
-                            } else {
-                                handle_responses(
-                                    response,
-                                    local_peer_id,
-                                    channels,
-                                    swarm,
-                                    client_topic_subscriber,
-                                    relay_topic_subscribers,
-                                )
-                                .await;
                             }
                         }
                     },

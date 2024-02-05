@@ -12,15 +12,14 @@ mod handle_listeners;
 mod outnodes;
 mod remove_relays;
 mod requests;
-mod responses;
 mod send_address;
-mod send_response;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
 mod check_trx;
 pub mod create_log;
 mod db_connection;
+mod get_addresses;
 mod handle_messages;
 mod nodes_sync_announce;
 mod reciept;
@@ -29,14 +28,13 @@ mod syncing;
 
 use crate::handlers::create_log::write_log;
 
-use self::structures::{Channels, FullNodes, GetGossipMsg};
+use self::structures::{FullNodes, GetGossipMsg};
 //handle streams that come to swarm events and relays.dat file to add or remove addresses
 pub async fn handle_streams(
     local_peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     clients_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
-    channels: &mut Vec<Channels>,
     relays: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
@@ -101,7 +99,6 @@ pub async fn handle_streams(
             local_peer_id,
             my_addresses,
             clients,
-            channels,
             relays,
             clients_topic.clone(),
             relay_topic.clone(),

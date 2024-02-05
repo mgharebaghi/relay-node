@@ -1,5 +1,5 @@
 use libp2p::{
-    request_response::{cbor, ResponseChannel},
+    request_response::cbor,
     swarm::NetworkBehaviour,
     PeerId,
 };
@@ -34,12 +34,6 @@ pub struct ReqForReq {
 pub struct ResForReq {
     pub peer: Vec<PeerId>,
     pub res: Res,
-}
-
-#[derive(Debug)]
-pub struct Channels {
-    pub peer: PeerId,
-    pub channel: ResponseChannel<Res>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
