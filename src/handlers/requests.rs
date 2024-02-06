@@ -31,6 +31,7 @@ pub async fn handle_requests(
     my_addresses: &mut Vec<String>,
 ) {
     if request.req == "handshake".to_string() {
+        println!("in handshake request");
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
@@ -87,6 +88,7 @@ pub async fn handle_requests(
             }
         }
     } else if request.req.clone() == "fullnodes".to_string() {
+        println!("in full node request");
         let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();
         let response = Res { res: str_fullnodes };
         let _ = swarm
@@ -104,14 +106,12 @@ pub async fn handle_requests(
                     .publish(clients_topic, request.req.as_bytes())
                 {
                     Ok(_) => {
-                        let response = Res {
-                            res: String::new(),
-                        };
+                        let response = Res { res: String::new() };
                         let _ = swarm
                             .behaviour_mut()
                             .req_res
                             .send_response(channel, response);
-                        
+
                         //send true block to sse servers
                         let sse_topic = IdentTopic::new("sse");
                         match swarm
