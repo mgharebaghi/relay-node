@@ -186,13 +186,13 @@ async fn submit_block(
                                                 }
                                             }
                                         } else {
-                                            write_log("block prev hash problem! recieved block (line 206)".to_string());
+                                            write_log("block prev hash problem! recieved block (line 189)".to_string());
                                             Err(())
                                         }
                                     }
                                     Some(_) => {
                                         write_log(
-                                            "find same block! recieved block (line 157)"
+                                            "find same block! recieved block (line 195)"
                                                 .to_string(),
                                         );
                                         Err(())
@@ -200,7 +200,7 @@ async fn submit_block(
                                 }
                             } else {
                                 write_log(
-                                    "check trx in block verify problem! recieved block (line 160)"
+                                    "check trx in block verify problem! recieved block (line 203)"
                                         .to_string(),
                                 );
                                 Err(())
