@@ -127,6 +127,7 @@ pub async fn handle_requests(
                 }
             }
             Err(_) => {
+                println!("verify block problem");
                 handle_outnode(
                     propagation_source,
                     swarm,
