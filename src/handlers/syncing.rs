@@ -15,9 +15,9 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
         Ok(db) => {
             let trim_addr = dialed_addr.trim_start_matches("/ip4/");
             let split_addr = trim_addr.split("/").next().unwrap();
-            let blocks_addr = format!("http://{}:3390/blockchain/Blocks.bson", split_addr);
-            let utxos_addr = format!("http://{}:3390/blockchain/UTXOs.bson", split_addr);
-            let reciepts_addr = format!("http://{}:3390/blockchain/reciept.bson", split_addr);
+            let blocks_addr = format!("http://{}:33369/blockchain/Blocks.bson", split_addr);
+            let utxos_addr = format!("http://{}:33369/blockchain/UTXOs.bson", split_addr);
+            let reciepts_addr = format!("http://{}:33369/blockchain/reciept.bson", split_addr);
             let mut blocks_output = fs::File::create("/etc/Blocks.bson").unwrap();
             let mut utxos_output = fs::File::create("/etc/UTXOs.bson").unwrap();
             let mut reciepts_output = fs::File::create("/etc/reciept.bson").unwrap();
