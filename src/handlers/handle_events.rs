@@ -64,6 +64,7 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                println!("connection stablished with:\n{}", peer_id);
                 if !*sync && dialed_addr.contains(&peer_id.to_string()) {
                     match syncing(dialed_addr.clone()).await {
                         Ok(_) => {
@@ -114,6 +115,7 @@ pub async fn events(
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                println!("connection closed with:\n{}", peer_id);
                 let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {
@@ -138,12 +140,12 @@ pub async fn events(
 
                     //check relays number and if it's 0 break for dial to others and
                     //remove listener for open new listener without conflict
-                    if relays.len() < 1 {
-                        for listener in listeners.id {
-                            swarm.remove_listener(listener);
-                        }
-                        break;
-                    }
+                    // if relays.len() < 1 {
+                    //     for listener in listeners.id {
+                    //         swarm.remove_listener(listener);
+                    //     }
+                    //     break;
+                    // }
                 }
 
                 //check clients and if it's 0 send my address to rpc server for remove from it if close connection
@@ -160,7 +162,6 @@ pub async fn events(
                             peer_id,
                             swarm,
                             clients_topic.clone(),
-                            client_topic_subscriber,
                             relays,
                             clients,
                             relay_topic.clone(),
@@ -264,7 +265,6 @@ pub async fn events(
                                     fullnodes,
                                     leader,
                                     clients_topic.clone(),
-                                    client_topic_subscriber,
                                     relays,
                                     clients,
                                     relay_topic.clone(),

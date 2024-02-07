@@ -10,28 +10,26 @@ pub async fn handle_outnode(
     peerid: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     clients_topic: IdentTopic,
-    client_topic_subscriber: &mut Vec<PeerId>,
     relays: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
-    fullnodes: &mut Vec<FullNodes>
+    fullnodes: &mut Vec<FullNodes>,
 ) {
     if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
         fullnodes.remove(index);
     }
     let outnode = OutNode { peer_id: peerid };
     let serialize_out_node = serde_json::to_string(&outnode).unwrap();
-    if client_topic_subscriber.len() > 0 {
-        match swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(clients_topic, serialize_out_node.as_bytes())
-        {
-            Ok(_) => {}
-            Err(_) => {
-                write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
-            }
+
+    match swarm
+        .behaviour_mut()
+        .gossipsub
+        .publish(clients_topic, serialize_out_node.as_bytes())
+    {
+        Ok(_) => {}
+        Err(_) => {
+            write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
         }
     }
 

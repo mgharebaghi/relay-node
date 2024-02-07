@@ -12,9 +12,9 @@ use crossterm::style::{Print, ResetColor, SetForegroundColor, Stylize};
 use handlers::create_log::write_log;
 use handlers::handle_streams;
 use handlers::structures::CustomBehav;
+use handlers::structures::FullNodes;
 use handlers::structures::Req;
 use handlers::structures::Res;
-use handlers::structures::FullNodes;
 
 use libp2p::{
     gossipsub::IdentTopic,
@@ -147,16 +147,9 @@ pub async fn run() {
                 .unwrap();
             let addresses: Addresses = serde_json::from_str(&addr).unwrap();
 
-            let mut prev_addresses = Vec::new();
             let path_exist = fs::metadata(relays_path).is_ok();
             if path_exist {
-                let relays_file = File::open(relays_path).unwrap();
-                let reader = BufReader::new(relays_file);
-                for i in reader.lines() {
-                    let relay_addr = i.unwrap();
-                    prev_addresses.push(relay_addr);
-                }
-
+                fs::write(relays_path, "").unwrap();
                 let write_file = OpenOptions::new()
                     .write(true)
                     .append(true)
@@ -164,9 +157,7 @@ pub async fn run() {
                     .unwrap();
                 let mut writer = BufWriter::new(write_file);
                 for addr in addresses.addr {
-                    if !prev_addresses.contains(&addr) {
-                        writeln!(writer, "{}", addr).unwrap();
-                    }
+                    writeln!(writer, "{}", addr).unwrap();
                 }
             } else {
                 let relays_file = OpenOptions::new()
