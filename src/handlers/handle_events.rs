@@ -242,7 +242,6 @@ pub async fn events(
                         topic,
                         peer_id,
                         swarm,
-                        my_addresses.clone(),
                         relay_topic_subscribers,
                         connections,
                         clients,

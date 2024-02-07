@@ -7,7 +7,6 @@ pub fn send_address(
     topic: TopicHash,
     peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,
-    my_addresses: Vec<String>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     connections: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
@@ -25,28 +24,10 @@ pub fn send_address(
                 Err(e) => write_log(format!("{}", e)),
             }
         }
-        let my_addresses_str = serde_json::to_string(&my_addresses).unwrap();
-        match swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(topic.clone(), my_addresses_str.as_bytes())
-        {
-            Ok(_) => {}
-            Err(e) => write_log(format!("{}", e)),
-        }
     }
 
     if topic.to_string() == "client".to_string() && connections.contains(&peer_id) {
         client_topic_subscriber.push(peer_id);
-        let my_addresses_str = serde_json::to_string(&my_addresses).unwrap();
-        match swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(topic.clone(), my_addresses_str.as_bytes())
-        {
-            Ok(_) => {}
-            Err(e) => write_log(format!("{}", e)),
-        }
     }
 
     if topic.to_string() == "sse".to_string() {
