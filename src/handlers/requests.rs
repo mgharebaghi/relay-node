@@ -30,7 +30,6 @@ pub async fn handle_requests(
     my_addresses: &mut Vec<String>,
 ) {
     if request.req == "handshake".to_string() {
-        println!("in handshake request");
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
@@ -87,7 +86,6 @@ pub async fn handle_requests(
             }
         }
     } else if request.req.clone() == "fullnodes".to_string() {
-        println!("in full node request");
         let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();
         let response = Res { res: str_fullnodes };
         let _ = swarm
@@ -95,7 +93,6 @@ pub async fn handle_requests(
             .req_res
             .send_response(channel, response);
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req.clone()) {
-        println!("in block request");
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
         match verifying_block(&request.req, leader, fullnode_subs).await {
             Ok(_) => {
@@ -126,7 +123,6 @@ pub async fn handle_requests(
                 }
             }
             Err(_) => {
-                println!("verify block problem");
                 handle_outnode(
                     propagation_source,
                     swarm,

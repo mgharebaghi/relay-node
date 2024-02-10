@@ -64,7 +64,6 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                println!("connection stablished with:\n{}", peer_id);
                 if !*sync && dialed_addr.contains(&peer_id.to_string()) {
                     match syncing(dialed_addr.clone()).await {
                         Ok(_) => {
@@ -115,7 +114,6 @@ pub async fn events(
                 break;
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                println!("connection closed with:\n{}", peer_id);
                 let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                 match index {
                     Some(i) => {
@@ -193,6 +191,7 @@ pub async fn events(
                         message,
                         ..
                     } => {
+                        
                         if *sync {
                             handle_gossip_message(
                                 propagation_source,

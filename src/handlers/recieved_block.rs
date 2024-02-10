@@ -26,7 +26,6 @@ pub async fn verifying_block(
 ) -> Result<(), ()> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
-            println!("get gossip messeage:\n{:?}", gossip_message);
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
@@ -63,10 +62,7 @@ pub async fn verifying_block(
                         if check_pid_with_public_key {
                             if verify_block_sign {
                                 match submit_block(gossip_message, leader, fullnode_subs).await {
-                                    Ok(_) => {
-                                        println!("block submit");
-                                        Ok(())
-                                    },
+                                    Ok(_) => Ok(()),
                                     Err(_) => Err(()),
                                 }
                             } else {
@@ -107,7 +103,6 @@ async fn submit_block(
 ) -> Result<(), ()> {
     match blockchain_db().await {
         Ok(db) => {
-            println!("in block submit");
             let blocks_coll: Collection<Document> = db.collection("Blocks");
             let utxos_coll: Collection<Document> = db.collection("UTXOs");
             let reciept_coll: Collection<Document> = db.collection("reciept");

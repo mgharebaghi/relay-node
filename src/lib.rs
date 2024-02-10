@@ -74,7 +74,6 @@ pub async fn run() {
     let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
     let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-
     //request and response protocol config
     let req_res = cbor::Behaviour::<Req, Res>::new(
         [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
@@ -172,29 +171,29 @@ pub async fn run() {
                     writeln!(writer, "{}", addr).unwrap();
                 }
             }
+
+            handle_streams(
+                local_peer_id,
+                &mut swarm,
+                clients_topic,
+                &mut my_addresses,
+                &mut relays,
+                &mut clients,
+                relay_topic,
+                &mut connections,
+                &mut relay_topic_subscribers,
+                &mut client_topic_subscribers,
+                &mut wallet,
+                &mut leader,
+                &mut fullnode_subs,
+                &mut sync,
+                &mut syncing_blocks,
+            )
+            .await;
         }
         Err(_) => write_log(
             "Relay could not connect to centichain.org for get latest relays addresses!"
                 .to_string(),
         ),
     }
-
-    handle_streams(
-        local_peer_id,
-        &mut swarm,
-        clients_topic,
-        &mut my_addresses,
-        &mut relays,
-        &mut clients,
-        relay_topic,
-        &mut connections,
-        &mut relay_topic_subscribers,
-        &mut client_topic_subscribers,
-        &mut wallet,
-        &mut leader,
-        &mut fullnode_subs,
-        &mut sync,
-        &mut syncing_blocks,
-    )
-    .await;
 }
