@@ -40,7 +40,7 @@ pub async fn events(
     leader: &mut String,
     fullnodes: &mut Vec<FullNodes>,
     sync: &mut bool,
-    dialed_addr: String,
+    dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
 ) {
     let mut listeners = Listeners { id: Vec::new() };
@@ -64,18 +64,25 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                if !*sync && dialed_addr.contains(&peer_id.to_string()) {
-                    match syncing(dialed_addr.clone()).await {
-                        Ok(_) => {
-                            let fullnodes_req = Req {
-                                req: "fullnodes".to_string(),
-                            };
-                            swarm
-                                .behaviour_mut()
-                                .req_res
-                                .send_request(&peer_id, fullnodes_req);
+                if !*sync {
+                    for addr in dialed_addr.clone() {
+                        if addr.contains(&peer_id.to_string()) {
+                            match syncing(addr.clone()).await {
+                                Ok(_) => {
+                                    let fullnodes_req = Req {
+                                        req: "fullnodes".to_string(),
+                                    };
+                                    swarm
+                                        .behaviour_mut()
+                                        .req_res
+                                        .send_request(&peer_id, fullnodes_req);
+                                    break;
+                                }
+                                Err(_) => break,
+                            }
+                        } else {
+                            break;
                         }
-                        Err(_) => break,
                     }
                 }
 
@@ -95,33 +102,25 @@ pub async fn events(
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
-                write_log(format!("Dialing failed with: {}", peer_id.unwrap()));
                 remove_peer(peer_id.unwrap()).await;
-                for i in relays.clone() {
-                    if peer_id.unwrap() == i {
-                        match relays.iter().position(|pid| pid == &peer_id.unwrap()) {
-                            Some(index) => {
-                                relays.remove(index);
-                            }
-                            None => {}
-                        }
-                    }
-                }
-
-                for listener in listeners.id {
-                    swarm.remove_listener(listener);
-                }
-                break;
-            }
-            SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
-                match index {
-                    Some(i) => {
-                        client_topic_subscriber.remove(i);
+                let dialed_index = dialed_addr
+                    .iter()
+                    .position(|dialed| dialed.contains(&peer_id.unwrap().to_string()));
+                match dialed_index {
+                    Some(index) => {
+                        dialed_addr.remove(index);
                     }
                     None => {}
                 }
-
+                if dialed_addr.len() < 2 {
+                    for listener in listeners.id {
+                        swarm.remove_listener(listener);
+                    }
+                    break;
+                }
+            }
+            SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                //remove peer from relays if it is in the relays
                 if relays.contains(&peer_id) {
                     match relays.iter().position(|pid| pid == &peer_id) {
                         Some(index) => {
@@ -135,52 +134,71 @@ pub async fn events(
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
                     remove_peer(peer_id).await;
-
-                    //check relays number and if it's 0 break for dial to others and
-                    //remove listener for open new listener without conflict
-                    // if relays.len() < 1 {
-                    //     for listener in listeners.id {
-                    //         swarm.remove_listener(listener);
-                    //     }
-                    //     break;
-                    // }
                 }
 
-                //check clients and if it's 0 send my address to rpc server for remove from it if close connection
-                //was a client and propagate its address to network
-                let index = clients.iter().position(|c| *c == peer_id);
-                match index {
-                    Some(i) => {
-                        clients.remove(i);
-                        swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .remove_explicit_peer(&peer_id);
-                        handle_outnode(
-                            peer_id,
-                            swarm,
-                            clients_topic.clone(),
-                            relays,
-                            clients,
-                            relay_topic.clone(),
-                            my_addresses,
-                            fullnodes,
-                        )
-                        .await;
+                //remove peer from dialed address if it is in the dialed addresses
+                let dialed_index = dialed_addr
+                    .iter()
+                    .position(|dialed| dialed.contains(&peer_id.to_string()));
+
+                match dialed_index {
+                    Some(index) => {
+                        dialed_addr.remove(index);
                     }
                     None => {}
                 }
 
-                //remove from relay topic subscribers
-                if relay_topic_subscribers.contains(&peer_id) {
-                    let i_relay_subscriber = relay_topic_subscribers
-                        .iter()
-                        .position(|pid| *pid == peer_id);
-                    match i_relay_subscriber {
-                        Some(index) => {
-                            relay_topic_subscribers.remove(index);
+                //break for dial with other relays if there is not connection with any relays
+                if dialed_addr.len() < 1 && relays.len() < 1 {
+                    for listener in listeners.id {
+                        swarm.remove_listener(listener);
+                    }
+                    break;
+                } else {
+                    let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
+                    match index {
+                        Some(i) => {
+                            client_topic_subscriber.remove(i);
                         }
                         None => {}
+                    }
+
+                    //check clients and if it's 0 send my address to rpc server for remove from it if close connection
+                    //was a client and propagate its address to network
+                    let index = clients.iter().position(|c| *c == peer_id);
+                    match index {
+                        Some(i) => {
+                            clients.remove(i);
+                            swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .remove_explicit_peer(&peer_id);
+                            handle_outnode(
+                                peer_id,
+                                swarm,
+                                clients_topic.clone(),
+                                relays,
+                                clients,
+                                relay_topic.clone(),
+                                my_addresses,
+                                fullnodes,
+                            )
+                            .await;
+                        }
+                        None => {}
+                    }
+
+                    //remove from relay topic subscribers
+                    if relay_topic_subscribers.contains(&peer_id) {
+                        let i_relay_subscriber = relay_topic_subscribers
+                            .iter()
+                            .position(|pid| *pid == peer_id);
+                        match i_relay_subscriber {
+                            Some(index) => {
+                                relay_topic_subscribers.remove(index);
+                            }
+                            None => {}
+                        }
                     }
                 }
             }
@@ -191,7 +209,6 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        
                         if *sync {
                             handle_gossip_message(
                                 propagation_source,

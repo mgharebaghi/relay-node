@@ -49,7 +49,7 @@ pub async fn handle_streams(
 ) {
     loop {
         let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
-        let mut dialed_addr = String::new();
+        let mut dialed_addr:Vec<String> = Vec::new();
         if relays_file_exist {
             let file = File::open("/etc/relays.dat").unwrap();
             let reader = BufReader::new(&file);
@@ -69,17 +69,34 @@ pub async fn handle_streams(
             }
 
             if dial_addresses.len() > 0 {
-                let rnd_dial_addr = dial_addresses
-                    .choose(&mut rand::thread_rng())
-                    .unwrap()
-                    .clone();
-                match swarm.dial(rnd_dial_addr.clone()) {
-                    Ok(_) => {
-                        dialed_addr.push_str(&rnd_dial_addr.to_string().clone());
-                        write_log(format!("Dialing with: {}", rnd_dial_addr));
+                if dial_addresses.len() < 9 {
+                    for addr in dial_addresses {
+                        match swarm.dial(addr.clone()) {
+                            Ok(_) => {
+                                dialed_addr.push(addr.to_string());
+                            }
+                            Err(_) => {
+                                write_log(format!("dialing problem with: {}", addr));
+                            }
+                        }
                     }
-                    Err(_) => {
-                        write_log("dialing problem!".to_string());
+                } else {
+                    let mut rnd_relays = Vec::new();
+                    while rnd_relays.len() < 9 {
+                        let new_rnd = dial_addresses.choose(&mut rand::thread_rng()).unwrap();
+                        if !rnd_relays.contains(new_rnd) {
+                            rnd_relays.push(new_rnd.clone())
+                        }
+                    }
+                    for addr in rnd_relays {
+                        match swarm.dial(addr.clone()) {
+                            Ok(_) => {
+                                dialed_addr.push(addr.to_string());
+                            }
+                            Err(_) => {
+                                write_log(format!("dialing problem with: {}", addr));
+                            }
+                        }
                     }
                 }
             } else {
@@ -107,7 +124,7 @@ pub async fn handle_streams(
             leader,
             fullnodes,
             sync,
-            dialed_addr,
+            &mut dialed_addr,
             syncing_blocks,
         )
         .await;
