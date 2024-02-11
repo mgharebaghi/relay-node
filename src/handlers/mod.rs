@@ -5,6 +5,7 @@ use std::{
     net::TcpStream,
 };
 
+use axum::http::response;
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use rand::seq::SliceRandom;
 
@@ -101,38 +102,44 @@ pub async fn handle_streams(
 
 async fn get_addresses(relays_path: &str) {
     println!("in get addresses method in the mod rs");
-    let addr = reqwest::get("https://centichain.org/api/relays")
+    match reqwest::get("https://centichain.org/api/relays")
         .await
         .unwrap()
         .text()
         .await
-        .unwrap();
-    println!("response from relays:\n{}", addr);
-    let addresses: Addresses = serde_json::from_str(&addr).unwrap();
+    {
+        Ok(addr) => {
+            println!("response from relays:\n{}", addr);
+            let addresses: Addresses = serde_json::from_str(&addr).unwrap();
 
-    let path_exist = fs::metadata(relays_path).is_ok();
-    if path_exist {
-        fs::write(relays_path, "").unwrap();
-        let write_file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(relays_path)
-            .unwrap();
-        let mut writer = BufWriter::new(write_file);
-        for addr in addresses.addr {
-            writeln!(writer, "{}", addr).unwrap();
+            let path_exist = fs::metadata(relays_path).is_ok();
+            if path_exist {
+                fs::write(relays_path, "").unwrap();
+                let write_file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .open(relays_path)
+                    .unwrap();
+                let mut writer = BufWriter::new(write_file);
+                for addr in addresses.addr {
+                    writeln!(writer, "{}", addr).unwrap();
+                }
+            } else {
+                let relays_file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(relays_path)
+                    .unwrap();
+                let mut writer = BufWriter::new(relays_file);
+
+                for addr in addresses.addr {
+                    writeln!(writer, "{}", addr).unwrap();
+                }
+            }
         }
-    } else {
-        let relays_file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(relays_path)
-            .unwrap();
-        let mut writer = BufWriter::new(relays_file);
-
-        for addr in addresses.addr {
-            writeln!(writer, "{}", addr).unwrap();
+        Err(_) => {
+            println!("get relays from server problem!");
         }
     }
 }

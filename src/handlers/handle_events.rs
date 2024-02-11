@@ -119,7 +119,7 @@ pub async fn events(
                     }
                     None => {}
                 }
-                if dialed_addr.len() < 1 && relay_topic_subscribers.len() > 1 && relays.len() < 1 {
+                if dialed_addr.len() < 1 && relays.len() < 1 {
                     println!("break in outgoing connection error");
                     break;
                 }

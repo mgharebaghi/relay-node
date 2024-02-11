@@ -100,8 +100,11 @@ pub async fn handle_requests() {
         );
     let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
 
-    axum_server::bind(addr)
+    match axum_server::bind(addr)
         .serve(app.into_make_service())
-        .await
-        .unwrap();
+        .await {
+            Ok(_) => {}
+            Err(e) => {println!("error from RPC server:\n{}", e)}
+        }
+        
 }
