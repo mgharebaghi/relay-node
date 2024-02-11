@@ -116,7 +116,7 @@ pub async fn events(
                     }
                     None => {}
                 }
-                if dialed_addr.len() < 2 {
+                if dialed_addr.len() < 1 {
                     for listener in listeners.id {
                         swarm.remove_listener(listener);
                     }
