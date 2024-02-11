@@ -5,7 +5,6 @@ use std::{
     net::TcpStream,
 };
 
-use axum::http::response;
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use rand::seq::SliceRandom;
 
