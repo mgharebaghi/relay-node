@@ -38,6 +38,7 @@ pub async fn send_addr_to_server(full_addr: String) {
 
     match res {
         Ok(response) => {
+            println!("my addresses posted to server");
             let mut addresses = String::new();
             match response.text().await {
                 Ok(all_addr) => {
