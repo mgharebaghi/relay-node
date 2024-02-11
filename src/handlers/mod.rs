@@ -73,6 +73,7 @@ pub async fn handle_streams(
                     for addr in dial_addresses {
                         match swarm.dial(addr.clone()) {
                             Ok(_) => {
+                                println!("dialing with: {}", addr);
                                 dialed_addr.push(addr.to_string());
                             }
                             Err(_) => {

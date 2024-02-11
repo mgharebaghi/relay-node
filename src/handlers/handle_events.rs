@@ -64,11 +64,13 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                println!("connection stablished with:\n{}", peer_id);
                 if !*sync {
                     for addr in dialed_addr.clone() {
                         if addr.contains(&peer_id.to_string()) {
                             match syncing(addr.clone()).await {
                                 Ok(_) => {
+                                    println!("syncing complete\n-----------------");
                                     let fullnodes_req = Req {
                                         req: "fullnodes".to_string(),
                                     };
