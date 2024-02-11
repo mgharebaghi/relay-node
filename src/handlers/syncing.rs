@@ -57,6 +57,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             }
                         }
                         Err(_) => {
+                            println!("error in reciept response");
                             write_log("insert reciept problem and change connection!".to_string());
                             return Err(());
                         }
@@ -88,6 +89,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             }
                         }
                         Err(_) => {
+                            println!("error in UTXOs response");
                             write_log("insert utxos problem and change connection!".to_string());
                             return Err(());
                         }
@@ -141,6 +143,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             }
                         }
                         Err(_) => {
+                            println!("error in blocks response");
                             return Err(());
                         }
                     }
