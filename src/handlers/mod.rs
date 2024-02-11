@@ -1,5 +1,8 @@
 use std::{
-    env::consts::OS, fs::{self, File, OpenOptions}, io::{BufRead, BufReader, BufWriter, Write}, net::TcpStream
+    env::consts::OS,
+    fs::{self, File, OpenOptions},
+    io::{BufRead, BufReader, BufWriter, Write},
+    net::TcpStream,
 };
 
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
@@ -58,112 +61,21 @@ pub async fn handle_streams(
         let site_connection = TcpStream::connect(server_address);
 
         let mut relays_path = "";
-                if OS == "windows" {
-                    relays_path = "relays.dat"
-                } else if OS == "linux" {
-                    relays_path = "/etc/relays.dat"
-                }
+        if OS == "windows" {
+            relays_path = "relays.dat"
+        } else if OS == "linux" {
+            relays_path = "/etc/relays.dat"
+        }
 
         match site_connection {
-            Ok(_) => {
-                let addr = reqwest::get("https://centichain.org/api/relays")
-                    .await
-                    .unwrap()
-                    .text()
-                    .await
-                    .unwrap();
-                let addresses: Addresses = serde_json::from_str(&addr).unwrap();
-
-                let path_exist = fs::metadata(relays_path).is_ok();
-                if path_exist {
-                    fs::write(relays_path, "").unwrap();
-                    let write_file = OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .open(relays_path)
-                        .unwrap();
-                    let mut writer = BufWriter::new(write_file);
-                    for addr in addresses.addr {
-                        writeln!(writer, "{}", addr).unwrap();
-                    }
-                } else {
-                    let relays_file = OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .create(true)
-                        .open(relays_path)
-                        .unwrap();
-                    let mut writer = BufWriter::new(relays_file);
-
-                    for addr in addresses.addr {
-                        writeln!(writer, "{}", addr).unwrap();
-                    }
-                }
-            }
+            Ok(_) => get_addresses(relays_path).await,
             Err(_) => write_log(
                 "Relay could not connect to centichain.org for get latest relays addresses!"
                     .to_string(),
             ),
         }
 
-        let relays_file_exist = fs::metadata(relays_path).is_ok();
-        let mut dialed_addr: Vec<String> = Vec::new();
-        if relays_file_exist {
-            let file = File::open(relays_path).unwrap();
-            let reader = BufReader::new(&file);
-            let mut dial_addresses = Vec::new();
-            for i in reader.lines() {
-                let addr = i.unwrap();
-                if addr.trim().len() > 0 {
-                    match addr.parse::<Multiaddr>() {
-                        Ok(addresses) => {
-                            if !addresses.to_string().contains(&local_peer_id.to_string()) {
-                                dial_addresses.push(addresses);
-                            }
-                        }
-                        Err(_) => {}
-                    }
-                }
-            }
-
-            if dial_addresses.len() > 0 {
-                if dial_addresses.len() < 9 {
-                    for addr in dial_addresses {
-                        match swarm.dial(addr.clone()) {
-                            Ok(_) => {
-                                println!("dialing with: {}", addr);
-                                dialed_addr.push(addr.to_string());
-                            }
-                            Err(_) => {
-                                write_log(format!("dialing problem with: {}", addr));
-                            }
-                        }
-                    }
-                } else {
-                    let mut rnd_relays = Vec::new();
-                    while rnd_relays.len() < 9 {
-                        let new_rnd = dial_addresses.choose(&mut rand::thread_rng()).unwrap();
-                        if !rnd_relays.contains(new_rnd) {
-                            rnd_relays.push(new_rnd.clone())
-                        }
-                    }
-                    for addr in rnd_relays {
-                        match swarm.dial(addr.clone()) {
-                            Ok(_) => {
-                                dialed_addr.push(addr.to_string());
-                            }
-                            Err(_) => {
-                                write_log(format!("dialing problem with: {}", addr));
-                            }
-                        }
-                    }
-                }
-            } else {
-                *sync = true
-            }
-        } else {
-            *sync = true
-        }
+        let mut dialed_addr = dialing(relays_path, local_peer_id, swarm, sync);
 
         events(
             swarm,
@@ -185,4 +97,108 @@ pub async fn handle_streams(
         )
         .await;
     }
+}
+
+async fn get_addresses(relays_path: &str) {
+    let addr = reqwest::get("https://centichain.org/api/relays")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    let addresses: Addresses = serde_json::from_str(&addr).unwrap();
+
+    let path_exist = fs::metadata(relays_path).is_ok();
+    if path_exist {
+        fs::write(relays_path, "").unwrap();
+        let write_file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(relays_path)
+            .unwrap();
+        let mut writer = BufWriter::new(write_file);
+        for addr in addresses.addr {
+            writeln!(writer, "{}", addr).unwrap();
+        }
+    } else {
+        let relays_file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(relays_path)
+            .unwrap();
+        let mut writer = BufWriter::new(relays_file);
+
+        for addr in addresses.addr {
+            writeln!(writer, "{}", addr).unwrap();
+        }
+    }
+}
+
+fn dialing(
+    relays_path: &str,
+    local_peer_id: PeerId,
+    swarm: &mut Swarm<CustomBehav>,
+    sync: &mut bool,
+) -> Vec<String> {
+    let relays_file_exist = fs::metadata(relays_path).is_ok();
+    let mut dialed_addr: Vec<String> = Vec::new();
+    if relays_file_exist {
+        let file = File::open(relays_path).unwrap();
+        let reader = BufReader::new(&file);
+        let mut dial_addresses = Vec::new();
+        for i in reader.lines() {
+            let addr = i.unwrap();
+            if addr.trim().len() > 0 {
+                match addr.parse::<Multiaddr>() {
+                    Ok(addresses) => {
+                        if !addresses.to_string().contains(&local_peer_id.to_string()) {
+                            dial_addresses.push(addresses);
+                        }
+                    }
+                    Err(_) => {}
+                }
+            }
+        }
+
+        if dial_addresses.len() > 0 {
+            if dial_addresses.len() < 9 {
+                for addr in dial_addresses {
+                    match swarm.dial(addr.clone()) {
+                        Ok(_) => {
+                            println!("dialing with: {}", addr);
+                            dialed_addr.push(addr.to_string());
+                        }
+                        Err(_) => {
+                            write_log(format!("dialing problem with: {}", addr));
+                        }
+                    }
+                }
+            } else {
+                let mut rnd_relays = Vec::new();
+                while rnd_relays.len() < 9 {
+                    let new_rnd = dial_addresses.choose(&mut rand::thread_rng()).unwrap();
+                    if !rnd_relays.contains(new_rnd) {
+                        rnd_relays.push(new_rnd.clone())
+                    }
+                }
+                for addr in rnd_relays {
+                    match swarm.dial(addr.clone()) {
+                        Ok(_) => {
+                            dialed_addr.push(addr.to_string());
+                        }
+                        Err(_) => {
+                            write_log(format!("dialing problem with: {}", addr));
+                        }
+                    }
+                }
+            }
+        } else {
+            *sync = true
+        }
+    } else {
+        *sync = true
+    }
+
+    dialed_addr
 }

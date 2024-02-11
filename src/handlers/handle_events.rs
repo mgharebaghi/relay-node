@@ -80,7 +80,10 @@ pub async fn events(
                                         .send_request(&peer_id, fullnodes_req);
                                     break;
                                 }
-                                Err(_) => break,
+                                Err(_) => {
+                                    println!("error in syncing");
+                                    break;
+                                }
                             }
                         } else {
                             break;
@@ -117,11 +120,16 @@ pub async fn events(
                     None => {}
                 }
                 if dialed_addr.len() < 1 && relay_topic_subscribers.len() > 1 && relays.len() < 1 {
+                    println!("break in outgoing connection error");
                     break;
                 }
             }
-            SwarmEvent::ConnectionClosed { peer_id,cause, .. } => {
-                println!("connection close with:\n{}\ncause:\n{}", peer_id, cause.unwrap());
+            SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
+                println!(
+                    "connection close with:\n{}\ncause:\n{}",
+                    peer_id,
+                    cause.unwrap()
+                );
                 //remove from relay topic subscribers
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
