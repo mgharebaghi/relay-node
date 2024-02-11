@@ -1,9 +1,5 @@
 use super::{
-    check_trx::handle_transactions,
-    create_log::write_log,
-    outnodes::handle_outnode,
-    recieved_block::verifying_block,
-    structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction},
+    check_trx::handle_transactions, create_log::write_log, handle_listeners::send_addr_to_server, outnodes::handle_outnode, recieved_block::verifying_block, structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction}
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use serde::{Deserialize, Serialize};
@@ -92,6 +88,7 @@ pub async fn handle_requests(
             .behaviour_mut()
             .req_res
             .send_response(channel, response);
+        send_addr_to_server(my_addresses[0].to_string()).await;
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req.clone()) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
         match verifying_block(&request.req, leader, fullnode_subs).await {
