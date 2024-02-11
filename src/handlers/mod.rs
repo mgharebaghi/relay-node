@@ -100,12 +100,14 @@ pub async fn handle_streams(
 }
 
 async fn get_addresses(relays_path: &str) {
+    println!("in get addresses method in the mod rs");
     let addr = reqwest::get("https://centichain.org/api/relays")
         .await
         .unwrap()
         .text()
         .await
         .unwrap();
+    println!("response from relays:\n{}", addr);
     let addresses: Addresses = serde_json::from_str(&addr).unwrap();
 
     let path_exist = fs::metadata(relays_path).is_ok();
@@ -141,6 +143,7 @@ fn dialing(
     swarm: &mut Swarm<CustomBehav>,
     sync: &mut bool,
 ) -> Vec<String> {
+    println!("in dialing method");
     let relays_file_exist = fs::metadata(relays_path).is_ok();
     let mut dialed_addr: Vec<String> = Vec::new();
     if relays_file_exist {
@@ -162,6 +165,7 @@ fn dialing(
         }
 
         if dial_addresses.len() > 0 {
+            println!("dialed addresses:\n{:?}", dial_addresses);
             if dial_addresses.len() < 9 {
                 for addr in dial_addresses {
                     match swarm.dial(addr.clone()) {
