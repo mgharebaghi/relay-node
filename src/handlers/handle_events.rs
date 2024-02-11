@@ -120,7 +120,8 @@ pub async fn events(
                     break;
                 }
             }
-            SwarmEvent::ConnectionClosed { peer_id, .. } => {
+            SwarmEvent::ConnectionClosed { peer_id,cause, .. } => {
+                println!("connection close with:\n{}\ncause:\n{}", peer_id, cause.unwrap());
                 //remove from relay topic subscribers
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
