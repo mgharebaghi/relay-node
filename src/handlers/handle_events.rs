@@ -104,6 +104,8 @@ pub async fn events(
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
+                println!("dialing failed with:\n{}", peer_id.unwrap());
+                
                 remove_peer(peer_id.unwrap()).await;
                 let dialed_index = dialed_addr
                     .iter()
