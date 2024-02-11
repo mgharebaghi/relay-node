@@ -1,10 +1,10 @@
 mod handlers;
 pub mod rpc;
+use libp2p::Multiaddr;
 pub use rpc::handle_requests;
 use std::env::consts::OS;
-use std::fs::{self, File, OpenOptions};
-use std::io::{stdout, BufRead, BufReader, BufWriter, Write};
-use std::net::TcpStream;
+use std::fs::File;
+use std::io::{stdout, BufRead, BufReader};
 use std::time::Duration;
 
 use crossterm::execute;
@@ -22,12 +22,6 @@ use libp2p::{
     request_response::{cbor, ProtocolSupport},
     PeerId, StreamProtocol, SwarmBuilder,
 };
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Addresses {
-    addr: Vec<String>,
-}
 
 pub async fn run() {
     let mut wallet = String::new();
@@ -116,6 +110,9 @@ pub async fn run() {
         .with_swarm_config(|_conf| swarm_config)
         .build();
 
+    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
+    swarm.listen_on(listener).unwrap();
+
     let mut connections: Vec<PeerId> = Vec::new();
     let mut relay_topic_subscribers: Vec<PeerId> = Vec::new();
     let mut client_topic_subscribers: Vec<PeerId> = Vec::new();
@@ -127,73 +124,22 @@ pub async fn run() {
     let mut sync = false;
     let mut syncing_blocks = Vec::new();
 
-    let server_address = "www.centichain.org:80";
-    let site_connection = TcpStream::connect(server_address);
-
-    match site_connection {
-        Ok(_) => {
-            let mut relays_path = "";
-            if OS == "windows" {
-                relays_path = "relays.dat"
-            } else if OS == "linux" {
-                relays_path = "/etc/relays.dat"
-            }
-            let addr = reqwest::get("https://centichain.org/api/relays")
-                .await
-                .unwrap()
-                .text()
-                .await
-                .unwrap();
-            let addresses: Addresses = serde_json::from_str(&addr).unwrap();
-
-            let path_exist = fs::metadata(relays_path).is_ok();
-            if path_exist {
-                fs::write(relays_path, "").unwrap();
-                let write_file = OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open(relays_path)
-                    .unwrap();
-                let mut writer = BufWriter::new(write_file);
-                for addr in addresses.addr {
-                    writeln!(writer, "{}", addr).unwrap();
-                }
-            } else {
-                let relays_file = OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .create(true)
-                    .open(relays_path)
-                    .unwrap();
-                let mut writer = BufWriter::new(relays_file);
-
-                for addr in addresses.addr {
-                    writeln!(writer, "{}", addr).unwrap();
-                }
-            }
-
-            handle_streams(
-                local_peer_id,
-                &mut swarm,
-                clients_topic,
-                &mut my_addresses,
-                &mut relays,
-                &mut clients,
-                relay_topic,
-                &mut connections,
-                &mut relay_topic_subscribers,
-                &mut client_topic_subscribers,
-                &mut wallet,
-                &mut leader,
-                &mut fullnode_subs,
-                &mut sync,
-                &mut syncing_blocks,
-            )
-            .await;
-        }
-        Err(_) => write_log(
-            "Relay could not connect to centichain.org for get latest relays addresses!"
-                .to_string(),
-        ),
-    }
+    handle_streams(
+        local_peer_id,
+        &mut swarm,
+        clients_topic,
+        &mut my_addresses,
+        &mut relays,
+        &mut clients,
+        relay_topic,
+        &mut connections,
+        &mut relay_topic_subscribers,
+        &mut client_topic_subscribers,
+        &mut wallet,
+        &mut leader,
+        &mut fullnode_subs,
+        &mut sync,
+        &mut syncing_blocks,
+    )
+    .await;
 }

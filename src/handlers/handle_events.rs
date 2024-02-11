@@ -116,10 +116,7 @@ pub async fn events(
                     }
                     None => {}
                 }
-                if dialed_addr.len() < 1 {
-                    for listener in listeners.id {
-                        swarm.remove_listener(listener);
-                    }
+                if dialed_addr.len() < 1 && relays.len() < 1 {
                     break;
                 }
             }
@@ -166,9 +163,6 @@ pub async fn events(
 
                 //break for dial with other relays if there is not connection with any relays
                 if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0 {
-                    for listener in listeners.id {
-                        swarm.remove_listener(listener);
-                    }
                     break;
                 } else {
                     let index = client_topic_subscriber.iter().position(|c| *c == peer_id);

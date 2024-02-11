@@ -1,6 +1,5 @@
 use std::{
-    fs::{self, File},
-    io::{BufRead, BufReader},
+    env::consts::OS, fs::{self, File, OpenOptions}, io::{BufRead, BufReader, BufWriter, Write}, net::TcpStream
 };
 
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
@@ -29,6 +28,13 @@ mod syncing;
 use crate::handlers::create_log::write_log;
 
 use self::structures::{FullNodes, GetGossipMsg};
+
+use serde::{Deserialize, Serialize};
+#[derive(Debug, Serialize, Deserialize)]
+struct Addresses {
+    addr: Vec<String>,
+}
+
 //handle streams that come to swarm events and relays.dat file to add or remove addresses
 pub async fn handle_streams(
     local_peer_id: PeerId,
@@ -48,10 +54,62 @@ pub async fn handle_streams(
     syncing_blocks: &mut Vec<GetGossipMsg>,
 ) {
     loop {
-        let relays_file_exist = fs::metadata("/etc/relays.dat").is_ok();
-        let mut dialed_addr:Vec<String> = Vec::new();
+        let server_address = "www.centichain.org:80";
+        let site_connection = TcpStream::connect(server_address);
+
+        let mut relays_path = "";
+                if OS == "windows" {
+                    relays_path = "relays.dat"
+                } else if OS == "linux" {
+                    relays_path = "/etc/relays.dat"
+                }
+
+        match site_connection {
+            Ok(_) => {
+                let addr = reqwest::get("https://centichain.org/api/relays")
+                    .await
+                    .unwrap()
+                    .text()
+                    .await
+                    .unwrap();
+                let addresses: Addresses = serde_json::from_str(&addr).unwrap();
+
+                let path_exist = fs::metadata(relays_path).is_ok();
+                if path_exist {
+                    fs::write(relays_path, "").unwrap();
+                    let write_file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open(relays_path)
+                        .unwrap();
+                    let mut writer = BufWriter::new(write_file);
+                    for addr in addresses.addr {
+                        writeln!(writer, "{}", addr).unwrap();
+                    }
+                } else {
+                    let relays_file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .create(true)
+                        .open(relays_path)
+                        .unwrap();
+                    let mut writer = BufWriter::new(relays_file);
+
+                    for addr in addresses.addr {
+                        writeln!(writer, "{}", addr).unwrap();
+                    }
+                }
+            }
+            Err(_) => write_log(
+                "Relay could not connect to centichain.org for get latest relays addresses!"
+                    .to_string(),
+            ),
+        }
+
+        let relays_file_exist = fs::metadata(relays_path).is_ok();
+        let mut dialed_addr: Vec<String> = Vec::new();
         if relays_file_exist {
-            let file = File::open("/etc/relays.dat").unwrap();
+            let file = File::open(relays_path).unwrap();
             let reader = BufReader::new(&file);
             let mut dial_addresses = Vec::new();
             for i in reader.lines() {
@@ -106,9 +164,6 @@ pub async fn handle_streams(
         } else {
             *sync = true
         }
-
-        let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
-        swarm.listen_on(listener).unwrap();
 
         events(
             swarm,
