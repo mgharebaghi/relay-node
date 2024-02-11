@@ -4862,6 +4862,8 @@ dependencies = [
  "futures-util",
  "libp2p",
  "mongodb",
+ "openssl",
+ "openssl-sys",
  "public-ip",
  "rand 0.8.5",
  "reqwest",

@@ -105,7 +105,7 @@ pub async fn events(
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
                 println!("dialing failed with:\n{}", peer_id.unwrap());
-                
+
                 remove_peer(peer_id.unwrap()).await;
                 let dialed_index = dialed_addr
                     .iter()
@@ -124,6 +124,18 @@ pub async fn events(
                 }
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                //remove from relay topic subscribers
+                if relay_topic_subscribers.contains(&peer_id) {
+                    let i_relay_subscriber = relay_topic_subscribers
+                        .iter()
+                        .position(|pid| *pid == peer_id);
+                    match i_relay_subscriber {
+                        Some(index) => {
+                            relay_topic_subscribers.remove(index);
+                        }
+                        None => {}
+                    }
+                }
                 //remove peer from relays if it is in the relays
                 if relays.contains(&peer_id) {
                     match relays.iter().position(|pid| pid == &peer_id) {
@@ -153,7 +165,7 @@ pub async fn events(
                 }
 
                 //break for dial with other relays if there is not connection with any relays
-                if dialed_addr.len() < 1 && relays.len() < 1 {
+                if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0 {
                     for listener in listeners.id {
                         swarm.remove_listener(listener);
                     }
@@ -190,19 +202,6 @@ pub async fn events(
                             .await;
                         }
                         None => {}
-                    }
-
-                    //remove from relay topic subscribers
-                    if relay_topic_subscribers.contains(&peer_id) {
-                        let i_relay_subscriber = relay_topic_subscribers
-                            .iter()
-                            .position(|pid| *pid == peer_id);
-                        match i_relay_subscriber {
-                            Some(index) => {
-                                relay_topic_subscribers.remove(index);
-                            }
-                            None => {}
-                        }
                     }
                 }
             }
