@@ -78,6 +78,7 @@ pub async fn events(
                                         .behaviour_mut()
                                         .req_res
                                         .send_request(&peer_id, fullnodes_req);
+                                    send_addr_to_server(my_addresses[0].clone()).await;
                                     break;
                                 }
                                 Err(_) => {
