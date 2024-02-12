@@ -28,7 +28,7 @@ mod reciept;
 mod recieved_block;
 mod syncing;
 
-use crate::handlers::create_log::write_log;
+use crate::handlers::{create_log::write_log, handle_listeners::send_addr_to_server};
 
 use self::structures::{FullNodes, GetGossipMsg};
 
@@ -75,7 +75,7 @@ pub async fn handle_streams(
             ),
         }
 
-        let mut dialed_addr = dialing(relays_path, local_peer_id, swarm, sync);
+        let mut dialed_addr = dialing(relays_path, local_peer_id, swarm, sync, my_addresses).await;
 
         events(
             swarm,
@@ -143,11 +143,12 @@ async fn get_addresses(relays_path: &str) {
     }
 }
 
-fn dialing(
+async fn dialing(
     relays_path: &str,
     local_peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     sync: &mut bool,
+    my_addresses: &mut Vec<String>
 ) -> Vec<String> {
     println!("in dialing method");
     let relays_file_exist = fs::metadata(relays_path).is_ok();
@@ -204,9 +205,11 @@ fn dialing(
                 }
             }
         } else {
+            send_addr_to_server(my_addresses[0].clone()).await;
             *sync = true
         }
     } else {
+        send_addr_to_server(my_addresses[0].clone()).await;
         *sync = true
     }
 
