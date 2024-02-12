@@ -30,6 +30,7 @@ pub async fn verifying_block(
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
             if leader.len() > 0 {
+                println!("string of current leader: {}", leader);
                 let current_leader: PeerId = leader.parse().unwrap();
                 println!("current leader:\n{}", current_leader);
                 println!("validator peer:\n{}", validator_peerid);

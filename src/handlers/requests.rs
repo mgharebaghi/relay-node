@@ -88,7 +88,6 @@ pub async fn handle_requests(
             .behaviour_mut()
             .req_res
             .send_response(channel, response);
-        send_addr_to_server(my_addresses[0].to_string()).await;
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req.clone()) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
         match verifying_block(&request.req, leader, fullnode_subs).await {
