@@ -4,7 +4,7 @@ use mongodb::{
     Collection,
 };
 use std::{
-    fs,
+    fs::{self, File},
     io::{BufReader, Write},
 };
 
@@ -27,12 +27,8 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                     let mut utxos_output = fs::File::create("/etc/UTXOs.bson").unwrap();
                     let mut reciepts_output = fs::File::create("/etc/reciept.bson").unwrap();
 
-                    let blocks_response = reqwest::get(blocks_addr).await;
-                    let utxos_response = reqwest::get(utxos_addr).await;
-                    let reciepts_response = reqwest::get(reciepts_addr).await;
-
                     //get reciepts from server and insert it to db
-                    match reciepts_response {
+                    match reqwest::get(reciepts_addr).await {
                         Ok(res) => {
                             let mut body = res.bytes_stream();
 
@@ -46,7 +42,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                 }
                             }
 
-                            let bson_file = fs::File::open("/etc/reciept.bson").unwrap();
+                            let bson_file = File::open("reciept.bson").unwrap();
                             let mut reader = BufReader::new(bson_file);
 
                             let reciept_coll: Collection<Document> = db.collection("reciept");
@@ -55,95 +51,104 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             while let Ok(doc) = Document::from_reader(&mut reader) {
                                 reciept_coll.insert_one(doc, None).await.unwrap();
                             }
-                        }
-                        Err(_) => {
-                            println!("error in reciept response");
-                            write_log("insert reciept problem and change connection!".to_string());
-                            return Err(());
-                        }
-                    }
 
-                    //get utxos from server and insert it to db
-                    match utxos_response {
-                        Ok(res) => {
-                            let mut body = res.bytes_stream();
+                            //get utxos from server and insert it to db
+                            match reqwest::get(utxos_addr).await {
+                                Ok(res) => {
+                                    let mut body = res.bytes_stream();
 
-                            loop {
-                                match body.next().await {
-                                    Some(item) => {
-                                        let chunk = item.unwrap();
-                                        utxos_output.write_all(&chunk).unwrap();
+                                    loop {
+                                        match body.next().await {
+                                            Some(item) => {
+                                                let chunk = item.unwrap();
+                                                utxos_output.write_all(&chunk).unwrap();
+                                            }
+                                            None => break,
+                                        }
                                     }
-                                    None => break,
-                                }
-                            }
 
-                            let bson_file = fs::File::open("/etc/UTXOs.bson").unwrap();
-                            let mut reader = BufReader::new(bson_file);
+                                    let bson_file = File::open("UTXOs.bson").unwrap();
+                                    let mut reader = BufReader::new(bson_file);
 
-                            let utxos_coll: Collection<Document> = db.collection("UTXOs");
-                            utxos_coll.delete_many(doc! {}, None).await.unwrap();
+                                    let utxos_coll: Collection<Document> = db.collection("UTXOs");
+                                    utxos_coll.delete_many(doc! {}, None).await.unwrap();
 
-                            while let Ok(doc) = Document::from_reader(&mut reader) {
-                                utxos_coll.insert_one(doc, None).await.unwrap();
-                            }
-                        }
-                        Err(_) => {
-                            println!("error in UTXOs response");
-                            write_log("insert utxos problem and change connection!".to_string());
-                            return Err(());
-                        }
-                    }
-
-                    //get blocks from server and insert it to db if it is correct blockchain
-                    match blocks_response {
-                        Ok(res) => {
-                            let mut body = res.bytes_stream();
-
-                            loop {
-                                match body.next().await {
-                                    Some(item) => {
-                                        let chunk = item.unwrap();
-                                        blocks_output.write_all(&chunk).unwrap();
+                                    while let Ok(doc) = Document::from_reader(&mut reader) {
+                                        utxos_coll.insert_one(doc, None).await.unwrap();
                                     }
-                                    None => break,
+
+                                    //get blocks from server and insert it to db if it is correct blockchain
+                                    match reqwest::get(blocks_addr).await {
+                                        Ok(res) => {
+                                            let mut body = res.bytes_stream();
+
+                                            loop {
+                                                match body.next().await {
+                                                    Some(item) => {
+                                                        let chunk = item.unwrap();
+                                                        blocks_output.write_all(&chunk).unwrap();
+                                                    }
+                                                    None => break,
+                                                }
+                                            }
+
+                                            let bson_file = File::open("Blocks.bson").unwrap();
+                                            let mut reader = BufReader::new(bson_file);
+
+                                            let block_coll: Collection<Document> =
+                                                db.collection("Blocks");
+                                            block_coll.delete_many(doc! {}, None).await.unwrap();
+
+                                            let mut prev_hash = String::new();
+
+                                            while let Ok(doc) = Document::from_reader(&mut reader) {
+                                                let block: Block =
+                                                    from_document(doc.clone()).unwrap();
+
+                                                if block.header.prevhash
+                                                    != "This block is Genesis".to_string()
+                                                    && block.header.prevhash == prev_hash
+                                                {
+                                                    prev_hash.clear();
+                                                    let str_block_body =
+                                                        serde_json::to_string(&block.body).unwrap();
+                                                    prev_hash
+                                                        .push_str(&create_hash(str_block_body));
+                                                    block_coll.insert_one(doc, None).await.unwrap();
+                                                } else if block.header.prevhash
+                                                    == "This block is Genesis".to_string()
+                                                {
+                                                    prev_hash.clear();
+                                                    let str_block_body =
+                                                        serde_json::to_string(&block.body).unwrap();
+                                                    prev_hash
+                                                        .push_str(&create_hash(str_block_body));
+                                                    block_coll.insert_one(doc, None).await.unwrap();
+                                                } else {
+                                                    println!(
+                                                        "{}",
+                                                        format!("blocks synced problem!")
+                                                    );
+                                                    return Err(());
+                                                }
+                                            }
+                                            println!("{}", format!("blocks synced"));
+                                            return Ok(());
+                                        }
+                                        Err(e) => {
+                                            println!("{}", format!("blocks response err: {e}"));
+                                            return Err(());
+                                        }
+                                    }
                                 }
-                            }
-
-                            let bson_file = fs::File::open("/etc/Blocks.bson").unwrap();
-                            let mut reader = BufReader::new(bson_file);
-
-                            let block_coll: Collection<Document> = db.collection("Blocks");
-                            block_coll.delete_many(doc! {}, None).await.unwrap();
-
-                            let mut prev_hash = String::new();
-
-                            while let Ok(doc) = Document::from_reader(&mut reader) {
-                                let block: Block = from_document(doc.clone()).unwrap();
-
-                                if block.header.prevhash != "This block is Genesis".to_string()
-                                    && block.header.prevhash == prev_hash
-                                {
-                                    prev_hash.clear();
-                                    let str_block_body =
-                                        serde_json::to_string(&block.body).unwrap();
-                                    prev_hash.push_str(&&create_hash(str_block_body));
-                                    block_coll.insert_one(doc, None).await.unwrap();
-                                } else if block.header.prevhash
-                                    == "This block is Genesis".to_string()
-                                {
-                                    prev_hash.clear();
-                                    let str_block_body =
-                                        serde_json::to_string(&block.body).unwrap();
-                                    prev_hash.push_str(&create_hash(str_block_body));
-                                    block_coll.insert_one(doc, None).await.unwrap();
-                                } else {
+                                Err(e) => {
+                                    println!("{}", format!("UTXOs response err: {e}"));
                                     return Err(());
                                 }
                             }
                         }
-                        Err(_) => {
-                            println!("error in blocks response");
+                        Err(e) => {
+                            println!("{}", format!("reciepts response err: {e}"));
                             return Err(());
                         }
                     }
@@ -153,8 +158,6 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                     return Err(());
                 }
             }
-
-            Ok(())
         }
         Err(_e) => return Err(()),
     }

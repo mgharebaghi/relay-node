@@ -1,5 +1,5 @@
 use super::{
-    check_trx::handle_transactions, create_log::write_log, handle_listeners::send_addr_to_server, outnodes::handle_outnode, recieved_block::verifying_block, structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction}
+    check_trx::handle_transactions, create_log::write_log, outnodes::handle_outnode, recieved_block::verifying_block, structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction}
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use serde::{Deserialize, Serialize};
