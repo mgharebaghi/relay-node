@@ -65,7 +65,22 @@ pub async fn verifying_block(
                         if check_pid_with_public_key {
                             if verify_block_sign {
                                 match submit_block(gossip_message, leader, fullnode_subs).await {
-                                    Ok(_) => Ok(()),
+                                    Ok(_) => {
+                                        match Command::new("mongodump")
+                                            .arg("--db")
+                                            .arg("Blockchain")
+                                            .arg("--out")
+                                            .arg("/etc/dump")
+                                            .output()
+                                        {
+                                            Ok(_) => Ok(()),
+                                            Err(e) => {
+                                                println!("dumping command error in verifying block");
+                                                write_log(format!("{:?}", e));
+                                                Ok(())
+                                            }
+                                        }
+                                    }
                                     Err(_) => Err(()),
                                 }
                             } else {
@@ -169,20 +184,7 @@ async fn submit_block(
                                             //check next leader
                                             leader.clear();
                                             leader.push_str(&gossip_message.next_leader);
-
-                                            match Command::new("mongodump")
-                                                .arg("--db")
-                                                .arg("Blockchain")
-                                                .arg("--out")
-                                                .arg("/etc/dump")
-                                                .output()
-                                            {
-                                                Ok(_) => Ok(()),
-                                                Err(e) => {
-                                                    write_log(format!("{:?}", e));
-                                                    Err(())
-                                                }
-                                            }
+                                            Ok(())
                                         } else {
                                             write_log("block prev hash problem! recieved block (line 189)".to_string());
                                             Err(())
@@ -235,20 +237,7 @@ async fn submit_block(
                                                     //check next leader
                                                     leader.clear();
                                                     leader.push_str(&gossip_message.next_leader);
-
-                                                    match Command::new("mongodump")
-                                                        .arg("--db")
-                                                        .arg("Blockchain")
-                                                        .arg("--out")
-                                                        .arg("/etc/dump")
-                                                        .output()
-                                                    {
-                                                        Ok(_) => Ok(()),
-                                                        Err(e) => {
-                                                            write_log(format!("{:?}", e));
-                                                            Err(())
-                                                        }
-                                                    }
+                                                    Ok(())
                                                 }
                                                 Err(_) => {
                                                     write_log(
@@ -307,20 +296,7 @@ async fn submit_block(
                                             //check next leader
                                             leader.clear();
                                             leader.push_str(&gossip_message.next_leader);
-
-                                            match Command::new("mongodump")
-                                                .arg("--db")
-                                                .arg("Blockchain")
-                                                .arg("--out")
-                                                .arg("/etc/dump")
-                                                .output()
-                                            {
-                                                Ok(_) => Ok(()),
-                                                Err(e) => {
-                                                    write_log(format!("{:?}", e));
-                                                    Err(())
-                                                }
-                                            }
+                                            Ok(())
                                         }
                                         Err(_) => {
                                             write_log(
