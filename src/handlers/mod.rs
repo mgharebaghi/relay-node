@@ -148,7 +148,7 @@ async fn dialing(
     local_peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     sync: &mut bool,
-    my_addresses: &mut Vec<String>
+    my_addresses: &mut Vec<String>,
 ) -> Vec<String> {
     println!("in dialing method");
     let relays_file_exist = fs::metadata(relays_path).is_ok();
@@ -205,11 +205,15 @@ async fn dialing(
                 }
             }
         } else {
-            send_addr_to_server(my_addresses[0].clone()).await;
+            if my_addresses.len() > 0 {
+                send_addr_to_server(my_addresses[0].clone()).await;
+            }
             *sync = true
         }
     } else {
-        send_addr_to_server(my_addresses[0].clone()).await;
+        if my_addresses.len() > 0 {
+            send_addr_to_server(my_addresses[0].clone()).await;
+        }
         *sync = true
     }
 
