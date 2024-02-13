@@ -1,6 +1,6 @@
 use async_std::stream::StreamExt;
 use mongodb::{
-    bson::{doc, from_document, to_document, Document, document::Document as Doc},
+    bson::{doc, document::Document as Doc, from_document, to_document, Document},
     Collection,
 };
 use std::{
@@ -92,7 +92,8 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                                 }
                                             }
 
-                                            let bson_file = File::open("Blocks.bson").unwrap();
+                                            let bson_file =
+                                                File::open("Blocks.bson").unwrap();
                                             let mut reader = BufReader::new(bson_file);
 
                                             let block_coll: Collection<Document> =
@@ -115,7 +116,10 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                                         serde_json::to_string(&block.body).unwrap();
                                                     prev_hash
                                                         .push_str(&create_hash(str_block_body));
-                                                    block_coll.insert_one(doc_from_block, None).await.unwrap();
+                                                    block_coll
+                                                        .insert_one(doc_from_block, None)
+                                                        .await
+                                                        .unwrap();
                                                 } else if block.header.prevhash
                                                     == "This block is Genesis".to_string()
                                                 {
@@ -124,7 +128,10 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                                         serde_json::to_string(&block.body).unwrap();
                                                     prev_hash
                                                         .push_str(&create_hash(str_block_body));
-                                                    block_coll.insert_one(doc_from_block, None).await.unwrap();
+                                                    block_coll
+                                                        .insert_one(doc_from_block, None)
+                                                        .await
+                                                        .unwrap();
                                                 } else {
                                                     println!(
                                                         "{}",
