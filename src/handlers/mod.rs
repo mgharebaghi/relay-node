@@ -173,7 +173,7 @@ async fn dialing(
 
         if dial_addresses.len() > 0 {
             println!("dialed addresses:\n{:?}", dial_addresses);
-            if dial_addresses.len() < 9 {
+            if dial_addresses.len() < 6 {
                 for addr in dial_addresses {
                     match swarm.dial(addr.clone()) {
                         Ok(_) => {
@@ -187,7 +187,7 @@ async fn dialing(
                 }
             } else {
                 let mut rnd_relays = Vec::new();
-                while rnd_relays.len() < 9 {
+                while rnd_relays.len() < 6 {
                     let new_rnd = dial_addresses.choose(&mut rand::thread_rng()).unwrap();
                     if !rnd_relays.contains(new_rnd) {
                         rnd_relays.push(new_rnd.clone())
