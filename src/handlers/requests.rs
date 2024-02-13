@@ -28,6 +28,7 @@ pub async fn handle_requests(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
+    local_peer_id: PeerId
 ) {
     if request.req == "handshake".to_string() {
         let mut handshake_res = Handshake {
@@ -99,7 +100,7 @@ pub async fn handle_requests(
                 match swarm
                     .behaviour_mut()
                     .gossipsub
-                    .publish(clients_topic, request.req.as_bytes())
+                    .publish(relay_topic, request.req.as_bytes())
                 {
                     Ok(_) => {
                         let response = Res { res: String::new() };
@@ -109,15 +110,26 @@ pub async fn handle_requests(
                             .send_response(channel, response);
 
                         //send true block to sse servers
-                        // let sse_topic = IdentTopic::new("sse");
-                        // match swarm
-                        //     .behaviour_mut()
-                        //     .gossipsub
-                        //     .publish(sse_topic, request.req.clone())
-                        // {
-                        //     Ok(_) => {}
-                        //     Err(_) => {}
-                        // }
+                        let sse_topic = IdentTopic::new("sse");
+                        match swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .publish(sse_topic, request.req.clone().as_bytes())
+                        {
+                            Ok(_) => {}
+                            Err(_) => {}
+                        }
+
+                        //send true block to connected Validators
+                        let validators_topic = IdentTopic::new(local_peer_id.to_string());
+                        match swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .publish(validators_topic, request.req.clone().as_bytes())
+                        {
+                            Ok(_) => {}
+                            Err(_) => {}
+                        }
                     }
                     Err(_) => {}
                 }

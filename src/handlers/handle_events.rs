@@ -287,6 +287,7 @@ pub async fn events(
                                     clients,
                                     relay_topic.clone(),
                                     my_addresses,
+                                    local_peer_id
                                 )
                                 .await;
                             }

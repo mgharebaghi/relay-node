@@ -1,4 +1,4 @@
-use libp2p::{gossipsub::Message, PeerId, Swarm};
+use libp2p::{gossipsub::{IdentTopic, Message}, PeerId, Swarm};
 
 use super::{
     check_trx::handle_transactions,
@@ -16,6 +16,7 @@ pub async fn msg_check(
     propagation_source: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     connections: &mut Vec<PeerId>,
+    local_peer_id: PeerId
 ) {
     let str_msg = String::from_utf8(message.data.clone()).unwrap();
 
@@ -24,7 +25,29 @@ pub async fn msg_check(
     handle_transactions(String::from_utf8(message.data).unwrap()).await;
 
     match verifying_block(&str_msg, &mut leader, fullnodes).await {
-        Ok(_) => {}
+        Ok(_) => {
+            //send true block to sse servers
+            let sse_topic = IdentTopic::new("sse");
+            match swarm
+                .behaviour_mut()
+                .gossipsub
+                .publish(sse_topic, str_msg.clone().as_bytes())
+            {
+                Ok(_) => {}
+                Err(_) => {}
+            }
+
+            //send true block to connected Validators
+            let validators_topic = IdentTopic::new(local_peer_id.to_string());
+            match swarm
+                .behaviour_mut()
+                .gossipsub
+                .publish(validators_topic, str_msg.clone().as_bytes())
+            {
+                Ok(_) => {}
+                Err(_) => {}
+            }
+        }
         Err(_) => {
             let gossipmsg: GossipMessage = serde_json::from_str(&str_msg).unwrap();
             let c_index = fullnodes
@@ -37,9 +60,7 @@ pub async fn msg_check(
                 None => {}
             }
 
-            let r_index = relays
-                .iter()
-                .position(|relay| relay == &propagation_source);
+            let r_index = relays.iter().position(|relay| relay == &propagation_source);
             match r_index {
                 Some(i) => {
                     relays.remove(i);

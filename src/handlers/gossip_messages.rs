@@ -21,7 +21,7 @@ pub async fn handle_gossip_message(
     fullnodes: &mut Vec<FullNodes>,
 ) {
     
-    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections).await;
+    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id).await;
 
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {

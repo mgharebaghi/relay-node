@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, process::Command};
+use std::process::Command;
 
 use libp2p::{identity::PublicKey, PeerId};
 use sha2::{Digest, Sha256};
@@ -26,12 +26,7 @@ pub async fn verifying_block(
 ) -> Result<(), ()> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
-            println!(
-                "block sign wallet_public:\n{}",
-                gossip_message.block.header.block_signature.wallet_public
-            );
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
-            println!("validator peerID: {}", validator_peerid);
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
             if leader.len() > 0 {
@@ -77,17 +72,7 @@ pub async fn verifying_block(
                                             .arg("/etc/dump")
                                             .output()
                                         {
-                                            Ok(_) => {
-                                                let bson_file =
-                                                    File::open("/etc/dump/Blockchain/Blocks.bson").unwrap();
-                                                let mut reader = BufReader::new(bson_file);
-                                                while let Ok(doc) =
-                                                    Document::from_reader(&mut reader)
-                                                {
-                                                    println!("{:?}", doc);
-                                                }
-                                                Ok(())
-                                            }
+                                            Ok(_) => Ok(()),
                                             Err(e) => {
                                                 println!(
                                                     "dumping command error in verifying block"
