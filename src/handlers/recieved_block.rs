@@ -78,9 +78,12 @@ pub async fn verifying_block(
                                             .output()
                                         {
                                             Ok(_) => {
-                                                let bson_file = File::open("Blocks.bson").unwrap();
+                                                let bson_file =
+                                                    File::open("/etc/dump/Blockchain/Blocks.bson").unwrap();
                                                 let mut reader = BufReader::new(bson_file);
-                                                while let Ok(doc) = Document::from_reader(&mut reader) {
+                                                while let Ok(doc) =
+                                                    Document::from_reader(&mut reader)
+                                                {
                                                     println!("{:?}", doc);
                                                 }
                                                 Ok(())

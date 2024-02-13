@@ -42,7 +42,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                 }
                             }
 
-                            let bson_file = File::open("reciept.bson").unwrap();
+                            let bson_file = File::open("/etc/reciept.bson").unwrap();
                             let mut reader = BufReader::new(bson_file);
 
                             let reciept_coll: Collection<Document> = db.collection("reciept");
@@ -67,7 +67,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                         }
                                     }
 
-                                    let bson_file = File::open("UTXOs.bson").unwrap();
+                                    let bson_file = File::open("/etc/UTXOs.bson").unwrap();
                                     let mut reader = BufReader::new(bson_file);
 
                                     let utxos_coll: Collection<Document> = db.collection("UTXOs");
@@ -93,7 +93,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                             }
 
                                             let bson_file =
-                                                File::open("Blocks.bson").unwrap();
+                                                File::open("/etc/Blocks.bson").unwrap();
                                             let mut reader = BufReader::new(bson_file);
 
                                             let block_coll: Collection<Document> =
