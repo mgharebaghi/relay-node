@@ -26,6 +26,7 @@ pub async fn verifying_block(
 ) -> Result<(), ()> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
+            println!("block sign wallet_public:\n{}", gossip_message.block.header.block_signature.wallet_public);
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
             println!("validator peerID: {}", validator_peerid);
             //check leader that is equal with curren leader in our leader or not

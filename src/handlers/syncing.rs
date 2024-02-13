@@ -103,8 +103,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
 
                                             while let Ok(doc) = Doc::from_reader(&mut reader) {
                                                 println!("{:?}", doc);
-                                                let block: Block =
-                                                    from_document(doc).unwrap();
+                                                let block: Block = from_document(doc).unwrap();
 
                                                 let doc_from_block = to_document(&block).unwrap();
                                                 if block.header.prevhash
