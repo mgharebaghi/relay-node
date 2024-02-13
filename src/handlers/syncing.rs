@@ -1,6 +1,6 @@
 use async_std::stream::StreamExt;
 use mongodb::{
-    bson::{doc, from_document, to_document, Document},
+    bson::{doc, from_document, to_document, Document, document::Document as Doc},
     Collection,
 };
 use std::{
@@ -48,7 +48,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             let reciept_coll: Collection<Document> = db.collection("reciept");
                             reciept_coll.delete_many(doc! {}, None).await.unwrap();
 
-                            while let Ok(doc) = Document::from_reader(&mut reader) {
+                            while let Ok(doc) = Doc::from_reader(&mut reader) {
                                 reciept_coll.insert_one(doc, None).await.unwrap();
                             }
 
@@ -73,7 +73,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     let utxos_coll: Collection<Document> = db.collection("UTXOs");
                                     utxos_coll.delete_many(doc! {}, None).await.unwrap();
 
-                                    while let Ok(doc) = Document::from_reader(&mut reader) {
+                                    while let Ok(doc) = Doc::from_reader(&mut reader) {
                                         utxos_coll.insert_one(doc, None).await.unwrap();
                                     }
 
@@ -101,7 +101,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
 
                                             let mut prev_hash = String::new();
 
-                                            while let Ok(doc) = Document::from_reader(&mut reader) {
+                                            while let Ok(doc) = Doc::from_reader(&mut reader) {
                                                 let block: Block =
                                                     from_document(doc).unwrap();
 
