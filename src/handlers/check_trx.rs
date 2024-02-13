@@ -59,6 +59,12 @@ pub async fn handle_transactions(message: String) {
         }
         let trx_validity = transaction.output.output_data.utxos.len() != unvalidity_num;
 
+        println!("trx_validity: {}", trx_validity);
+        println!("sign_verify: {}", sign_verify);
+        println!("hash_verify: {}", hash_verify);
+        println!("inputhash_check: {}", inputhash_check);
+        println!("outputhash_check: {}", outputhash_check);
+
         //check if all of hashs is verify and trx_validity is legit then handle the trx
         if trx_validity && sign_verify && hash_verify && inputhash_check && outputhash_check {
             match blockchain_db().await {
@@ -114,6 +120,7 @@ pub async fn handle_transactions(message: String) {
                             .await;
                         }
                     } else {
+                        println!("user Doesn't have UTXO document!");
                         write_log("discorrect trx in check trx line(117)".to_string());
                         insert_reciept(
                             transaction,
@@ -127,6 +134,7 @@ pub async fn handle_transactions(message: String) {
                 Err(_) => {}
             }
         } else {
+            println!("verifying transaction problem!");
             write_log("discorrect trx in check trx line(130)".to_string());
             insert_reciept(
                 transaction,

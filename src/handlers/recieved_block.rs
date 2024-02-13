@@ -27,10 +27,10 @@ pub async fn verifying_block(
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
             let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
+            println!("validator peerID: {}", validator_peerid);
             //check leader that is equal with curren leader in our leader or not
             let mut validate_leader = true;
             if leader.len() > 0 {
-                println!("string of current leader: {}", leader);
                 let current_leader: PeerId = leader.parse().unwrap();
                 println!("current leader:\n{}", current_leader);
                 println!("validator peer:\n{}", validator_peerid);
@@ -84,12 +84,14 @@ pub async fn verifying_block(
                                     Err(_) => Err(()),
                                 }
                             } else {
+                                println!("verify block sign error! recieved block");
                                 write_log(
                                     "verify block sign error! recieved block (line 90)".to_string(),
                                 );
                                 Err(())
                             }
                         } else {
+                            println!("check pid with public key error! recieved block");
                             write_log(
                                 "check pid with public key error! recieved block (line 96)"
                                     .to_string(),
@@ -98,6 +100,7 @@ pub async fn verifying_block(
                         }
                     }
                     Err(_) => {
+                        println!("validator public key error! recieved block");
                         write_log(
                             "validator public key error! recieved block (line 104)".to_string(),
                         );
@@ -105,6 +108,7 @@ pub async fn verifying_block(
                     }
                 }
             } else {
+                println!("validate leader error! recieved block");
                 write_log("validate leader error! recieved block (line 110)".to_string());
                 Err(())
             }

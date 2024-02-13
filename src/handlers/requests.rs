@@ -1,5 +1,9 @@
 use super::{
-    check_trx::handle_transactions, create_log::write_log, outnodes::handle_outnode, recieved_block::verifying_block, structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction}
+    check_trx::handle_transactions,
+    create_log::write_log,
+    outnodes::handle_outnode,
+    recieved_block::verifying_block,
+    structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction},
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use serde::{Deserialize, Serialize};
@@ -51,15 +55,15 @@ pub async fn handle_requests(
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
         handle_transactions(request.req.clone()).await;
-        let sse_topic = IdentTopic::new("sse");
-        match swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(sse_topic, request.req.clone())
-        {
-            Ok(_) => {}
-            Err(_) => {}
-        }
+        // let sse_topic = IdentTopic::new("sse");
+        // match swarm
+        //     .behaviour_mut()
+        //     .gossipsub
+        //     .publish(sse_topic, request.req.clone())
+        // {
+        //     Ok(_) => {}
+        //     Err(_) => {}
+        // }
         let send_transaction = swarm.behaviour_mut().gossipsub.publish(topic, request.req);
         match send_transaction {
             Ok(_) => {
@@ -105,15 +109,15 @@ pub async fn handle_requests(
                             .send_response(channel, response);
 
                         //send true block to sse servers
-                        let sse_topic = IdentTopic::new("sse");
-                        match swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .publish(sse_topic, request.req.clone())
-                        {
-                            Ok(_) => {}
-                            Err(_) => {}
-                        }
+                        // let sse_topic = IdentTopic::new("sse");
+                        // match swarm
+                        //     .behaviour_mut()
+                        //     .gossipsub
+                        //     .publish(sse_topic, request.req.clone())
+                        // {
+                        //     Ok(_) => {}
+                        //     Err(_) => {}
+                        // }
                     }
                     Err(_) => {}
                 }
