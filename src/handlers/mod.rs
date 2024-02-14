@@ -143,7 +143,7 @@ async fn get_addresses(relays_path: &str) {
     }
 }
 
-async fn dialing(
+pub async fn dialing(
     relays_path: &str,
     local_peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,

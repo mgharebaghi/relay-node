@@ -5,6 +5,7 @@ use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
+use crate::handlers::dialing;
 use crate::handlers::structures::OutNode;
 
 use super::create_log::write_log;
@@ -181,8 +182,15 @@ pub async fn events(
                 }
 
                 //break for dial with other relays if there is not connection with any relays
-                if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0 {
-                    break;
+                if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0  {
+                    if relay_topic_subscribers.len() > 1 {
+                        for connected in connections {
+                            swarm.disconnect_peer_id(connected.clone()).unwrap();
+                        }
+                        break;
+                    } else {
+                        dialing("/etc/relays.dat", local_peer_id, swarm, sync, my_addresses).await;
+                    }
                 } else {
                     let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
                     match index {
