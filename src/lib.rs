@@ -1,6 +1,5 @@
 mod handlers;
 pub mod rpc;
-use libp2p::gossipsub::{Message, MessageId};
 use libp2p::Multiaddr;
 pub use rpc::handle_requests;
 use std::env::consts::OS;
@@ -24,9 +23,6 @@ use libp2p::{
     PeerId, StreamProtocol, SwarmBuilder,
 };
 
-fn message_id(message: &Message) -> MessageId {
-    MessageId::from(String::from_utf8(message.data.clone()).unwrap())
-}
 
 pub async fn run() {
     let mut wallet = String::new();
@@ -71,7 +67,7 @@ pub async fn run() {
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
     let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().duplicate_cache_time(
         Duration::from_secs(60 * 10)
-    ).message_id_fn(message_id).build().unwrap();
+    ).build().unwrap();
     gossip_cfg.duplicate_cache_time();
     let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
     //request and response protocol config
