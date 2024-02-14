@@ -44,7 +44,9 @@ pub async fn msg_check(
                 .gossipsub
                 .publish(validators_topic, str_msg.clone().as_bytes())
             {
-                Ok(_) => {}
+                Ok(_) => {
+                    println!("block sent...");
+                }
                 Err(_) => {}
             }
         }
