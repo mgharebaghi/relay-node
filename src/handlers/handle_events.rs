@@ -285,7 +285,6 @@ pub async fn events(
                                     swarm,
                                     channel,
                                     wallet,
-                                    clients_topic.clone(),
                                     fullnodes,
                                     leader,
                                     clients_topic.clone(),

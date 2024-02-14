@@ -20,7 +20,6 @@ pub async fn handle_requests(
     swarm: &mut Swarm<CustomBehav>,
     channel: ResponseChannel<Res>,
     wallet: &mut String,
-    topic: IdentTopic,
     fullnode_subs: &mut Vec<FullNodes>,
     leader: &mut String,
     clients_topic: IdentTopic,
@@ -28,7 +27,7 @@ pub async fn handle_requests(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
-    local_peer_id: PeerId
+    local_peer_id: PeerId,
 ) {
     if request.req == "handshake".to_string() {
         let mut handshake_res = Handshake {
@@ -65,7 +64,10 @@ pub async fn handle_requests(
         //     Ok(_) => {}
         //     Err(_) => {}
         // }
-        let send_transaction = swarm.behaviour_mut().gossipsub.publish(topic, request.req);
+        let send_transaction = swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(clients_topic, request.req);
         match send_transaction {
             Ok(_) => {
                 let response = Res {

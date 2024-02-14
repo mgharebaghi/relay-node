@@ -64,8 +64,9 @@ pub async fn run() {
 
     //gossip protocol config
     let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
-    let gossip_cfg_builder = libp2p::gossipsub::ConfigBuilder::default();
-    let gossip_cfg = libp2p::gossipsub::ConfigBuilder::build(&gossip_cfg_builder).unwrap();
+    let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().duplicate_cache_time(
+        Duration::from_secs(60 * 10)
+    ).build().unwrap();
     gossip_cfg.duplicate_cache_time();
     let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
     //request and response protocol config
