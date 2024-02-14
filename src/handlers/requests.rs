@@ -102,9 +102,10 @@ pub async fn handle_requests(
                 match swarm
                     .behaviour_mut()
                     .gossipsub
-                    .publish(relay_topic, request.req.as_bytes())
+                    .publish(relay_topic.clone(), request.req.as_bytes())
                 {
                     Ok(_) => {
+                        println!("block sent to {} topic", relay_topic);
                         let response = Res { res: String::new() };
                         let _ = swarm
                             .behaviour_mut()
