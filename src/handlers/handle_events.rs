@@ -142,33 +142,37 @@ pub async fn events(
                     }
                 }
                 //remove peer from relays if it is in the relays
+                match relays.iter().position(|pid| pid == &peer_id) {
+                    Some(index) => {
+                        relays.remove(index);
+                    }
+                    None => {}
+                }
+                
                 if relays.contains(&peer_id) {
-                    match relays.iter().position(|pid| pid == &peer_id) {
-                        Some(index) => {
-                            relays.remove(index);
-                        }
-                        None => {}
-                    }
-
-                    swarm
-                        .behaviour_mut()
-                        .gossipsub
-                        .remove_explicit_peer(&peer_id);
-                    let out_node = OutNode { peer_id };
-                    let outnode_str = serde_json::to_string(&out_node).unwrap();
-                    match swarm
-                        .behaviour_mut()
-                        .gossipsub
-                        .publish(clients_topic.clone(), outnode_str.as_bytes())
-                    {
-                        Ok(_) => {
-                            println!("send relay that closed to clients");
-                        }
-                        Err(_) => {
-                            write_log("can not send out node to the network in handle events relay outnode".to_string());
-                        }
-                    }
                     remove_peer(peer_id).await;
+                }
+
+                swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .remove_explicit_peer(&peer_id);
+                let out_node = OutNode { peer_id };
+                let outnode_str = serde_json::to_string(&out_node).unwrap();
+                match swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .publish(clients_topic.clone(), outnode_str.as_bytes())
+                {
+                    Ok(_) => {
+                        println!("send relay that closed to clients");
+                    }
+                    Err(_) => {
+                        write_log(
+                            "can not send out node to the network in handle events relay outnode"
+                                .to_string(),
+                        );
+                    }
                 }
 
                 //remove peer from dialed address if it is in the dialed addresses
