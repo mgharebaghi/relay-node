@@ -182,14 +182,27 @@ pub async fn events(
                 }
 
                 //break for dial with other relays if there is not connection with any relays
-                if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0  {
+                if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0 {
                     if relay_topic_subscribers.len() > 1 {
-                        for connected in connections {
-                            swarm.disconnect_peer_id(connected.clone()).unwrap();
+                        let mut is_r_connection = false;
+                        for r in relay_topic_subscribers.clone() {
+                            if connections.contains(&r) {
+                                is_r_connection = true;
+                            }
                         }
-                        break;
+                        if !is_r_connection {
+                            for connected in connections {
+                                swarm.disconnect_peer_id(connected.clone()).unwrap();
+                            }
+                            break;
+                        }
                     } else {
-                        dialing("/etc/relays.dat", local_peer_id, swarm, sync, my_addresses).await;
+                        if connections.contains(&relay_topic_subscribers[0]) {
+                            continue;
+                        } else {
+                            dialing("/etc/relays.dat", local_peer_id, swarm, sync, my_addresses)
+                                .await;
+                        }
                     }
                 } else {
                     let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
