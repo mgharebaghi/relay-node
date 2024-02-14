@@ -24,8 +24,8 @@ use libp2p::{
     PeerId, StreamProtocol, SwarmBuilder,
 };
 
-fn message_id(_message: &Message) -> MessageId {
-    MessageId::from(format!("{}", rand::random::<u32>()))
+fn message_id(message: &Message) -> MessageId {
+    MessageId::from(String::from_utf8(message.data.clone()).unwrap())
 }
 
 pub async fn run() {
