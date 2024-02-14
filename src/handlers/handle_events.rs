@@ -6,7 +6,6 @@ use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
 use crate::handlers::dialing;
-use crate::handlers::structures::OutNode;
 
 use super::create_log::write_log;
 use super::get_addresses::get_addresses;
@@ -148,32 +147,22 @@ pub async fn events(
                     }
                     None => {}
                 }
-                
+
                 if relays.contains(&peer_id) {
                     remove_peer(peer_id).await;
                 }
 
-                swarm
-                    .behaviour_mut()
-                    .gossipsub
-                    .remove_explicit_peer(&peer_id);
-                let out_node = OutNode { peer_id };
-                let outnode_str = serde_json::to_string(&out_node).unwrap();
-                match swarm
-                    .behaviour_mut()
-                    .gossipsub
-                    .publish(clients_topic.clone(), outnode_str.as_bytes())
-                {
-                    Ok(_) => {
-                        println!("send relay that closed to clients");
-                    }
-                    Err(_) => {
-                        write_log(
-                            "can not send out node to the network in handle events relay outnode"
-                                .to_string(),
-                        );
-                    }
-                }
+                handle_outnode(
+                    peer_id,
+                    swarm,
+                    clients_topic.clone(),
+                    relays,
+                    clients,
+                    relay_topic.clone(),
+                    my_addresses,
+                    fullnodes,
+                )
+                .await;
 
                 //remove peer from dialed address if it is in the dialed addresses
                 let dialed_index = dialed_addr
@@ -191,31 +180,6 @@ pub async fn events(
                 match index {
                     Some(i) => {
                         client_topic_subscriber.remove(i);
-                    }
-                    None => {}
-                }
-
-                //check clients and if it's 0 send my address to rpc server for remove from it if close connection
-                //was a client and propagate its address to network
-                let index = clients.iter().position(|c| *c == peer_id);
-                match index {
-                    Some(i) => {
-                        clients.remove(i);
-                        swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .remove_explicit_peer(&peer_id);
-                        handle_outnode(
-                            peer_id,
-                            swarm,
-                            clients_topic.clone(),
-                            relays,
-                            clients,
-                            relay_topic.clone(),
-                            my_addresses,
-                            fullnodes,
-                        )
-                        .await;
                     }
                     None => {}
                 }
