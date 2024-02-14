@@ -1,8 +1,4 @@
-use libp2p::{
-    request_response::cbor,
-    swarm::NetworkBehaviour,
-    PeerId,
-};
+use libp2p::{request_response::cbor, swarm::NetworkBehaviour, Multiaddr, PeerId};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -53,7 +49,7 @@ pub struct OutNode {
 pub struct BlockSign {
     pub wallet_public: Public,
     pub signature: Vec<Signature>,
-    pub peer_public: Vec<u8>
+    pub peer_public: Vec<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -203,7 +199,7 @@ pub struct Reciept {
     pub fee: Decimal,
     pub status: String,
     pub description: String,
-    pub date: String
+    pub date: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -223,5 +219,5 @@ pub struct FullNodes {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetGossipMsg {
     pub gossip: GossipMessage,
-    pub propagation_source: PeerId
+    pub propagation_source: PeerId,
 }

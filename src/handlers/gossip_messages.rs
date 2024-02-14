@@ -1,5 +1,7 @@
+use std::{fs::OpenOptions, io::{BufWriter, Write}};
+
 use libp2p::{
-    gossipsub::{IdentTopic, Message}, PeerId, Swarm
+    gossipsub::{IdentTopic, Message}, Multiaddr, PeerId, Swarm
 };
 
 use crate::handlers::structures::{ImSync, OutNode};
@@ -71,8 +73,8 @@ pub async fn handle_gossip_message(
                 }
             }
 
-            if msg == "i have a client".to_string() && connections.contains(&propagation_source) {
-                if !relays.contains(&propagation_source) {
+            if msg == "i have a client".to_string() {
+                if connections.contains(&propagation_source) && !relays.contains(&propagation_source) {
                     relays.push(propagation_source);
                 }
             }
@@ -85,6 +87,18 @@ pub async fn handle_gossip_message(
                         relays.remove(index);
                     }
                     None => {}
+                }
+            }
+
+            //get relay full address and insert it to relays file
+            if let Ok(relayaddr) = serde_json::from_str::<Multiaddr>(&msg) {
+                let relays_file = OpenOptions::new().append(true).write(true).open("/etc/relays.dat");
+                match relays_file {
+                    Ok(file) => {
+                        let mut writer = BufWriter::new(file);
+                        writeln!(writer, "{}", relayaddr.to_string()).unwrap();
+                    }
+                    Err(_) => {}
                 }
             }
 

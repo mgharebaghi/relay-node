@@ -148,7 +148,7 @@ pub async fn events(
                     None => {}
                 }
 
-                if relays.contains(&peer_id) {
+                if relay_topic_subscribers.contains(&peer_id) {
                     remove_peer(peer_id).await;
                 }
 
@@ -341,6 +341,11 @@ pub async fn events(
 
                                 *sync = true;
                                 send_addr_to_server(my_addresses[0].clone()).await;
+                                swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .publish(clients_topic.clone(), my_addresses[0].as_bytes())
+                                    .unwrap();
                             }
                         }
                     },
