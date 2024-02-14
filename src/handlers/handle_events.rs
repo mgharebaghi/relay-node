@@ -3,6 +3,7 @@ use std::process::Command;
 
 use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
+use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
 use crate::handlers::dialing;
@@ -341,11 +342,18 @@ pub async fn events(
 
                                 *sync = true;
                                 send_addr_to_server(my_addresses[0].clone()).await;
-                                swarm
+                                let my_multiaddress: Multiaddr = my_addresses[0].parse().unwrap();
+                                let str_my_multiaddr = serde_json::to_string(&my_multiaddress).unwrap();
+                                match swarm
                                     .behaviour_mut()
                                     .gossipsub
-                                    .publish(clients_topic.clone(), my_addresses[0].as_bytes())
-                                    .unwrap();
+                                    .publish(clients_topic.clone(), str_my_multiaddr.as_bytes())
+                                {
+                                    Ok(_) => println!("my address propagate to the network"),
+                                    Err(_) => {
+                                        println!("my address propagation error!")
+                                    }
+                                }
                             }
                         }
                     },

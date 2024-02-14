@@ -1,4 +1,4 @@
-use libp2p::{request_response::cbor, swarm::NetworkBehaviour, Multiaddr, PeerId};
+use libp2p::{request_response::cbor, swarm::NetworkBehaviour, PeerId};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
