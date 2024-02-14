@@ -95,6 +95,18 @@ pub async fn handle_gossip_message(
                 .position(|x| x.peer_id == outnode.peer_id)
                     {
                         fullnodes.remove(index);
+                    } else {
+                        for fullnode in fullnodes.clone() {
+                            if outnode.peer_id == fullnode.relay {
+                                let index = fullnodes.iter().position(|x| x.relay == outnode.peer_id);
+                                match index {
+                                    Some(i) => {
+                                        fullnodes.remove(i);
+                                    }
+                                    None => {}
+                                }
+                            }
+                        }
                     }
             }
 

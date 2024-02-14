@@ -5,6 +5,8 @@ use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
+use crate::handlers::structures::OutNode;
+
 use super::create_log::write_log;
 use super::get_addresses::get_addresses;
 use super::gossip_messages::handle_gossip_message;
@@ -151,6 +153,18 @@ pub async fn events(
                         .behaviour_mut()
                         .gossipsub
                         .remove_explicit_peer(&peer_id);
+                    let out_node = OutNode { peer_id };
+                    let outnode_str = serde_json::to_string(&out_node).unwrap();
+                    match swarm
+                        .behaviour_mut()
+                        .gossipsub
+                        .publish(clients_topic.clone(), outnode_str.as_bytes())
+                    {
+                        Ok(_) => {}
+                        Err(_) => {
+                            write_log("can not send out node to the network in handle events relay outnode".to_string());
+                        }
+                    }
                     remove_peer(peer_id).await;
                 }
 
@@ -287,7 +301,7 @@ pub async fn events(
                                     clients,
                                     relay_topic.clone(),
                                     my_addresses,
-                                    local_peer_id
+                                    local_peer_id,
                                 )
                                 .await;
                             }

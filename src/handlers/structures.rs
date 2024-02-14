@@ -38,6 +38,7 @@ pub struct ResForReq {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ImSync {
+    pub relay: PeerId,
     pub peerid: PeerId,
     pub msg: String,
     pub public_key: sp_core::ecdsa::Public,
@@ -213,6 +214,7 @@ pub struct NextLeader {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
 pub struct FullNodes {
+    pub relay: PeerId,
     pub peer_id: PeerId,
     pub waiting: i64,
     pub public_key: Public,
