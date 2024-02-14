@@ -161,7 +161,9 @@ pub async fn events(
                         .gossipsub
                         .publish(clients_topic.clone(), outnode_str.as_bytes())
                     {
-                        Ok(_) => {}
+                        Ok(_) => {
+                            println!("send relay that closed to clients");
+                        }
                         Err(_) => {
                             write_log("can not send out node to the network in handle events relay outnode".to_string());
                         }
