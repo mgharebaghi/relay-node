@@ -181,6 +181,39 @@ pub async fn events(
                     None => {}
                 }
 
+                let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
+                match index {
+                    Some(i) => {
+                        client_topic_subscriber.remove(i);
+                    }
+                    None => {}
+                }
+
+                //check clients and if it's 0 send my address to rpc server for remove from it if close connection
+                //was a client and propagate its address to network
+                let index = clients.iter().position(|c| *c == peer_id);
+                match index {
+                    Some(i) => {
+                        clients.remove(i);
+                        swarm
+                            .behaviour_mut()
+                            .gossipsub
+                            .remove_explicit_peer(&peer_id);
+                        handle_outnode(
+                            peer_id,
+                            swarm,
+                            clients_topic.clone(),
+                            relays,
+                            clients,
+                            relay_topic.clone(),
+                            my_addresses,
+                            fullnodes,
+                        )
+                        .await;
+                    }
+                    None => {}
+                }
+
                 //break for dial with other relays if there is not connection with any relays
                 if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0 {
                     if relay_topic_subscribers.len() > 1 {
@@ -203,39 +236,6 @@ pub async fn events(
                             dialing("/etc/relays.dat", local_peer_id, swarm, sync, my_addresses)
                                 .await;
                         }
-                    }
-                } else {
-                    let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
-                    match index {
-                        Some(i) => {
-                            client_topic_subscriber.remove(i);
-                        }
-                        None => {}
-                    }
-
-                    //check clients and if it's 0 send my address to rpc server for remove from it if close connection
-                    //was a client and propagate its address to network
-                    let index = clients.iter().position(|c| *c == peer_id);
-                    match index {
-                        Some(i) => {
-                            clients.remove(i);
-                            swarm
-                                .behaviour_mut()
-                                .gossipsub
-                                .remove_explicit_peer(&peer_id);
-                            handle_outnode(
-                                peer_id,
-                                swarm,
-                                clients_topic.clone(),
-                                relays,
-                                clients,
-                                relay_topic.clone(),
-                                my_addresses,
-                                fullnodes,
-                            )
-                            .await;
-                        }
-                        None => {}
                     }
                 }
             }
