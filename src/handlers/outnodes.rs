@@ -18,6 +18,8 @@ pub async fn handle_outnode(
 ) {
     if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
         fullnodes.remove(index);
+    } else if let Some(index) = fullnodes.iter().position(|x| x.relay == peerid) {
+        fullnodes.remove(index);
     }
     let outnode = OutNode { peer_id: peerid };
     let serialize_out_node = serde_json::to_string(&outnode).unwrap();
