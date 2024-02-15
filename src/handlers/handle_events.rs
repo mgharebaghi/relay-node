@@ -123,7 +123,16 @@ pub async fn events(
                     None => {}
                 }
                 if dialed_addr.len() < 1 && relays.len() < 1 {
-                    println!("break in outgoing connection error");
+                    leader.clear();
+                    fullnodes.clear();
+                    connections.clear();
+                    client_topic_subscriber.clear();
+                    relay_topic_subscribers.clear();
+                    clients.clear();
+                    relays.clear();
+                    dialed_addr.clear();
+                    syncing_blocks.clear();
+                    my_addresses.clear();
                     break;
                 }
             }
@@ -195,9 +204,19 @@ pub async fn events(
                             }
                         }
                         if !is_r_connection {
-                            for connected in connections {
+                            for connected in connections.clone() {
                                 swarm.disconnect_peer_id(connected.clone()).unwrap();
                             }
+                            leader.clear();
+                            fullnodes.clear();
+                            connections.clear();
+                            client_topic_subscriber.clear();
+                            relay_topic_subscribers.clear();
+                            clients.clear();
+                            relays.clear();
+                            dialed_addr.clear();
+                            syncing_blocks.clear();
+                            my_addresses.clear();
                             break;
                         }
                     } else {
@@ -342,7 +361,8 @@ pub async fn events(
                                 *sync = true;
                                 send_addr_to_server(my_addresses[0].clone()).await;
                                 let my_multiaddress: Multiaddr = my_addresses[0].parse().unwrap();
-                                let str_my_multiaddr = serde_json::to_string(&my_multiaddress).unwrap();
+                                let str_my_multiaddr =
+                                    serde_json::to_string(&my_multiaddress).unwrap();
                                 match swarm
                                     .behaviour_mut()
                                     .gossipsub
