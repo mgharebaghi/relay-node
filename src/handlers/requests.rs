@@ -137,19 +137,21 @@ pub async fn handle_requests(
                     Err(_) => {}
                 }
             }
-            Err(_) => {
-                handle_outnode(
-                    propagation_source,
-                    swarm,
-                    clients_topic,
-                    relays,
-                    clients,
-                    relay_topic,
-                    my_addresses,
-                    fullnode_subs,
-                )
-                .await;
-                swarm.disconnect_peer_id(propagation_source).unwrap();
+            Err(e) => {
+                if e != "reject" {
+                    handle_outnode(
+                        propagation_source,
+                        swarm,
+                        clients_topic,
+                        relays,
+                        clients,
+                        relay_topic,
+                        my_addresses,
+                        fullnode_subs,
+                    )
+                    .await;
+                    swarm.disconnect_peer_id(propagation_source).unwrap();
+                }
             }
         }
     }

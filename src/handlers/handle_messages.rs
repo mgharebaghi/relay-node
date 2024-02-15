@@ -1,4 +1,7 @@
-use libp2p::{gossipsub::{IdentTopic, Message}, PeerId, Swarm};
+use libp2p::{
+    gossipsub::{IdentTopic, Message},
+    PeerId, Swarm,
+};
 
 use super::{
     check_trx::handle_transactions,
@@ -16,7 +19,7 @@ pub async fn msg_check(
     propagation_source: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     connections: &mut Vec<PeerId>,
-    local_peer_id: PeerId
+    local_peer_id: PeerId,
 ) {
     let str_msg = String::from_utf8(message.data.clone()).unwrap();
 
@@ -50,27 +53,29 @@ pub async fn msg_check(
                 Err(_) => {}
             }
         }
-        Err(_) => {
-            let gossipmsg: GossipMessage = serde_json::from_str(&str_msg).unwrap();
-            let c_index = fullnodes
-                .iter()
-                .position(|node| node.peer_id == gossipmsg.block.header.validator.parse().unwrap());
-            match c_index {
-                Some(i) => {
-                    fullnodes.remove(i);
-                }
-                None => {}
-            }
-
-            let r_index = relays.iter().position(|relay| relay == &propagation_source);
-            match r_index {
-                Some(i) => {
-                    relays.remove(i);
-                    if connections.contains(&propagation_source) {
-                        swarm.disconnect_peer_id(propagation_source).unwrap();
+        Err(e) => {
+            if e != "reject" {
+                let gossipmsg: GossipMessage = serde_json::from_str(&str_msg).unwrap();
+                let c_index = fullnodes.iter().position(|node| {
+                    node.peer_id == gossipmsg.block.header.validator.parse().unwrap()
+                });
+                match c_index {
+                    Some(i) => {
+                        fullnodes.remove(i);
                     }
+                    None => {}
                 }
-                None => {}
+
+                let r_index = relays.iter().position(|relay| relay == &propagation_source);
+                match r_index {
+                    Some(i) => {
+                        relays.remove(i);
+                        if connections.contains(&propagation_source) {
+                            swarm.disconnect_peer_id(propagation_source).unwrap();
+                        }
+                    }
+                    None => {}
+                }
             }
         }
     }

@@ -19,111 +19,156 @@ use mongodb::{
 };
 
 //interpreter of messages.................................................................................
-pub async fn verifying_block(
+pub async fn verifying_block<'a>(
     str_msg: &String,
     leader: &mut String,
     fullnode_subs: &mut Vec<FullNodes>,
-) -> Result<(), ()> {
+) -> Result<(), &'a str> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
-            let validator_peerid: PeerId = gossip_message.block.header.validator.parse().unwrap();
-            //check leader that is equal with curren leader in our leader or not
-            let mut validate_leader = true;
-            if leader.len() > 0 {
-                let current_leader: PeerId = leader.parse().unwrap();
-                println!("current leader:\n{}", current_leader);
-                println!("validator peer:\n{}", validator_peerid);
-                if current_leader == validator_peerid {
-                    validate_leader = true
-                } else {
-                    validate_leader = false
-                }
-            }
+            match blockchain_db().await {
+                Ok(db) => {
+                    let block_coll: Collection<Document> = db.collection("Blocks");
+                    let filter =
+                        doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
+                    let block = block_coll.find_one(filter, None).await;
+                    match block {
+                        Ok(is) => {
+                            if is.is_none() {
+                                let validator_peerid: PeerId =
+                                    gossip_message.block.header.validator.parse().unwrap();
+                                //check leader that is equal with curren leader in our leader or not
+                                let mut validate_leader = true;
+                                if leader.len() > 0 {
+                                    let current_leader: PeerId = leader.parse().unwrap();
+                                    println!("current leader:\n{}", current_leader);
+                                    println!("validator peer:\n{}", validator_peerid);
+                                    if current_leader == validator_peerid {
+                                        validate_leader = true
+                                    } else {
+                                        validate_leader = false
+                                    }
+                                }
 
-            if validate_leader {
-                //get validator public key
-                let validator_publickey = PublicKey::try_decode_protobuf(
-                    &gossip_message.block.header.block_signature.peer_public,
-                );
-                match validator_publickey {
-                    Ok(pubkey) => {
-                        //check validator peerid
-                        let check_pid_with_public_key =
-                            PeerId::from_public_key(&pubkey) == validator_peerid;
+                                if validate_leader {
+                                    //get validator public key
+                                    let validator_publickey = PublicKey::try_decode_protobuf(
+                                        &gossip_message.block.header.block_signature.peer_public,
+                                    );
+                                    match validator_publickey {
+                                        Ok(pubkey) => {
+                                            //check validator peerid
+                                            let check_pid_with_public_key =
+                                                PeerId::from_public_key(&pubkey)
+                                                    == validator_peerid;
 
-                        //check block signature
-                        let str_block_body_for_verify =
-                            gossip_message.block.body.coinbase.tx_hash.clone();
+                                            //check block signature
+                                            let str_block_body_for_verify =
+                                                gossip_message.block.body.coinbase.tx_hash.clone();
 
-                        let verify_block_sign = sp_core::ecdsa::Pair::verify(
-                            &gossip_message.block.header.block_signature.signature[0],
-                            str_block_body_for_verify,
-                            &gossip_message.block.header.block_signature.wallet_public,
-                        );
+                                            let verify_block_sign = sp_core::ecdsa::Pair::verify(
+                                                &gossip_message
+                                                    .block
+                                                    .header
+                                                    .block_signature
+                                                    .signature[0],
+                                                str_block_body_for_verify,
+                                                &gossip_message
+                                                    .block
+                                                    .header
+                                                    .block_signature
+                                                    .wallet_public,
+                                            );
 
-                        if check_pid_with_public_key {
-                            if verify_block_sign {
-                                match submit_block(gossip_message, leader, fullnode_subs).await {
-                                    Ok(_) => {
-                                        match Command::new("mongodump")
-                                            .arg("--db")
-                                            .arg("Blockchain")
-                                            .arg("--out")
-                                            .arg("/etc/dump")
-                                            .output()
-                                        {
-                                            Ok(_) => Ok(()),
-                                            Err(e) => {
-                                                println!(
-                                                    "dumping command error in verifying block"
-                                                );
-                                                write_log(format!("{:?}", e));
-                                                Ok(())
+                                            if check_pid_with_public_key {
+                                                if verify_block_sign {
+                                                    match submit_block(
+                                                        gossip_message,
+                                                        leader,
+                                                        fullnode_subs,
+                                                    )
+                                                    .await
+                                                    {
+                                                        Ok(_) => {
+                                                            match Command::new("mongodump")
+                                                                .arg("--db")
+                                                                .arg("Blockchain")
+                                                                .arg("--out")
+                                                                .arg("/etc/dump")
+                                                                .output()
+                                                            {
+                                                                Ok(_) => Ok(()),
+                                                                Err(e) => {
+                                                                    println!(
+                                                                        "dumping command error in verifying block"
+                                                                    );
+                                                                    write_log(format!("{:?}", e));
+                                                                    Ok(())
+                                                                }
+                                                            }
+                                                        }
+                                                        Err(e) => {
+                                                            if e != "reject" {
+                                                                Err("submit block problem")
+                                                            } else {
+                                                                Err("reject")
+                                                            }
+                                                        },
+                                                    }
+                                                } else {
+                                                    println!(
+                                                        "verify block sign error! recieved block"
+                                                    );
+                                                    write_log(
+                                                                "verify block sign error! recieved block (line 90)".to_string(),
+                                                            );
+                                                    Err("block sign error")
+                                                }
+                                            } else {
+                                                println!("check pid with public key error! recieved block");
+                                                write_log(
+                                                            "check pid with public key error! recieved block (line 96)"
+                                                                .to_string(),
+                                                        );
+                                                Err("check pid error")
                                             }
                                         }
+                                        Err(_) => {
+                                            println!("validator public key error! recieved block");
+                                            write_log(
+                                                        "validator public key error! recieved block (line 104)".to_string(),
+                                                    );
+                                            Err("validator pubkey error")
+                                        }
                                     }
-                                    Err(_) => Err(()),
+                                } else {
+                                    println!("validate leader error! recieved block");
+                                    write_log(
+                                        "validate leader error! recieved block (line 110)"
+                                            .to_string(),
+                                    );
+                                    Err("leader problem")
                                 }
                             } else {
-                                println!("verify block sign error! recieved block");
-                                write_log(
-                                    "verify block sign error! recieved block (line 90)".to_string(),
-                                );
-                                Err(())
+                                return Err("reject");
                             }
-                        } else {
-                            println!("check pid with public key error! recieved block");
-                            write_log(
-                                "check pid with public key error! recieved block (line 96)"
-                                    .to_string(),
-                            );
-                            Err(())
                         }
-                    }
-                    Err(_) => {
-                        println!("validator public key error! recieved block");
-                        write_log(
-                            "validator public key error! recieved block (line 104)".to_string(),
-                        );
-                        Err(())
+                        Err(_) => return Err("reject"),
                     }
                 }
-            } else {
-                println!("validate leader error! recieved block");
-                write_log("validate leader error! recieved block (line 110)".to_string());
-                Err(())
+                Err(_) => return Err("reject"),
             }
         }
-        Err(_) => Ok(()),
+        Err(_) => Err("reject"),
     }
 }
 
 //check block in database and check transactions in mempool and then instert it to database
-async fn submit_block(
+async fn submit_block<'a>(
     gossip_message: GossipMessage,
     leader: &mut String,
     fullnode_subs: &mut Vec<FullNodes>,
-) -> Result<(), ()> {
+) -> Result<(), &'a str> {
     match blockchain_db().await {
         Ok(db) => {
             let blocks_coll: Collection<Document> = db.collection("Blocks");
@@ -192,7 +237,7 @@ async fn submit_block(
                                             Ok(())
                                         } else {
                                             write_log("block prev hash problem! recieved block (line 189)".to_string());
-                                            Err(())
+                                            Err("problem")
                                         }
                                     }
                                     Some(_) => {
@@ -200,7 +245,7 @@ async fn submit_block(
                                             "find same block! recieved block (line 195)"
                                                 .to_string(),
                                         );
-                                        Err(())
+                                        Err("problem")
                                     }
                                 }
                             } else {
@@ -208,7 +253,7 @@ async fn submit_block(
                                     "check trx in block verify problem! recieved block (line 203)"
                                         .to_string(),
                                 );
-                                Err(())
+                                Err("problem")
                             }
                         }
                         None => {
@@ -249,7 +294,7 @@ async fn submit_block(
                                                         "remove reciept collection problem!"
                                                             .to_string(),
                                                     );
-                                                    Err(())
+                                                    Err("problem")
                                                 }
                                             }
                                         }
@@ -257,16 +302,16 @@ async fn submit_block(
                                             write_log(
                                                 "remove utxos collection problem!".to_string(),
                                             );
-                                            Err(())
+                                            Err("problem")
                                         }
                                     },
                                     Err(_) => {
                                         write_log("remove bocks collection problem!".to_string());
-                                        Err(())
+                                        Err("problem")
                                     }
                                 }
                             } else {
-                                Err(())
+                                Err("problem")
                             }
                         }
                     }
@@ -307,27 +352,27 @@ async fn submit_block(
                                             write_log(
                                                 "remove reciept collection problem!".to_string(),
                                             );
-                                            Err(())
+                                            Err("problem")
                                         }
                                     }
                                 }
                                 Err(_) => {
                                     write_log("remove utxos collection problem!".to_string());
-                                    Err(())
+                                    Err("probelm")
                                 }
                             },
                             Err(_) => {
                                 write_log("remove bocks collection problem!".to_string());
-                                Err(())
+                                Err("probelm")
                             }
                         }
                     } else {
-                        Err(())
+                        Err("probelm")
                     }
                 }
             }
         }
-        Err(_e) => Ok(()),
+        Err(_e) => Err("reject"),
     }
 }
 
