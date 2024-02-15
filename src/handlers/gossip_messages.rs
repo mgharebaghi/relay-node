@@ -34,6 +34,7 @@ pub async fn handle_gossip_message(
                 fpids.push(fullnode.peer_id);
             }
             if let Ok(identifier) = serde_json::from_str::<NextLeader>(&msg) {
+                println!("get next leader");
                 if leader.len() > 0 && fpids.contains(&identifier.identifier_peer_id) && fpids.contains(&identifier.next_leader) {
                     println!("next leader: {}", identifier.next_leader);
                     leader.clear();
