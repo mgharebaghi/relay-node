@@ -18,20 +18,33 @@ pub async fn handle_outnode(
 ) {
     if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
         fullnodes.remove(index);
-    } else if let Some(index) = fullnodes.iter().position(|x| x.relay == peerid) {
-        fullnodes.remove(index);
+    } else {
+        for validator in fullnodes.clone() {
+            if peerid == validator.relay {
+                let index = fullnodes.iter().position(|f| peerid == f.relay);
+                match index {
+                    Some(i) => {
+                        fullnodes.remove(i);
+                    }
+                    None => {}
+                }
+            }
+        }
     }
-    let outnode = OutNode { peer_id: peerid };
-    let serialize_out_node = serde_json::to_string(&outnode).unwrap();
 
-    match swarm
-        .behaviour_mut()
-        .gossipsub
-        .publish(clients_topic, serialize_out_node.as_bytes())
-    {
-        Ok(_) => {}
-        Err(_) => {
-            write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
+    if clients.contains(&peerid) {
+        let outnode = OutNode { peer_id: peerid };
+        let serialize_out_node = serde_json::to_string(&outnode).unwrap();
+
+        match swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(clients_topic, serialize_out_node.as_bytes())
+        {
+            Ok(_) => {}
+            Err(_) => {
+                write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
+            }
         }
     }
 

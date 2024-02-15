@@ -145,6 +145,7 @@ pub async fn events(
                         .position(|pid| *pid == peer_id);
                     match i_relay_subscriber {
                         Some(index) => {
+                            remove_peer(peer_id).await;
                             relay_topic_subscribers.remove(index);
                         }
                         None => {}
@@ -156,10 +157,6 @@ pub async fn events(
                         relays.remove(index);
                     }
                     None => {}
-                }
-
-                if relay_topic_subscribers.contains(&peer_id) {
-                    remove_peer(peer_id).await;
                 }
 
                 handle_outnode(
