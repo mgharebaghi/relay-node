@@ -306,7 +306,6 @@ pub async fn events(
                                     relays,
                                     clients,
                                     relay_topic.clone(),
-                                    my_addresses,
                                     local_peer_id,
                                 )
                                 .await;

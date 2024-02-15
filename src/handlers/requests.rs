@@ -26,7 +26,6 @@ pub async fn handle_requests(
     relays: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
-    my_addresses: &mut Vec<String>,
     local_peer_id: PeerId,
 ) {
     if request.req == "handshake".to_string() {
@@ -146,7 +145,6 @@ pub async fn handle_requests(
                         relays,
                         clients,
                         relay_topic,
-                        my_addresses,
                         fullnode_subs,
                     )
                     .await;
