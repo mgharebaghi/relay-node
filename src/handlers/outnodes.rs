@@ -15,6 +15,7 @@ pub async fn handle_outnode(
     fullnodes: &mut Vec<FullNodes>,
 ) {
     if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
+        println!("remove fullnode");
         fullnodes.remove(index);
     } else {
         for validator in fullnodes.clone() {
@@ -22,6 +23,7 @@ pub async fn handle_outnode(
                 let index = fullnodes.iter().position(|f| peerid == f.relay);
                 match index {
                     Some(i) => {
+                        println!("remove fullnode when it has relay that is outed");
                         fullnodes.remove(i);
                     }
                     None => {}
@@ -38,7 +40,8 @@ pub async fn handle_outnode(
         .publish(clients_topic, serialize_out_node.as_bytes())
     {
         Ok(_) => {}
-        Err(_) => {
+        Err(e) => {
+            println!("gossip outnode problem:\n{}", e);
             write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
         }
     }

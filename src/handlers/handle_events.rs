@@ -145,6 +145,7 @@ pub async fn events(
                         .position(|pid| *pid == peer_id);
                     match i_relay_subscriber {
                         Some(index) => {
+                            println!("remove relay topic subscriber");
                             remove_peer(peer_id).await;
                             relay_topic_subscribers.remove(index);
                         }
@@ -154,6 +155,7 @@ pub async fn events(
                 //remove peer from relays if it is in the relays
                 match relays.iter().position(|pid| pid == &peer_id) {
                     Some(index) => {
+                        println!("remove relay");
                         relays.remove(index);
                     }
                     None => {}
@@ -200,6 +202,7 @@ pub async fn events(
                             }
                         }
                         if !is_r_connection {
+                            println!("in r connection condition for brerak");
                             for connected in connections.clone() {
                                 swarm.disconnect_peer_id(connected.clone()).unwrap();
                             }

@@ -121,18 +121,18 @@ pub async fn handle_requests(
                             Ok(_) => {}
                             Err(_) => {}
                         }
-
-                        //send true block to connected Validators
-                        let validators_topic = IdentTopic::new(local_peer_id.to_string());
-                        match swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .publish(validators_topic, request.req.clone().as_bytes())
-                        {
-                            Ok(_) => {}
-                            Err(_) => {}
-                        }
                     }
+                    Err(_) => {}
+                }
+
+                //send true block to connected Validators
+                let validators_topic = IdentTopic::new(local_peer_id.to_string());
+                match swarm
+                    .behaviour_mut()
+                    .gossipsub
+                    .publish(validators_topic, request.req.clone().as_bytes())
+                {
+                    Ok(_) => {}
                     Err(_) => {}
                 }
             }
