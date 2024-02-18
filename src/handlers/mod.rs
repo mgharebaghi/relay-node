@@ -20,7 +20,7 @@ use handle_events::events;
 use structures::CustomBehav;
 mod check_trx;
 pub mod create_log;
-mod db_connection;
+pub mod db_connection;
 mod get_addresses;
 mod handle_messages;
 mod nodes_sync_announce;
