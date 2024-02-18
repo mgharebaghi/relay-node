@@ -102,7 +102,17 @@ pub async fn events(
                         .arg("/etc/dump")
                         .output()
                     {
-                        Ok(_) => {}
+                        Ok(_) => {
+                            match Command::new("zip")
+                                .arg("-r")
+                                .arg("blockchain.zip")
+                                .arg("/etc/dump")
+                                .output()
+                            {
+                                Ok(_) => {}
+                                Err(e) => write_log(format!("{:?}", e)),
+                            }
+                        }
                         Err(e) => write_log(format!("{:?}", e)),
                     }
                 }

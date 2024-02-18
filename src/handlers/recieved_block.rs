@@ -41,8 +41,6 @@ pub async fn verifying_block<'a>(
                                 let mut validate_leader = true;
                                 if leader.len() > 0 {
                                     let current_leader: PeerId = leader.parse().unwrap();
-                                    println!("current leader:\n{}", current_leader);
-                                    println!("validator peer:\n{}", validator_peerid);
                                     if current_leader == validator_peerid {
                                         validate_leader = true
                                     } else {
@@ -97,11 +95,24 @@ pub async fn verifying_block<'a>(
                                                                 .arg("/etc/dump")
                                                                 .output()
                                                             {
-                                                                Ok(_) => Ok(()),
+                                                                Ok(_) => {
+                                                                    match Command::new("zip")
+                                                                        .arg("-r")
+                                                                        .arg("blockchain.zip")
+                                                                        .arg("/etc/dump")
+                                                                        .output()
+                                                                    {
+                                                                        Ok(_) => Ok(()),
+                                                                        Err(e) => {
+                                                                            write_log(format!(
+                                                                                "{:?}",
+                                                                                e
+                                                                            ));
+                                                                            Ok(())
+                                                                        }
+                                                                    }
+                                                                }
                                                                 Err(e) => {
-                                                                    println!(
-                                                                        "dumping command error in verifying block"
-                                                                    );
                                                                     write_log(format!("{:?}", e));
                                                                     Ok(())
                                                                 }
@@ -113,7 +124,7 @@ pub async fn verifying_block<'a>(
                                                             } else {
                                                                 Err("reject")
                                                             }
-                                                        },
+                                                        }
                                                     }
                                                 } else {
                                                     println!(
