@@ -98,8 +98,8 @@ pub async fn verifying_block<'a>(
                                                                 Ok(_) => {
                                                                     match Command::new("zip")
                                                                         .arg("-r")
-                                                                        .arg("blockchain.zip")
-                                                                        .arg("/etc/dump")
+                                                                        .arg("/etc/dump/blockchain.zip")
+                                                                        .arg("/etc/dump/Blockchain")
                                                                         .output()
                                                                     {
                                                                         Ok(_) => Ok(()),

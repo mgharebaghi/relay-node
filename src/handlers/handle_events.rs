@@ -105,7 +105,7 @@ pub async fn events(
                         Ok(_) => {
                             match Command::new("zip")
                                 .arg("-r")
-                                .arg("blockchain.zip")
+                                .arg("/etc/dump/blockchain.zip")
                                 .arg("/etc/dump")
                                 .output()
                             {
