@@ -84,7 +84,6 @@ pub async fn events(
                                     break;
                                 }
                                 Err(_) => {
-                                    println!("error in syncing");
                                     break;
                                 }
                             }
