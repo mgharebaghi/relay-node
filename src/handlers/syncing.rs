@@ -23,6 +23,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                 Some(addr) => {
                     let blockchain_addr =
                         format!("http://{}:33369/blockchain/blockchain.zip", addr);
+                        fs::create_dir("/etc/dump").unwrap();
                     let mut blockchain_output =
                         fs::File::create("/etc/dump/blockchain.zip").unwrap();
 
