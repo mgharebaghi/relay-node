@@ -23,9 +23,8 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                 Some(addr) => {
                     let blockchain_addr =
                         format!("http://{}:33369/blockchain/blockchain.zip", addr);
-                        fs::create_dir("/etc/dump").unwrap();
                     let mut blockchain_output =
-                        fs::File::create("/etc/dump/blockchain.zip").unwrap();
+                        fs::File::create("/home/blockchain.zip").unwrap();
 
                     match reqwest::get(blockchain_addr).await {
                         Ok(res) => {
@@ -45,16 +44,16 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             //---------------------------------------------------------
                             //unzip blockchain.zip and create files from it
                             match Command::new("unzip")
-                                .arg("/etc/dump/blockchain.zip")
+                                .arg("/home/blockchain.zip")
                                 .arg("-d")
-                                .arg("/etc/dump")
+                                .arg("/home/")
                                 .status()
                             {
                                 Ok(_) => {
                                     //---------------------------------------------------------
                                     //open and read reciepts.bson file and insert it to database
                                     let bson_file =
-                                        File::open("/etc/dump/etc/dump/Blockchain/reciept.bson").unwrap();
+                                        File::open("/home/etc/dump/Blockchain/reciept.bson").unwrap();
                                     let mut reader = BufReader::new(bson_file);
 
                                     let reciept_coll: Collection<Document> =
@@ -68,7 +67,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     //---------------------------------------------------------
                                     //open and read UTXOs.bson file and insert it to database
                                     let bson_file =
-                                        File::open("/etc/dump/etc/dump/Blockchain/UTXOs.bson").unwrap();
+                                        File::open("/home/etc/dump/Blockchain/UTXOs.bson").unwrap();
                                     let mut reader = BufReader::new(bson_file);
 
                                     let utxos_coll: Collection<Document> = db.collection("UTXOs");
@@ -81,7 +80,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     //---------------------------------------------------------
                                     //open and read Blocks.bson file and insert it to database
                                     let bson_file =
-                                        File::open("/etc/dump/etc/dump/Blockchain/Blocks.bson").unwrap();
+                                        File::open("/home/etc/dump/Blockchain/Blocks.bson").unwrap();
                                     let mut reader = BufReader::new(bson_file);
 
                                     let block_coll: Collection<Document> = db.collection("Blocks");
