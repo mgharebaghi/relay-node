@@ -115,6 +115,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     return Ok(());
                                 }
                                 Err(e) => {
+                                    println!("zip error");
                                     write_log(format!("unzip blockchain.zip error:{e}"));
                                     return Err(());
                                 }
