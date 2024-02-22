@@ -16,7 +16,7 @@ pub async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json
     match blockchain_db().await {
         Ok(db) => {
             let reciept_coll: Collection<Document> = db.collection("reciept");
-            let filter = doc! {"tx_hash": tx_req.tx_hash.clone()};
+            let filter = doc! {"hash": tx_req.tx_hash.clone()};
             let documnet = reciept_coll.find_one(filter, None).await.unwrap();
             match documnet {
                 Some(doc) => {
