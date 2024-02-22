@@ -10,7 +10,7 @@ use tower_http::{
     services::ServeDir,
 };
 
-use crate::handlers::structures::Block;
+use crate::handlers::{create_log::write_log, structures::Block};
 
 use super::{
     block::handle_block,
@@ -54,11 +54,7 @@ pub struct RcptReq {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RcptRes {
     pub all: Vec<Reciept>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AllBlocksRes {
-    pub all: Vec<Block>,
+    pub status: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,17 +90,11 @@ pub async fn handle_requests() {
         .route("/blocksse", get(block_sse))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100))
-        .nest_service(
-            "/blockchain",
-            ServeDir::new("/home"),
-        );
+        .nest_service("/blockchain", ServeDir::new("/home"));
     let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
 
-    match axum_server::bind(addr)
-        .serve(app.into_make_service())
-        .await {
-            Ok(_) => {}
-            Err(e) => {println!("error from RPC server:\n{}", e)}
-        }
-        
+    match axum_server::bind(addr).serve(app.into_make_service()).await {
+        Ok(_) => {}
+        Err(e) => write_log(format!("error from RPC server:\n{}", e)),
+    }
 }

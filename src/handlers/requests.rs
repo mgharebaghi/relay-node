@@ -14,7 +14,6 @@ struct Handshake {
     first_node: String,
 }
 
-//handle requests that recieved from clients or relays
 pub async fn handle_requests(
     request: Req,
     swarm: &mut Swarm<CustomBehav>,
@@ -53,16 +52,20 @@ pub async fn handle_requests(
             Err(e) => write_log(format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
-        handle_transactions(request.req.clone()).await;
-        // let sse_topic = IdentTopic::new("sse");
-        // match swarm
-        //     .behaviour_mut()
-        //     .gossipsub
-        //     .publish(sse_topic, request.req.clone())
-        // {
-        //     Ok(_) => {}
-        //     Err(_) => {}
-        // }
+        handle_transactions(request.req.clone()).await; //insert transaction to db
+
+        //send true transaction to sse servers
+        let sse_topic = IdentTopic::new("sse");
+        match swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(sse_topic, request.req.clone())
+        {
+            Ok(_) => {}
+            Err(_) => {}
+        }
+
+        //send true transaction to connected Validators and relays
         let send_transaction = swarm
             .behaviour_mut()
             .gossipsub
