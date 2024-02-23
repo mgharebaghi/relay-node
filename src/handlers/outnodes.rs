@@ -15,15 +15,15 @@ pub async fn handle_outnode(
     fullnodes: &mut Vec<FullNodes>,
 ) {
     if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
-        println!("remove fullnode");
+        //remove validator if left the network
         fullnodes.remove(index);
     } else {
+        //remove validator if its relay left the network
         for validator in fullnodes.clone() {
             if peerid == validator.relay {
                 let index = fullnodes.iter().position(|f| peerid == f.relay);
                 match index {
                     Some(i) => {
-                        println!("remove fullnode when it has relay that is outed");
                         fullnodes.remove(i);
                     }
                     None => {}
@@ -32,6 +32,7 @@ pub async fn handle_outnode(
         }
     }
 
+    //say to network that a validator left from the network
     let outnode = OutNode { peer_id: peerid };
     let serialize_out_node = serde_json::to_string(&outnode).unwrap();
     match swarm
@@ -41,8 +42,10 @@ pub async fn handle_outnode(
     {
         Ok(_) => {}
         Err(e) => {
-            println!("gossip outnode problem:\n{}", e);
-            write_log("gossipsub publish error in handle out node(client_topic)!".to_string());
+            write_log(&format!(
+                "gossipsub publish error in handle out node! line(46): {}",
+                e
+            ));
         }
     }
 
@@ -53,8 +56,11 @@ pub async fn handle_outnode(
             .publish(relay_topic, "i dont have any clients".as_bytes())
         {
             Ok(_) => {}
-            Err(_) => {
-                write_log("gossipsub publish error in handle out node(relay_topic)!".to_string());
+            Err(e) => {
+                write_log(&format!(
+                    "gossipsub publish error in handle out node! line(61): {}",
+                    e
+                ));
             }
         }
     }

@@ -124,7 +124,7 @@ pub async fn handle_transactions(message: String) {
                                         .await;
                                     } else {
                                         write_log(
-                                            "discorrect trx in check trx line(102)".to_string(),
+                                            "discorrect trx in check trx line(127)",
                                         );
                                         insert_reciept(
                                             transaction,
@@ -135,8 +135,7 @@ pub async fn handle_transactions(message: String) {
                                         .await;
                                     }
                                 } else {
-                                    println!("user Doesn't have UTXO document!");
-                                    write_log("discorrect trx in check trx line(117)".to_string());
+                                    write_log("discorrect trx in check trx line(138)");
                                     insert_reciept(
                                         transaction,
                                         None,
@@ -146,8 +145,7 @@ pub async fn handle_transactions(message: String) {
                                     .await;
                                 }
                             } else {
-                                println!("verifying transaction problem!");
-                                write_log("discorrect trx in check trx line(130)".to_string());
+                                write_log("discorrect trx in check trx line(148)");
                                 insert_reciept(
                                     transaction,
                                     None,

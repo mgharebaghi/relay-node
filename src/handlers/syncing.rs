@@ -23,8 +23,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                 Some(addr) => {
                     let blockchain_addr =
                         format!("http://{}:33369/blockchain/blockchain.zip", addr);
-                    let mut blockchain_output =
-                        fs::File::create("/home/blockchain.zip").unwrap();
+                    let mut blockchain_output = fs::File::create("/home/blockchain.zip").unwrap();
 
                     match reqwest::get(blockchain_addr).await {
                         Ok(res) => {
@@ -53,7 +52,8 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     //---------------------------------------------------------
                                     //open and read reciepts.bson file and insert it to database
                                     let bson_file =
-                                        File::open("/home/etc/dump/Blockchain/reciept.bson").unwrap();
+                                        File::open("/home/etc/dump/Blockchain/reciept.bson")
+                                            .unwrap();
                                     let mut reader = BufReader::new(bson_file);
 
                                     let reciept_coll: Collection<Document> =
@@ -80,7 +80,8 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     //---------------------------------------------------------
                                     //open and read Blocks.bson file and insert it to database
                                     let bson_file =
-                                        File::open("/home/etc/dump/Blockchain/Blocks.bson").unwrap();
+                                        File::open("/home/etc/dump/Blockchain/Blocks.bson")
+                                            .unwrap();
                                     let mut reader = BufReader::new(bson_file);
 
                                     let block_coll: Collection<Document> = db.collection("Blocks");
@@ -115,20 +116,21 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     return Ok(());
                                 }
                                 Err(e) => {
-                                    println!("zip error");
-                                    write_log(format!("unzip blockchain.zip error:{e}"));
+                                    write_log(&format!("unzip blockchain.zip error:{e}"));
                                     return Err(());
                                 }
                             }
                         }
                         Err(e) => {
-                            write_log(format!("get blockchain.zip from a rpc sserver problem:{e}"));
+                            write_log(&format!(
+                                "get blockchain.zip from a rpc sserver problem:{e}"
+                            ));
                             return Err(());
                         }
                     }
                 }
                 None => {
-                    write_log("spliting address in syncing.rs problem".to_string());
+                    write_log("spliting address in syncing.rs problem");
                     return Err(());
                 }
             }

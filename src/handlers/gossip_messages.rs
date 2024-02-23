@@ -34,13 +34,11 @@ pub async fn handle_gossip_message(
                 fpids.push(fullnode.peer_id);
             }
             if let Ok(identifier) = serde_json::from_str::<NextLeader>(&msg) {
-                println!("get next leader");
                 if fpids.contains(&identifier.identifier_peer_id) && fpids.contains(&identifier.next_leader) {
-                    println!("next leader: {}", identifier.next_leader);
                     leader.clear();
                     leader.push_str(&identifier.next_leader.to_string());
                 } else {
-                    write_log("identifier is not true! recieved block (line 96)".to_string())
+                    write_log("identifier is not true! gossip_messages (line 41)")
                 }
             }
             //get new realay addresses and add it to relays file
@@ -69,7 +67,7 @@ pub async fn handle_gossip_message(
                                 Ok(_) => {
                           
                                 }
-                                Err(_) => write_log("gossipsub publish problem in gossip_messasged(relay announcement)!".to_string())
+                                Err(_) => write_log("gossipsub publish problem in gossip_messasged(relay announcement)!")
                             }
                     }
                 }
@@ -127,6 +125,6 @@ pub async fn handle_gossip_message(
             }
 
         }
-        Err(_) => write_log("convert gossip message to string problem!".to_string()),
+        Err(_) => write_log("convert gossip message to string problem!"),
     } //convert messages to string
 }

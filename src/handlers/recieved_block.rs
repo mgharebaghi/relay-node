@@ -104,7 +104,7 @@ pub async fn verifying_block<'a>(
                                                                     {
                                                                         Ok(_) => Ok(()),
                                                                         Err(e) => {
-                                                                            write_log(format!(
+                                                                            write_log(&format!(
                                                                                 "{:?}",
                                                                                 e
                                                                             ));
@@ -113,7 +113,7 @@ pub async fn verifying_block<'a>(
                                                                     }
                                                                 }
                                                                 Err(e) => {
-                                                                    write_log(format!("{:?}", e));
+                                                                    write_log(&format!("{:?}", e));
                                                                     Ok(())
                                                                 }
                                                             }
@@ -127,37 +127,28 @@ pub async fn verifying_block<'a>(
                                                         }
                                                     }
                                                 } else {
-                                                    println!(
-                                                        "verify block sign error! recieved block"
-                                                    );
                                                     write_log(
-                                                                "verify block sign error! recieved block (line 90)".to_string(),
+                                                                "verify block sign error! recieved block (line 131)",
                                                             );
                                                     Err("block sign error")
                                                 }
                                             } else {
-                                                println!("check pid with public key error! recieved block");
                                                 write_log(
-                                                            "check pid with public key error! recieved block (line 96)"
-                                                                .to_string(),
+                                                            "check pid with public key error! recieved block (line 137)"
+                                                            ,
                                                         );
                                                 Err("check pid error")
                                             }
                                         }
                                         Err(_) => {
-                                            println!("validator public key error! recieved block");
                                             write_log(
-                                                        "validator public key error! recieved block (line 104)".to_string(),
+                                                        "validator public key error! recieved block (line 145)",
                                                     );
                                             Err("validator pubkey error")
                                         }
                                     }
                                 } else {
-                                    println!("validate leader error! recieved block");
-                                    write_log(
-                                        "validate leader error! recieved block (line 110)"
-                                            .to_string(),
-                                    );
+                                    write_log("validate leader error! recieved block (line 151)");
                                     Err("leader problem")
                                 }
                             } else {
@@ -247,22 +238,18 @@ async fn submit_block<'a>(
                                             leader.push_str(&gossip_message.next_leader);
                                             Ok(())
                                         } else {
-                                            write_log("block prev hash problem! recieved block (line 189)".to_string());
+                                            write_log("block prev hash problem! recieved block (line 241)");
                                             Err("problem")
                                         }
                                     }
                                     Some(_) => {
-                                        write_log(
-                                            "find same block! recieved block (line 195)"
-                                                .to_string(),
-                                        );
+                                        write_log("find same block! recieved block (line 246)");
                                         Err("problem")
                                     }
                                 }
                             } else {
                                 write_log(
-                                    "check trx in block verify problem! recieved block (line 203)"
-                                        .to_string(),
+                                    "check trx in block verify problem! recieved block (line 252)",
                                 );
                                 Err("problem")
                             }
@@ -301,23 +288,18 @@ async fn submit_block<'a>(
                                                     Ok(())
                                                 }
                                                 Err(_) => {
-                                                    write_log(
-                                                        "remove reciept collection problem!"
-                                                            .to_string(),
-                                                    );
+                                                    write_log("remove reciept collection problem! recieved_block(line 291)");
                                                     Err("problem")
                                                 }
                                             }
                                         }
                                         Err(_) => {
-                                            write_log(
-                                                "remove utxos collection problem!".to_string(),
-                                            );
+                                            write_log("remove utxos collection problem! recieved_block(line 297)");
                                             Err("problem")
                                         }
                                     },
                                     Err(_) => {
-                                        write_log("remove bocks collection problem!".to_string());
+                                        write_log("remove bocks collection problem! recieved_block(line 302)");
                                         Err("problem")
                                     }
                                 }
@@ -332,48 +314,50 @@ async fn submit_block<'a>(
                         && fullnode_subs.len() < 2
                     {
                         match blocks_coll.delete_many(doc! {}, None).await {
-                            Ok(_) => match utxos_coll.delete_many(doc! {}, None).await {
-                                Ok(_) => {
-                                    match reciept_coll.delete_many(doc! {}, None).await {
-                                        Ok(_) => {
-                                            let new_block_doc =
-                                                to_document(&gossip_message.block).unwrap();
-                                            blocks_coll
-                                                .insert_one(new_block_doc, None)
-                                                .await
-                                                .unwrap(); //insert block to DB
-                                            handle_block_reward(
-                                                gossip_message.clone(),
-                                                utxos_coll.clone(),
-                                            )
-                                            .await;
-                                            //update utxos in database for transactions
-                                            handle_tx_utxos(
-                                                gossip_message.clone(),
-                                                utxos_coll.clone(),
-                                            )
-                                            .await;
+                            Ok(_) => {
+                                match utxos_coll.delete_many(doc! {}, None).await {
+                                    Ok(_) => {
+                                        match reciept_coll.delete_many(doc! {}, None).await {
+                                            Ok(_) => {
+                                                let new_block_doc =
+                                                    to_document(&gossip_message.block).unwrap();
+                                                blocks_coll
+                                                    .insert_one(new_block_doc, None)
+                                                    .await
+                                                    .unwrap(); //insert block to DB
+                                                handle_block_reward(
+                                                    gossip_message.clone(),
+                                                    utxos_coll.clone(),
+                                                )
+                                                .await;
+                                                //update utxos in database for transactions
+                                                handle_tx_utxos(
+                                                    gossip_message.clone(),
+                                                    utxos_coll.clone(),
+                                                )
+                                                .await;
 
-                                            //check next leader
-                                            leader.clear();
-                                            leader.push_str(&gossip_message.next_leader);
-                                            Ok(())
-                                        }
-                                        Err(_) => {
-                                            write_log(
-                                                "remove reciept collection problem!".to_string(),
-                                            );
-                                            Err("problem")
+                                                //check next leader
+                                                leader.clear();
+                                                leader.push_str(&gossip_message.next_leader);
+                                                Ok(())
+                                            }
+                                            Err(_) => {
+                                                write_log("remove reciept collection problem! recieved_block(line 346)");
+                                                Err("problem")
+                                            }
                                         }
                                     }
+                                    Err(_) => {
+                                        write_log("remove utxos collection problem! recieved_block(line 352)");
+                                        Err("probelm")
+                                    }
                                 }
-                                Err(_) => {
-                                    write_log("remove utxos collection problem!".to_string());
-                                    Err("probelm")
-                                }
-                            },
+                            }
                             Err(_) => {
-                                write_log("remove bocks collection problem!".to_string());
+                                write_log(
+                                    "remove bocks collection problem! recieved_block(line 359)",
+                                );
                                 Err("probelm")
                             }
                         }

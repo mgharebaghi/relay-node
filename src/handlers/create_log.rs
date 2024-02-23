@@ -1,6 +1,6 @@
 use std::{env::consts::OS, fs::{self, OpenOptions, File}, io::{BufWriter, Write}};
 
-pub fn write_log(log: String) {
+pub fn write_log(log: &str) {
     let mut relaylog_path = "";
     if OS == "windows" {
         relaylog_path = "relaylog.dat"

@@ -67,13 +67,12 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                println!("connection stablished with:\n{}", peer_id);
                 if !*sync {
                     for addr in dialed_addr.clone() {
                         if addr.contains(&peer_id.to_string()) {
                             match syncing(addr.clone()).await {
                                 Ok(_) => {
-                                    println!("syncing complete\n-----------------");
+                                    write_log("syncing completed");
                                     let fullnodes_req = Req {
                                         req: "fullnodes".to_string(),
                                     };
@@ -109,18 +108,17 @@ pub async fn events(
                                 .output()
                             {
                                 Ok(_) => {}
-                                Err(e) => write_log(format!("{:?}", e)),
+                                Err(e) => write_log(&format!("{:?}", e)),
                             }
                         }
-                        Err(e) => write_log(format!("{:?}", e)),
+                        Err(e) => write_log(&format!("{:?}", e)),
                     }
                 }
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
-                println!("dialing failed with:\n{}", peer_id.unwrap());
-
+                write_log(&format!("dialing failed with: {}", peer_id.unwrap()));
                 remove_peer(peer_id.unwrap()).await;
                 let dialed_index = dialed_addr
                     .iter()
@@ -146,7 +144,7 @@ pub async fn events(
                 }
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                println!("connection closed with: {}", peer_id);
+                write_log(&format!("connection closed with: {}", peer_id));
                 //remove from relay topic subscribers
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
@@ -154,7 +152,10 @@ pub async fn events(
                         .position(|pid| *pid == peer_id);
                     match i_relay_subscriber {
                         Some(index) => {
-                            println!("remove relay topic subscriber");
+                            write_log(&format!(
+                                "rm relay topic subscriber: {}",
+                                relay_topic_subscribers[index]
+                            ));
                             remove_peer(peer_id).await;
                             relay_topic_subscribers.remove(index);
                         }
@@ -164,7 +165,7 @@ pub async fn events(
                 //remove peer from relays if it is in the relays
                 match relays.iter().position(|pid| pid == &peer_id) {
                     Some(index) => {
-                        println!("remove relay");
+                        write_log(&format!("remove relay: {}", relays[index]));
                         relays.remove(index);
                     }
                     None => {}
@@ -211,7 +212,6 @@ pub async fn events(
                             }
                         }
                         if !is_r_connection {
-                            println!("in r connection condition for brerak");
                             for connected in connections.clone() {
                                 swarm.disconnect_peer_id(connected.clone()).unwrap();
                             }
@@ -375,10 +375,10 @@ pub async fn events(
                                     .gossipsub
                                     .publish(clients_topic.clone(), str_my_multiaddr.as_bytes())
                                 {
-                                    Ok(_) => println!("my address propagate to the network"),
-                                    Err(_) => {
-                                        println!("my address propagation error!")
-                                    }
+                                    Ok(_) => write_log("my address propagate to the network"),
+                                    Err(_) => write_log(
+                                        "my address propagation error! handle_events(line 380)",
+                                    ),
                                 }
                             }
                         }

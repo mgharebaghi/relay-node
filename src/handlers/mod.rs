@@ -70,8 +70,7 @@ pub async fn handle_streams(
         match site_connection {
             Ok(_) => get_addresses(relays_path).await,
             Err(_) => write_log(
-                "Relay could not connect to centichain.org for get latest relays addresses!"
-                    .to_string(),
+                "Relay could not connect to centichain.org for get latest relays addresses! mod.rs(line 73)",
             ),
         }
 
@@ -100,7 +99,6 @@ pub async fn handle_streams(
 }
 
 async fn get_addresses(relays_path: &str) {
-    println!("in get addresses method in the mod rs");
     match reqwest::get("https://centichain.org/api/relays")
         .await
         .unwrap()
@@ -108,7 +106,6 @@ async fn get_addresses(relays_path: &str) {
         .await
     {
         Ok(addr) => {
-            println!("response from relays:\n{}", addr);
             let addresses: Addresses = serde_json::from_str(&addr).unwrap();
 
             let path_exist = fs::metadata(relays_path).is_ok();
@@ -138,7 +135,7 @@ async fn get_addresses(relays_path: &str) {
             }
         }
         Err(_) => {
-            println!("get relays from server problem!");
+            write_log("get relays from server problem! mod.rs(line 138)");
         }
     }
 }
@@ -150,7 +147,6 @@ pub async fn dialing(
     sync: &mut bool,
     my_addresses: &mut Vec<String>,
 ) -> Vec<String> {
-    println!("in dialing method");
     let relays_file_exist = fs::metadata(relays_path).is_ok();
     let mut dialed_addr: Vec<String> = Vec::new();
     if relays_file_exist {
@@ -172,16 +168,15 @@ pub async fn dialing(
         }
 
         if dial_addresses.len() > 0 {
-            println!("dialed addresses:\n{:?}", dial_addresses);
             if dial_addresses.len() < 6 {
                 for addr in dial_addresses {
                     match swarm.dial(addr.clone()) {
                         Ok(_) => {
-                            println!("dialing with: {}", addr);
+                            write_log(&format!("dialing with: {}", addr));
                             dialed_addr.push(addr.to_string());
                         }
                         Err(_) => {
-                            write_log(format!("dialing problem with: {}", addr));
+                            write_log(&format!("dialing problem with: {}", addr));
                         }
                     }
                 }
@@ -199,7 +194,7 @@ pub async fn dialing(
                             dialed_addr.push(addr.to_string());
                         }
                         Err(_) => {
-                            write_log(format!("dialing problem with: {}", addr));
+                            write_log(&format!("dialing problem with: {}", addr));
                         }
                     }
                 }

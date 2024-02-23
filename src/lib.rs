@@ -1,20 +1,17 @@
 mod handlers;
 pub mod rpc;
-use libp2p::Multiaddr;
-pub use rpc::handle_requests;
-use std::env::consts::OS;
-use std::fs::File;
-use std::io::{stdout, BufRead, BufReader};
-use std::time::Duration;
-
-use crossterm::execute;
-use crossterm::style::{Print, ResetColor, SetForegroundColor, Stylize};
 use handlers::create_log::write_log;
 use handlers::handle_streams;
 use handlers::structures::CustomBehav;
 use handlers::structures::FullNodes;
 use handlers::structures::Req;
 use handlers::structures::Res;
+use libp2p::Multiaddr;
+pub use rpc::handle_requests;
+use std::env::consts::OS;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::time::Duration;
 
 use libp2p::{
     gossipsub::IdentTopic,
@@ -43,14 +40,7 @@ pub async fn run() {
             }
         }
         Err(_) => {
-            execute!(
-                stdout(),
-                SetForegroundColor(crossterm::style::Color::Red),
-                Print("Could not find the wallet address file!\n".bold()),
-                ResetColor
-            )
-            .ok();
-            write_log("Could not find the wallet address file!".to_string());
+            write_log("Could not find the wallet address file!");
             std::process::exit(404);
         }
     }

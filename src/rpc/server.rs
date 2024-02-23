@@ -95,6 +95,6 @@ pub async fn handle_requests() {
 
     match axum_server::bind(addr).serve(app.into_make_service()).await {
         Ok(_) => {}
-        Err(e) => write_log(format!("error from RPC server:\n{}", e)),
+        Err(e) => write_log(&format!("error from RPC server:\n{}", e)),
     }
 }

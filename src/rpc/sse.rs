@@ -73,7 +73,7 @@ async fn swarm() -> Swarm<gossipsub::Behaviour> {
                     break;
                 }
             }
-            Err(e) => write_log(format!("{}", e)),
+            Err(e) => write_log(&format!("{}", e)),
         }
     }
 
@@ -114,19 +114,16 @@ pub async fn trx_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 Event::default().data(serde_json::to_string(&reciept).unwrap())
                             )) {
                                 Ok(_) => {}
-                                Err(_) => write_log(
-                                    "error from send tx channel in transaction section!"
-                                        .to_string(),
-                                ),
+                                Err(_) => {
+                                    write_log("error from send tx channel in transaction section!")
+                                }
                             }
                         } else if let Ok(reciept) = serde_json::from_str::<Reciept>(&msg) {
                             match tx.send(Ok(
                                 Event::default().data(serde_json::to_string(&reciept).unwrap())
                             )) {
                                 Ok(_) => {}
-                                Err(_) => write_log(
-                                    "error from send tx channel in block section!".to_string(),
-                                ),
+                                Err(_) => write_log("error from send tx channel in block section!"),
                             }
                         }
                     }
@@ -155,10 +152,9 @@ pub async fn block_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 .data(serde_json::to_string(&gossipmessage.block).unwrap())))
                             {
                                 Ok(_) => {}
-                                Err(_) => write_log(
-                                    "error from send tx channel in transaction section!"
-                                        .to_string(),
-                                ),
+                                Err(_) => {
+                                    write_log("error from send tx channel in transaction section!")
+                                }
                             }
                         }
                     }

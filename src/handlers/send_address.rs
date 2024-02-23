@@ -21,7 +21,7 @@ pub fn send_address(
                 .publish(topic.clone(), "i have a client".as_bytes())
             {
                 Ok(_) => {}
-                Err(e) => write_log(format!("{}", e)),
+                Err(e) => write_log(&format!("{}", e)),
             }
         }
     }

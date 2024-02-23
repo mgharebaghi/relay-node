@@ -55,12 +55,12 @@ pub async fn remove_peer(peerid: PeerId) {
                             {
                                 Ok(_) => {}
                                 Err(_) => {
-                                    write_log("can not post the ip for remove rpc in remove relay section!".to_string());
+                                    write_log("can not post the ip for remove rpc! remove_relays(line 58)");
                                 }
                             }
                         }
                     } else {
-                        write_log("post remove address problem!".to_string());
+                        write_log("post remove address problem! remove_relays(line 63)");
                     }
                 }
             }

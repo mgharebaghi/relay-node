@@ -67,7 +67,7 @@ pub async fn handle_transaction(
                     break;
                 }
             }
-            Err(e) => write_log(format!("{}", e)),
+            Err(e) => write_log(&format!("{}", e)),
         }
     }
 

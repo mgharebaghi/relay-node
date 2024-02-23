@@ -38,14 +38,14 @@ pub async fn send_addr_to_server(full_addr: String) {
 
     match res {
         Ok(response) => {
-            println!("my addresses posted to server");
+            write_log("my addresses posted to server");
             let mut addresses = String::new();
             match response.text().await {
                 Ok(all_addr) => {
                     addresses.push_str(&all_addr);
                 }
                 Err(_) => {
-                    write_log("Writing addresses from centichain server problem!".to_string());
+                    write_log("centichain server response error! handle_listener(line 48)");
                 }
             }
 
@@ -80,22 +80,22 @@ pub async fn send_addr_to_server(full_addr: String) {
                                     let mut buf_writer = BufWriter::new(&relays_file);
                                     writeln!(buf_writer, "{}", addr).unwrap();
                                 }
-                                Err(e) => write_log(format!("{}", e)),
+                                Err(e) => write_log(&format!("{}", e)),
                             }
                         }
                     }
                 }
                 Err(_) => {
-                    write_log("deserialize addresses that get from server problem!".to_string());
+                    write_log(
+                        "deserializing addresses from server problem! handle_listener(line 90)",
+                    );
                 }
             }
         }
-        Err(_) => write_log(
-            "coud not get any response for send your address to centichain.org!".to_string(),
-        ),
+        Err(_) => write_log("coud not get any response for send your address to centichain.org! handle_listener(line 95)"),
     }
 
-    //send ip address for get rpc requests
+    //send ip address as RPC server
     let trim_my_addr = full_addr.trim_start_matches("/ip4/");
     let my_ip = trim_my_addr.split("/").next().unwrap();
     let client = Client::new();
@@ -107,7 +107,7 @@ pub async fn send_addr_to_server(full_addr: String) {
     match res {
         Ok(_) => {}
         Err(_) => write_log(
-            "Can not send your public ip to the server in gossip messages check!".to_string(),
+            "Can not send your public ip to the server as RPC server! handle_listener(line 110)",
         ),
     }
 }

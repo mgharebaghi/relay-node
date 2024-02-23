@@ -49,7 +49,7 @@ pub async fn handle_requests(
             .send_response(channel, response)
         {
             Ok(_) => {}
-            Err(e) => write_log(format!("{:?}", e)),
+            Err(e) => write_log(&format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
         handle_transactions(request.req.clone()).await; //insert transaction to db
@@ -107,7 +107,6 @@ pub async fn handle_requests(
                     .publish(relay_topic.clone(), request.req.as_bytes())
                 {
                     Ok(_) => {
-                        println!("block sent to {} topic", relay_topic);
                         let response = Res { res: String::new() };
                         let _ = swarm
                             .behaviour_mut()
