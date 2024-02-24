@@ -144,7 +144,9 @@ pub async fn events(
                 }
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                write_log(&format!("connection closed with: {}", peer_id));
+                if client_topic_subscriber.contains(&peer_id) {
+                    write_log(&format!("connection closed with: {}", peer_id));
+                }
                 //remove from relay topic subscribers
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
