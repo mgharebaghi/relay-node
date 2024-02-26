@@ -141,6 +141,7 @@ pub async fn events(
                     dialed_addr.clear();
                     syncing_blocks.clear();
                     my_addresses.clear();
+                    *sync = false;
                     break;
                 }
             }
@@ -227,6 +228,7 @@ pub async fn events(
                             dialed_addr.clear();
                             syncing_blocks.clear();
                             my_addresses.clear();
+                            *sync = false;
                             break;
                         }
                     } else {
@@ -344,7 +346,9 @@ pub async fn events(
                                         .await
                                         {
                                             Ok(_) => {}
-                                            Err(_) => {
+                                            Err(e) => {
+                                                write_log("verifying block error in syncing blocks of handle events(line 351)");
+                                                write_log(&format!("block insert error: {}", e));
                                                 //remove node from fullnodes list because its block is wrong!
                                                 let index = fullnodes.iter().position(|node| {
                                                     node.peer_id
