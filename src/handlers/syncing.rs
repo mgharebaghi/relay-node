@@ -23,8 +23,18 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                 Some(addr) => {
                     let blockchain_addr =
                         format!("http://{}:33369/blockchain/blockchain.zip", addr);
+
+                    //---------------------------------------------------------
+                    //remove blockchain.zip in home if exist
+                    let zip_exist = fs::metadata("/home/blockchain.zip");
+                    if zip_exist.is_ok() {
+                        let rm_zip = Command::new("rm").arg("/home/blockchain.zip").status();
+                        write_log(&rm_zip.unwrap().to_string());
+                    }
                     let mut blockchain_output = fs::File::create("/home/blockchain.zip").unwrap();
 
+                    //---------------------------------------------------------
+                    //get latest version of blockchain in zip format
                     match reqwest::get(blockchain_addr).await {
                         Ok(res) => {
                             let mut body = res.bytes_stream();
@@ -38,6 +48,14 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     }
                                     None => break,
                                 }
+                            }
+
+                            //---------------------------------------------------------
+                            //remove etc in home if exist
+                            let etc_exist = fs::metadata("/home/etc");
+                            if etc_exist.is_ok() {
+                                let rm_etc = Command::new("rm").arg("-r").arg("/home/etc").status();
+                                write_log(&rm_etc.unwrap().to_string());
                             }
 
                             //---------------------------------------------------------

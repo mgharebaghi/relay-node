@@ -83,6 +83,7 @@ pub async fn events(
                                     break;
                                 }
                                 Err(_) => {
+                                    write_log("syncing error in connection stablished(line 86)");
                                     break;
                                 }
                             }
@@ -146,6 +147,13 @@ pub async fn events(
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
                 if client_topic_subscriber.contains(&peer_id) {
                     write_log(&format!("connection closed with: {}", peer_id));
+                    let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
+                    match index {
+                        Some(i) => {
+                            client_topic_subscriber.remove(i);
+                        }
+                        None => {}
+                    }
                 }
                 //remove from relay topic subscribers
                 if relay_topic_subscribers.contains(&peer_id) {
@@ -192,14 +200,6 @@ pub async fn events(
                 match dialed_index {
                     Some(index) => {
                         dialed_addr.remove(index);
-                    }
-                    None => {}
-                }
-
-                let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
-                match index {
-                    Some(i) => {
-                        client_topic_subscriber.remove(i);
                     }
                     None => {}
                 }
