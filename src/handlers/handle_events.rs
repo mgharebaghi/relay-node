@@ -257,7 +257,9 @@ pub async fn events(
                                 write_log("gossip message recieved while not syncing");
                                 match String::from_utf8(message.data) {
                                     Ok(str_msg) => {
+
                                         write_log("gossip message recieved in str OK");
+                                        write_log(&format!("gossip message: {:?}", str_msg));
                                         if let Ok(gossipmsg) =
                                             serde_json::from_str::<GossipMessage>(&str_msg)
                                         {
