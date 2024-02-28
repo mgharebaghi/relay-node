@@ -124,7 +124,9 @@ pub async fn handle_requests(
                             Err(_) => {}
                         }
                     }
-                    Err(_) => {}
+                    Err(_) => {
+                        write_log("sending gossip message to relay topic has problem");
+                    }
                 }
 
                 //send true block to connected Validators
