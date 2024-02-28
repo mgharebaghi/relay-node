@@ -41,12 +41,7 @@ pub async fn handle_outnode(
         .publish(clients_topic, serialize_out_node.as_bytes())
     {
         Ok(_) => {}
-        Err(e) => {
-            write_log(&format!(
-                "gossipsub publish error in handle out node! line(46): {}",
-                e
-            ));
-        }
+        Err(_) => {}
     }
 
     if relays.len() > 0 && clients.len() == 0 {

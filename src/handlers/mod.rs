@@ -75,6 +75,10 @@ pub async fn handle_streams(
         }
 
         let mut dialed_addr = dialing(relays_path, local_peer_id, swarm, sync, my_addresses).await;
+        let mut im_first = false;
+        if dialed_addr.len() == 0 {
+            im_first = true;
+        }
 
         events(
             swarm,
@@ -93,6 +97,7 @@ pub async fn handle_streams(
             sync,
             &mut dialed_addr,
             syncing_blocks,
+            im_first
         )
         .await;
     }

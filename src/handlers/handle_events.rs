@@ -6,8 +6,6 @@ use libp2p::futures::StreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 
-use crate::handlers::dialing;
-
 use super::create_log::write_log;
 use super::get_addresses::get_addresses;
 use super::gossip_messages::handle_gossip_message;
@@ -45,6 +43,7 @@ pub async fn events(
     sync: &mut bool,
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
+    im_first: bool,
 ) {
     let mut listeners = Listeners { id: Vec::new() };
 
@@ -156,7 +155,7 @@ pub async fn events(
                         None => {}
                     }
                 }
-                //remove from relay topic subscribers
+                //remove from relay topic subscribers && remove from relays.dat file
                 if relay_topic_subscribers.contains(&peer_id) {
                     let i_relay_subscriber = relay_topic_subscribers
                         .iter()
@@ -167,8 +166,8 @@ pub async fn events(
                                 "rm relay topic subscriber: {}",
                                 relay_topic_subscribers[index]
                             ));
-                            remove_peer(peer_id).await;
                             relay_topic_subscribers.remove(index);
+                            remove_peer(peer_id).await; //remove from .dat file and send address to server for remove from relays list
                         }
                         None => {}
                     }
@@ -206,40 +205,28 @@ pub async fn events(
                 }
 
                 //break for dial with other relays if there is not connection with any relays
-                if dialed_addr.len() < 1 && relays.len() < 1 && relay_topic_subscribers.len() > 0 {
+                if !im_first && relays.len() < 1 {
                     write_log("going for break in removed dialed addresses");
-                    if relay_topic_subscribers.len() > 1 {
-                        let mut is_r_connection = false;
-                        for r in relay_topic_subscribers.clone() {
-                            if connections.contains(&r) {
-                                is_r_connection = true;
-                            }
-                        }
-                        if !is_r_connection {
-                            for connected in connections.clone() {
-                                swarm.disconnect_peer_id(connected.clone()).unwrap();
-                            }
-                            leader.clear();
-                            fullnodes.clear();
-                            connections.clear();
-                            client_topic_subscriber.clear();
-                            relay_topic_subscribers.clear();
-                            clients.clear();
-                            relays.clear();
-                            dialed_addr.clear();
-                            syncing_blocks.clear();
-                            my_addresses.clear();
-                            *sync = false;
-                            break;
-                        }
-                    } else {
-                        if connections.contains(&relay_topic_subscribers[0]) {
-                            continue;
-                        } else {
-                            dialing("/etc/relays.dat", local_peer_id, swarm, sync, my_addresses)
-                                .await;
-                        }
+                    write_log(&format!(
+                        "relay topic subscribers:\n{:?}",
+                        relay_topic_subscribers
+                    ));
+
+                    for connected in connections.clone() {
+                        swarm.disconnect_peer_id(connected.clone()).unwrap();
                     }
+                    leader.clear();
+                    fullnodes.clear();
+                    connections.clear();
+                    client_topic_subscriber.clear();
+                    relay_topic_subscribers.clear();
+                    clients.clear();
+                    relays.clear();
+                    dialed_addr.clear();
+                    syncing_blocks.clear();
+                    my_addresses.clear();
+                    *sync = false;
+                    break;
                 }
             }
             SwarmEvent::Behaviour(custom_behav) => match custom_behav {
