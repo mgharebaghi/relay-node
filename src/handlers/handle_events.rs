@@ -304,6 +304,9 @@ pub async fn events(
                                         serde_json::from_str::<Vec<String>>(&str_msg)
                                     {
                                         get_addresses(addresses, local_peer_id, my_addresses);
+                                    } else {
+                                        write_log("gossip message recieved while syncing is not GossipMessage or Transaction or Addresses");
+                                        write_log(&format!("gossip message: \n {}", str_msg));
                                     }
                                 }
                                 Err(_) => {
