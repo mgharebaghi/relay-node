@@ -79,7 +79,7 @@ pub async fn handle_streams(
         if dialed_addr.len() == 0 {
             im_first = true;
         }
-
+        write_log(&format!("im first: {}", im_first));
         events(
             swarm,
             local_peer_id,
