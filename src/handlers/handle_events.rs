@@ -273,9 +273,11 @@ pub async fn events(
                             write_log("gossip message recieved while not syncing");
                             match String::from_utf8(message.data) {
                                 Ok(str_msg) => {
+                                    write_log("gossip message recieved in str OK");
                                     if let Ok(gossipmsg) =
                                         serde_json::from_str::<GossipMessage>(&str_msg)
                                     {
+                                        write_log("gossip message recieved while syncing is GossipMessage");
                                         let new_gossip = GetGossipMsg {
                                             gossip: gossipmsg.clone(),
                                             propagation_source: gossipmsg
@@ -294,6 +296,7 @@ pub async fn events(
                                     } else if let Ok(transaction) =
                                         serde_json::from_str::<Transaction>(&str_msg)
                                     {
+                                        write_log("gossip message recieved while syncing is Transaction");
                                         insert_reciept(
                                             transaction,
                                             None,
