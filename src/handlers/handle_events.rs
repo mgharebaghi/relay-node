@@ -67,7 +67,6 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                write_log(&format!("sync status: {}", *sync));
                 if !*sync {
                     for addr in dialed_addr.clone() {
                         if addr.contains(&peer_id.to_string()) {
@@ -249,10 +248,6 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        write_log(&format!(
-                            "sync status when gossip message recieved: {}",
-                            *sync
-                        ));
                         if *sync {
                             handle_gossip_message(
                                 propagation_source,
