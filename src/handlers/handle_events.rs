@@ -249,7 +249,10 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        write_log(&format!("sync status when gossip message recieved: {}", *sync));
+                        write_log(&format!(
+                            "sync status when gossip message recieved: {}",
+                            *sync
+                        ));
                         if *sync {
                             handle_gossip_message(
                                 propagation_source,
@@ -267,38 +270,47 @@ pub async fn events(
                             )
                             .await;
                         } else {
-                            let str_msg = String::from_utf8(message.data).unwrap();
-                            if let Ok(gossipmsg) = serde_json::from_str::<GossipMessage>(&str_msg) {
-                                let new_gossip = GetGossipMsg {
-                                    gossip: gossipmsg.clone(),
-                                    propagation_source: gossipmsg
-                                        .block
-                                        .header
-                                        .validator
-                                        .parse()
-                                        .unwrap(),
-                                };
-                                syncing_blocks.push(new_gossip);
-                                write_log("syncing blocks pushed");
-                                write_log(&format!(
-                                    "syncing block hash: {:?}",
-                                    gossipmsg.block.header.blockhash
-                                ));
-                            } else if let Ok(transaction) =
-                                serde_json::from_str::<Transaction>(&str_msg)
-                            {
-                                insert_reciept(
-                                    transaction,
-                                    None,
-                                    "pending".to_string(),
-                                    "".to_string(),
-                                )
-                                .await;
-                            write_log("reciept inserted while syncing");
-                            } else if let Ok(addresses) =
-                                serde_json::from_str::<Vec<String>>(&str_msg)
-                            {
-                                get_addresses(addresses, local_peer_id, my_addresses);
+                            write_log("gossip message recieved while not syncing");
+                            match String::from_utf8(message.data) {
+                                Ok(str_msg) => {
+                                    if let Ok(gossipmsg) =
+                                        serde_json::from_str::<GossipMessage>(&str_msg)
+                                    {
+                                        let new_gossip = GetGossipMsg {
+                                            gossip: gossipmsg.clone(),
+                                            propagation_source: gossipmsg
+                                                .block
+                                                .header
+                                                .validator
+                                                .parse()
+                                                .unwrap(),
+                                        };
+                                        syncing_blocks.push(new_gossip);
+                                        write_log("syncing blocks pushed");
+                                        write_log(&format!(
+                                            "syncing block hash: {:?}",
+                                            gossipmsg.block.header.blockhash
+                                        ));
+                                    } else if let Ok(transaction) =
+                                        serde_json::from_str::<Transaction>(&str_msg)
+                                    {
+                                        insert_reciept(
+                                            transaction,
+                                            None,
+                                            "pending".to_string(),
+                                            "".to_string(),
+                                        )
+                                        .await;
+                                        write_log("reciept inserted while syncing");
+                                    } else if let Ok(addresses) =
+                                        serde_json::from_str::<Vec<String>>(&str_msg)
+                                    {
+                                        get_addresses(addresses, local_peer_id, my_addresses);
+                                    }
+                                }
+                                Err(_) => {
+                                    write_log("gossip message recieved is not utf8");
+                                }
                             }
                         }
                     }
