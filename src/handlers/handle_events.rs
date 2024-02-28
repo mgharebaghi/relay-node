@@ -65,33 +65,7 @@ pub async fn events(
 
                 listeners.id.push(listener_id);
             }
-            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                if !*sync {
-                    for addr in dialed_addr.clone() {
-                        if addr.contains(&peer_id.to_string()) {
-                            match syncing(addr.clone()).await {
-                                Ok(_) => {
-                                    write_log("syncing completed");
-                                    let fullnodes_req = Req {
-                                        req: "fullnodes".to_string(),
-                                    };
-                                    swarm
-                                        .behaviour_mut()
-                                        .req_res
-                                        .send_request(&peer_id, fullnodes_req);
-                                    break;
-                                }
-                                Err(_) => {
-                                    write_log("syncing error in connection stablished(line 86)");
-                                    break;
-                                }
-                            }
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {     
                 if *sync {
                     match Command::new("mongodump")
                         .arg("--db")
@@ -289,6 +263,31 @@ pub async fn events(
                                 {
                                     relays.push(propagation_source);
                                     write_log("new relay add");
+                                }
+                                if !*sync {
+                                    for addr in dialed_addr.clone() {
+                                        if addr.contains(&propagation_source.to_string()) {
+                                            match syncing(addr.clone()).await {
+                                                Ok(_) => {
+                                                    write_log("syncing completed");
+                                                    let fullnodes_req = Req {
+                                                        req: "fullnodes".to_string(),
+                                                    };
+                                                    swarm
+                                                        .behaviour_mut()
+                                                        .req_res
+                                                        .send_request(&propagation_source, fullnodes_req);
+                                                    break;
+                                                }
+                                                Err(_) => {
+                                                    write_log("syncing error in get gossip(line 283)");
+                                                    break;
+                                                }
+                                            }
+                                        } else {
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
