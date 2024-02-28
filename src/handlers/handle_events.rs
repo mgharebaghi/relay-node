@@ -230,101 +230,80 @@ pub async fn events(
                 }
             }
             SwarmEvent::Behaviour(custom_behav) => match custom_behav {
-                CustomBehavEvent::Gossipsub(gossipevent) => {
-                    match gossipevent {
-                        libp2p::gossipsub::Event::Message {
-                            propagation_source,
-                            message,
-                            ..
-                        } => {
-                            if *sync {
-                                handle_gossip_message(
-                                    propagation_source,
-                                    local_peer_id,
-                                    message,
-                                    clients,
-                                    relays,
-                                    swarm,
-                                    relay_topic.clone(),
-                                    connections,
-                                    relay_topic_subscribers,
-                                    my_addresses,
-                                    leader,
-                                    fullnodes,
+                CustomBehavEvent::Gossipsub(gossipevent) => match gossipevent {
+                    libp2p::gossipsub::Event::Message {
+                        propagation_source,
+                        message,
+                        ..
+                    } => {
+                        let str_msg = String::from_utf8(message.data.clone()).unwrap();
+                        if *sync {
+                            handle_gossip_message(
+                                propagation_source,
+                                local_peer_id,
+                                message,
+                                clients,
+                                relays,
+                                swarm,
+                                relay_topic.clone(),
+                                connections,
+                                relay_topic_subscribers,
+                                my_addresses,
+                                leader,
+                                fullnodes,
+                            )
+                            .await;
+                        } else {
+                            write_log("gossip message recieved while not syncing");
+                            write_log(&format!("gossip message: {:?}", str_msg));
+                            if let Ok(gossipmsg) = serde_json::from_str::<GossipMessage>(&str_msg) {
+                                write_log("gossip message recieved while syncing is GossipMessage");
+                                let new_gossip = GetGossipMsg {
+                                    gossip: gossipmsg.clone(),
+                                    propagation_source: propagation_source,
+                                };
+                                syncing_blocks.push(new_gossip);
+                                write_log("syncing blocks pushed");
+                                write_log(&format!(
+                                    "syncing block hash: {:?}",
+                                    gossipmsg.block.header.blockhash
+                                ));
+                            }
+                            if let Ok(transaction) = serde_json::from_str::<Transaction>(&str_msg) {
+                                write_log("gossip message recieved while syncing is Transaction");
+                                insert_reciept(
+                                    transaction,
+                                    None,
+                                    "pending".to_string(),
+                                    "".to_string(),
                                 )
                                 .await;
-                            } else {
-                                write_log("gossip message recieved while not syncing");
-                                match String::from_utf8(message.data) {
-                                    Ok(str_msg) => {
-
-                                        write_log("gossip message recieved in str OK");
-                                        write_log(&format!("gossip message: {:?}", str_msg));
-                                        if let Ok(gossipmsg) =
-                                            serde_json::from_str::<GossipMessage>(&str_msg)
-                                        {
-                                            write_log("gossip message recieved while syncing is GossipMessage");
-                                            let new_gossip = GetGossipMsg {
-                                                gossip: gossipmsg.clone(),
-                                                propagation_source: gossipmsg
-                                                    .block
-                                                    .header
-                                                    .validator
-                                                    .parse()
-                                                    .unwrap(),
-                                            };
-                                            syncing_blocks.push(new_gossip);
-                                            write_log("syncing blocks pushed");
-                                            write_log(&format!(
-                                                "syncing block hash: {:?}",
-                                                gossipmsg.block.header.blockhash
-                                            ));
-                                        } else if let Ok(transaction) =
-                                            serde_json::from_str::<Transaction>(&str_msg)
-                                        {
-                                            write_log("gossip message recieved while syncing is Transaction");
-                                            insert_reciept(
-                                                transaction,
-                                                None,
-                                                "pending".to_string(),
-                                                "".to_string(),
-                                            )
-                                            .await;
-                                            write_log("reciept inserted while syncing");
-                                        } else if let Ok(addresses) =
-                                            serde_json::from_str::<Vec<String>>(&str_msg)
-                                        {
-                                            get_addresses(addresses, local_peer_id, my_addresses);
-                                        } else if str_msg == "i have a client".to_string() {
-                                            if connections.contains(&propagation_source)
-                                                && !relays.contains(&propagation_source)
-                                            {
-                                                relays.push(propagation_source);
-                                                write_log("new relay add");
-                                            }
-                                        } else {
-                                            write_log("gossip message recieved while syncing is not GossipMessage or Transaction or Addresses");
-                                            write_log(&format!("gossip message: \n {}", str_msg));
-                                        }
-                                    }
-                                    Err(_) => {
-                                        write_log("gossip message recieved is not utf8");
-                                    }
+                                write_log("reciept inserted while syncing");
+                            }
+                            if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&str_msg) {
+                                get_addresses(addresses, local_peer_id, my_addresses);
+                            }
+                            if str_msg == "i have a client".to_string() {
+                                if connections.contains(&propagation_source)
+                                    && !relays.contains(&propagation_source)
+                                {
+                                    relays.push(propagation_source);
+                                    write_log("new relay add");
                                 }
                             }
                         }
-                        libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
-                            topic,
-                            peer_id,
-                            swarm,
-                            relay_topic_subscribers,
-                            connections,
-                            clients,
-                            client_topic_subscriber,
-                        ),
-                        _ => (),
                     }
-                }
+                    libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
+                        topic,
+                        peer_id,
+                        swarm,
+                        relay_topic_subscribers,
+                        connections,
+                        clients,
+                        client_topic_subscriber,
+                    ),
+                    _ => (),
+                },
                 CustomBehavEvent::ReqRes(req_res) => match req_res {
                     Event::Message { message, .. } => match message {
                         libp2p::request_response::Message::Request {
