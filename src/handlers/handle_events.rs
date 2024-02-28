@@ -167,7 +167,7 @@ pub async fn events(
                                 relay_topic_subscribers[index]
                             ));
                             relay_topic_subscribers.remove(index);
-                            remove_peer(peer_id).await; //remove from .dat file and send address to server for remove from relays list
+                            // remove_peer(peer_id).await; //remove from .dat file and send address to server for remove from relays list
                         }
                         None => {}
                     }
