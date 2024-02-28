@@ -67,6 +67,7 @@ pub async fn events(
                 listeners.id.push(listener_id);
             }
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                write_log(&format!("sync status: {}", *sync));
                 if !*sync {
                     for addr in dialed_addr.clone() {
                         if addr.contains(&peer_id.to_string()) {
@@ -248,6 +249,7 @@ pub async fn events(
                         message,
                         ..
                     } => {
+                        write_log(&format!("sync status when gossip message recieved: {}", *sync));
                         if *sync {
                             handle_gossip_message(
                                 propagation_source,
@@ -277,6 +279,11 @@ pub async fn events(
                                         .unwrap(),
                                 };
                                 syncing_blocks.push(new_gossip);
+                                write_log("syncing blocks pushed");
+                                write_log(&format!(
+                                    "syncing block hash: {:?}",
+                                    gossipmsg.block.header.blockhash
+                                ));
                             } else if let Ok(transaction) =
                                 serde_json::from_str::<Transaction>(&str_msg)
                             {
@@ -287,6 +294,7 @@ pub async fn events(
                                     "".to_string(),
                                 )
                                 .await;
+                            write_log("reciept inserted while syncing");
                             } else if let Ok(addresses) =
                                 serde_json::from_str::<Vec<String>>(&str_msg)
                             {

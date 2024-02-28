@@ -93,6 +93,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     if doc.is_some() {
                                         match reciept_coll.delete_many(doc! {}, None).await {
                                             Ok(_) => {
+                                                write_log("delete old reciept collection");
                                                 while let Ok(document) =
                                                     Document::from_reader(&mut reciept_reader)
                                                 {
@@ -101,6 +102,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                                         .await
                                                         .unwrap();
                                                 }
+                                                write_log("insert new reciept collection");
                                             }
                                             Err(_) => {
                                                 write_log("delete reciept collection error");
@@ -135,6 +137,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     if doc.is_some() {
                                         match utxo_coll.delete_many(doc! {}, None).await {
                                             Ok(_) => {
+                                                write_log("delete old utxo collection");
                                                 while let Ok(document) =
                                                     Document::from_reader(&mut utxo_reader)
                                                 {
@@ -143,6 +146,7 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                                         .await
                                                         .unwrap();
                                                 }
+                                                write_log("insert new utxo collection");
                                             }
                                             Err(_) => {
                                                 write_log("delete utxo collection error");
@@ -177,9 +181,12 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                                     if doc.is_some() {
                                         match block_coll.delete_many(doc! {}, None).await {
                                             Ok(_) => {
+                                                write_log("delete old block collection");
                                                 match insert_blocks(blocks_reader, block_coll).await
                                                 {
-                                                    Ok(_) => {}
+                                                    Ok(_) => {
+                                                        write_log("insert new block collection");
+                                                    }
                                                     Err(_) => {
                                                         write_log("insert block collection error");
                                                         return Err(());
