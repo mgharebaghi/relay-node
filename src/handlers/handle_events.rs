@@ -331,6 +331,7 @@ pub async fn events(
                             if let Ok(fullnode_subs) =
                                 serde_json::from_str::<Vec<FullNodes>>(&response.res)
                             {
+                                let mut set_sync = true;
                                 for fullnode in fullnode_subs.clone() {
                                     fullnodes.push(fullnode)
                                 }
@@ -345,8 +346,11 @@ pub async fn events(
                                         )
                                         .await
                                         {
-                                            Ok(_) => {}
+                                            Ok(_) => {
+                                                write_log("verifying block before syncing");
+                                            }
                                             Err(e) => {
+                                                set_sync = false;
                                                 write_log("verifying block error in syncing blocks of handle events(line 351)");
                                                 write_log(&format!("block insert error: {}", e));
                                                 //remove node from fullnodes list because its block is wrong!
@@ -371,20 +375,39 @@ pub async fn events(
                                     }
                                 }
 
-                                *sync = true;
-                                send_addr_to_server(my_addresses[0].clone()).await;
-                                let my_multiaddress: Multiaddr = my_addresses[0].parse().unwrap();
-                                let str_my_multiaddr =
-                                    serde_json::to_string(&my_multiaddress).unwrap();
-                                match swarm
-                                    .behaviour_mut()
-                                    .gossipsub
-                                    .publish(clients_topic.clone(), str_my_multiaddr.as_bytes())
-                                {
-                                    Ok(_) => write_log("my address propagate to the network"),
-                                    Err(_) => write_log(
-                                        "my address propagation error! handle_events(line 380)",
-                                    ),
+                                if set_sync {
+                                    *sync = true;
+                                    send_addr_to_server(my_addresses[0].clone()).await;
+                                    let my_multiaddress: Multiaddr =
+                                        my_addresses[0].parse().unwrap();
+                                    let str_my_multiaddr =
+                                        serde_json::to_string(&my_multiaddress).unwrap();
+                                    match swarm
+                                        .behaviour_mut()
+                                        .gossipsub
+                                        .publish(clients_topic.clone(), str_my_multiaddr.as_bytes())
+                                    {
+                                        Ok(_) => write_log("my address propagate to the network"),
+                                        Err(_) => write_log(
+                                            "my address propagation error! handle_events(line 380)",
+                                        ),
+                                    }
+                                } else {
+                                    for connected in connections.clone() {
+                                        swarm.disconnect_peer_id(connected.clone()).unwrap();
+                                    }
+                                    leader.clear();
+                                    fullnodes.clear();
+                                    connections.clear();
+                                    client_topic_subscriber.clear();
+                                    relay_topic_subscribers.clear();
+                                    clients.clear();
+                                    relays.clear();
+                                    dialed_addr.clear();
+                                    syncing_blocks.clear();
+                                    my_addresses.clear();
+                                    *sync = false;
+                                    break;
                                 }
                             }
                         }

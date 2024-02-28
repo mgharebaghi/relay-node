@@ -1,11 +1,12 @@
 use async_std::stream::StreamExt;
 use mongodb::{
     bson::{doc, from_document, Document},
+    options::FindOneOptions,
     Collection,
 };
 use std::{
     fs::{self, File},
-    io::{BufReader, Write},
+    io::{BufReader, Read, Write},
     process::Command,
 };
 
@@ -23,13 +24,17 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                 Some(addr) => {
                     let blockchain_addr =
                         format!("http://{}:33369/blockchain/blockchain.zip", addr);
+                    write_log(&format!("syncing with {}", blockchain_addr));
 
                     //---------------------------------------------------------
                     //remove blockchain.zip in home if exist
                     let zip_exist = fs::metadata("/home/blockchain.zip");
                     if zip_exist.is_ok() {
                         let rm_zip = Command::new("rm").arg("/home/blockchain.zip").status();
-                        write_log(&rm_zip.unwrap().to_string());
+                        write_log(&format!(
+                            "remove blockechain.zip:{}",
+                            rm_zip.unwrap().to_string()
+                        ));
                     }
                     let mut blockchain_output = fs::File::create("/home/blockchain.zip").unwrap();
 
@@ -37,17 +42,13 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                     //get latest version of blockchain in zip format
                     match reqwest::get(blockchain_addr).await {
                         Ok(res) => {
+                            write_log("get response from connected relay");
                             let mut body = res.bytes_stream();
 
                             //write response to blockchain.zip file
-                            loop {
-                                match body.next().await {
-                                    Some(item) => {
-                                        let chunk = item.unwrap();
-                                        blockchain_output.write_all(&chunk).unwrap();
-                                    }
-                                    None => break,
-                                }
+                            while let Some(item) = body.next().await {
+                                let chunk = item.unwrap();
+                                blockchain_output.write_all(&chunk).unwrap();
                             }
 
                             //---------------------------------------------------------
@@ -55,89 +56,161 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
                             let etc_exist = fs::metadata("/home/etc");
                             if etc_exist.is_ok() {
                                 let rm_etc = Command::new("rm").arg("-r").arg("/home/etc").status();
-                                write_log(&rm_etc.unwrap().to_string());
+                                write_log(&format!(
+                                    "remove etc in home direction: {}",
+                                    rm_etc.unwrap().to_string()
+                                ));
                             }
 
                             //---------------------------------------------------------
-                            //unzip blockchain.zip and create files from it
-                            match Command::new("unzip")
-                                .arg("/home/blockchain.zip")
-                                .arg("-d")
-                                .arg("/home/")
-                                .status()
-                            {
-                                Ok(_) => {
-                                    //---------------------------------------------------------
-                                    //open and read reciepts.bson file and insert it to database
-                                    let bson_file =
-                                        File::open("/home/etc/dump/Blockchain/reciept.bson")
+                            //unzip blockchain.zip file and create files from it
+                            let blockchain_file = File::open("/home/blockchain.zip").unwrap();
+                            fs::create_dir_all("/home/etc/dump/Blockchain").unwrap();
+                            let mut archive = zip::ZipArchive::new(blockchain_file).unwrap();
+                            for i in 0..archive.len() {
+                                let mut file = archive.by_index(i).unwrap();
+                                if file.is_file() {
+                                    let mut output =
+                                        fs::File::create(&format!("/home/{}", file.name()))
                                             .unwrap();
-                                    let mut reader = BufReader::new(bson_file);
-
-                                    let reciept_coll: Collection<Document> =
-                                        db.collection("reciept");
-                                    reciept_coll.delete_many(doc! {}, None).await.unwrap();
-
-                                    while let Ok(doc) = Document::from_reader(&mut reader) {
-                                        reciept_coll.insert_one(doc, None).await.unwrap();
-                                    }
-
-                                    //---------------------------------------------------------
-                                    //open and read UTXOs.bson file and insert it to database
-                                    let bson_file =
-                                        File::open("/home/etc/dump/Blockchain/UTXOs.bson").unwrap();
-                                    let mut reader = BufReader::new(bson_file);
-
-                                    let utxos_coll: Collection<Document> = db.collection("UTXOs");
-                                    utxos_coll.delete_many(doc! {}, None).await.unwrap();
-
-                                    while let Ok(doc) = Document::from_reader(&mut reader) {
-                                        utxos_coll.insert_one(doc, None).await.unwrap();
-                                    }
-
-                                    //---------------------------------------------------------
-                                    //open and read Blocks.bson file and insert it to database
-                                    let bson_file =
-                                        File::open("/home/etc/dump/Blockchain/Blocks.bson")
-                                            .unwrap();
-                                    let mut reader = BufReader::new(bson_file);
-
-                                    let block_coll: Collection<Document> = db.collection("Blocks");
-                                    block_coll.delete_many(doc! {}, None).await.unwrap();
-
-                                    let mut prev_hash = String::new();
-
-                                    while let Ok(doc) = Document::from_reader(&mut reader) {
-                                        let block: Block = from_document(doc.clone()).unwrap();
-
-                                        if block.header.prevhash
-                                            != "This block is Genesis".to_string()
-                                            && block.header.prevhash == prev_hash
-                                        {
-                                            prev_hash.clear();
-                                            let str_block_body =
-                                                serde_json::to_string(&block.body).unwrap();
-                                            prev_hash.push_str(&create_hash(str_block_body));
-                                            block_coll.insert_one(doc, None).await.unwrap();
-                                        } else if block.header.prevhash
-                                            == "This block is Genesis".to_string()
-                                        {
-                                            prev_hash.clear();
-                                            let str_block_body =
-                                                serde_json::to_string(&block.body).unwrap();
-                                            prev_hash.push_str(&create_hash(str_block_body));
-                                            block_coll.insert_one(doc, None).await.unwrap();
-                                        } else {
-                                            return Err(());
-                                        }
-                                    }
-                                    return Ok(());
-                                }
-                                Err(e) => {
-                                    write_log(&format!("unzip blockchain.zip error:{e}"));
-                                    return Err(());
+                                    let mut file_bytes = Vec::new();
+                                    file.read_to_end(&mut file_bytes).unwrap();
+                                    output.write_all(&file_bytes).unwrap();
                                 }
                             }
+
+                            //---------------------------------------------------------
+                            //open and read reciepts.bson file and insert it to database
+                            let reciept_bson =
+                                File::open("/home/etc/dump/Blockchain/reciept.bson").unwrap();
+                            let mut reciept_reader = BufReader::new(reciept_bson);
+
+                            let reciept_coll: Collection<Document> = db.collection("reciept");
+                            let sort = doc! {"_id": -1};
+                            let option = FindOneOptions::builder().sort(sort).build();
+                            match reciept_coll.find_one(None, option.clone()).await {
+                                Ok(doc) => {
+                                    if doc.is_some() {
+                                        match reciept_coll.delete_many(doc! {}, None).await {
+                                            Ok(_) => {
+                                                while let Ok(document) =
+                                                    Document::from_reader(&mut reciept_reader)
+                                                {
+                                                    reciept_coll
+                                                        .insert_one(document, None)
+                                                        .await
+                                                        .unwrap();
+                                                }
+                                            }
+                                            Err(_) => {
+                                                write_log("delete reciept collection error");
+                                                return Err(());
+                                            }
+                                        }
+                                    } else {
+                                        while let Ok(doc) =
+                                            Document::from_reader(&mut reciept_reader)
+                                        {
+                                            reciept_coll.insert_one(doc, None).await.unwrap();
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    while let Ok(doc) = Document::from_reader(&mut reciept_reader) {
+                                        reciept_coll.insert_one(doc, None).await.unwrap();
+                                    }
+                                }
+                            }
+
+                            //---------------------------------------------------------
+                            //open and read UTXOs.bson file and insert it to database
+                            let utxo_bson =
+                                File::open("/home/etc/dump/Blockchain/UTXOs.bson").unwrap();
+                            let mut utxo_reader = BufReader::new(utxo_bson);
+
+                            let utxo_coll: Collection<Document> = db.collection("UTXOs");
+
+                            match utxo_coll.find_one(None, option.clone()).await {
+                                Ok(doc) => {
+                                    if doc.is_some() {
+                                        match utxo_coll.delete_many(doc! {}, None).await {
+                                            Ok(_) => {
+                                                while let Ok(document) =
+                                                    Document::from_reader(&mut utxo_reader)
+                                                {
+                                                    utxo_coll
+                                                        .insert_one(document, None)
+                                                        .await
+                                                        .unwrap();
+                                                }
+                                            }
+                                            Err(_) => {
+                                                write_log("delete utxo collection error");
+                                                return Err(());
+                                            }
+                                        }
+                                    } else {
+                                        while let Ok(document) =
+                                            Document::from_reader(&mut utxo_reader)
+                                        {
+                                            utxo_coll.insert_one(document, None).await.unwrap();
+                                        }
+                                    }
+                                }
+                                Err(_) => {
+                                    while let Ok(document) = Document::from_reader(&mut utxo_reader)
+                                    {
+                                        utxo_coll.insert_one(document, None).await.unwrap();
+                                    }
+                                }
+                            }
+
+                            //---------------------------------------------------------
+                            //open and read Blocks.bson file and insert it to database
+                            let blocks_bson =
+                                File::open("/home/etc/dump/Blockchain/Blocks.bson").unwrap();
+                            let blocks_reader = BufReader::new(blocks_bson);
+
+                            let block_coll: Collection<Document> = db.collection("Blocks");
+                            match block_coll.find_one(None, option.clone()).await {
+                                Ok(doc) => {
+                                    if doc.is_some() {
+                                        match block_coll.delete_many(doc! {}, None).await {
+                                            Ok(_) => {
+                                                match insert_blocks(blocks_reader, block_coll).await
+                                                {
+                                                    Ok(_) => {}
+                                                    Err(_) => {
+                                                        write_log("insert block collection error");
+                                                        return Err(());
+                                                    }
+                                                }
+                                            }
+                                            Err(_) => {
+                                                write_log("delete block collection error");
+                                                return Err(());
+                                            }
+                                        }
+                                    } else {
+                                        match insert_blocks(blocks_reader, block_coll).await {
+                                            Ok(_) => {}
+                                            Err(_) => {
+                                                write_log("insert block collection error");
+                                                return Err(());
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(_) => match insert_blocks(blocks_reader, block_coll).await {
+                                    Ok(_) => {}
+                                    Err(_) => {
+                                        write_log("insert block collection error");
+                                        return Err(());
+                                    }
+                                },
+                            }
+
+                            return Ok(());
                         }
                         Err(e) => {
                             write_log(&format!(
@@ -155,4 +228,34 @@ pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
         }
         Err(_e) => return Err(()),
     }
+}
+
+
+//insert blocks of blockchain.zip that recieved from rpc server
+async fn insert_blocks(
+    mut blocks_reader: BufReader<File>,
+    block_coll: Collection<Document>,
+) -> Result<(), ()> {
+    let mut prev_hash = String::new();
+
+    while let Ok(doc) = Document::from_reader(&mut blocks_reader) {
+        let block: Block = from_document(doc.clone()).unwrap();
+
+        if block.header.prevhash != "This block is Genesis".to_string()
+            && block.header.prevhash == prev_hash
+        {
+            prev_hash.clear();
+            let str_block_body = serde_json::to_string(&block.body).unwrap();
+            prev_hash.push_str(&create_hash(str_block_body));
+            block_coll.insert_one(doc, None).await.unwrap();
+        } else if block.header.prevhash == "This block is Genesis".to_string() {
+            prev_hash.clear();
+            let str_block_body = serde_json::to_string(&block.body).unwrap();
+            prev_hash.push_str(&create_hash(str_block_body));
+            block_coll.insert_one(doc, None).await.unwrap();
+        } else {
+            return Err(());
+        }
+    }
+    Ok(())
 }
