@@ -112,7 +112,7 @@ async fn get_addresses(relays_path: &str) {
     {
         Ok(addr) => {
             let addresses: Addresses = serde_json::from_str(&addr).unwrap();
-
+            write_log(&format!("addresses:\n{:?}", addresses));
             let path_exist = fs::metadata(relays_path).is_ok();
             if path_exist {
                 fs::write(relays_path, "").unwrap();
@@ -196,6 +196,7 @@ pub async fn dialing(
                 for addr in rnd_relays {
                     match swarm.dial(addr.clone()) {
                         Ok(_) => {
+                            write_log(&format!("dialing with: {}", addr));
                             dialed_addr.push(addr.to_string());
                         }
                         Err(_) => {

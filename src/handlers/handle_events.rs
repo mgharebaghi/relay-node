@@ -129,7 +129,7 @@ pub async fn events(
                     }
                     None => {}
                 }
-                if dialed_addr.len() < 1 && relays.len() < 1 {
+                if dialed_addr.len() < 1 {
                     leader.clear();
                     fullnodes.clear();
                     connections.clear();
