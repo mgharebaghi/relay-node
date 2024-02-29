@@ -265,30 +265,30 @@ pub async fn events(
                                     write_log("new relay add");
                                 }
                                 if !*sync {
-                                    for addr in dialed_addr.clone() {
-                                        if addr.contains(&propagation_source.to_string()) {
-                                            match syncing(addr.clone()).await {
-                                                Ok(_) => {
-                                                    write_log("syncing completed");
-                                                    let fullnodes_req = Req {
-                                                        req: "fullnodes".to_string(),
-                                                    };
-                                                    swarm.behaviour_mut().req_res.send_request(
-                                                        &propagation_source,
-                                                        fullnodes_req,
-                                                    );
-                                                    break;
-                                                }
-                                                Err(_) => {
-                                                    write_log(
-                                                        "syncing error in get gossip(line 283)",
-                                                    );
-                                                    break;
-                                                }
-                                            }
-                                        } else {
-                                            break;
+                                    let mut addr = String::new();
+                                    for add in dialed_addr.clone() {
+                                        if add.contains(&propagation_source.to_string()) {
+                                            addr = add.clone();
                                         }
+                                    }
+                                    if dialed_addr.contains(&propagation_source.to_string()) {
+                                        match syncing(addr.clone()).await {
+                                            Ok(_) => {
+                                                write_log("syncing completed");
+                                                let fullnodes_req = Req {
+                                                    req: "fullnodes".to_string(),
+                                                };
+                                                swarm.behaviour_mut().req_res.send_request(
+                                                    &propagation_source,
+                                                    fullnodes_req,
+                                                );
+                                            }
+                                            Err(_) => {
+                                                write_log("syncing error in get gossip(line 283)");
+                                            }
+                                        }
+                                    } else {
+                                        break;
                                     }
                                 }
                             }
