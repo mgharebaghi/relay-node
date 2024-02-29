@@ -65,7 +65,7 @@ pub async fn events(
 
                 listeners.id.push(listener_id);
             }
-            SwarmEvent::ConnectionEstablished { peer_id, .. } => {     
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 if *sync {
                     match Command::new("mongodump")
                         .arg("--db")
@@ -273,14 +273,16 @@ pub async fn events(
                                                     let fullnodes_req = Req {
                                                         req: "fullnodes".to_string(),
                                                     };
-                                                    swarm
-                                                        .behaviour_mut()
-                                                        .req_res
-                                                        .send_request(&propagation_source, fullnodes_req);
+                                                    swarm.behaviour_mut().req_res.send_request(
+                                                        &propagation_source,
+                                                        fullnodes_req,
+                                                    );
                                                     break;
                                                 }
                                                 Err(_) => {
-                                                    write_log("syncing error in get gossip(line 283)");
+                                                    write_log(
+                                                        "syncing error in get gossip(line 283)",
+                                                    );
                                                     break;
                                                 }
                                             }
@@ -348,25 +350,30 @@ pub async fn events(
                                                 write_log("verifying block before syncing");
                                             }
                                             Err(e) => {
-                                                set_sync = false;
-                                                write_log("verifying block error in syncing blocks of handle events(line 351)");
-                                                write_log(&format!("block insert error: {}", e));
-                                                //remove node from fullnodes list because its block is wrong!
-                                                let index = fullnodes.iter().position(|node| {
-                                                    node.peer_id
-                                                        == gossipmsg
-                                                            .gossip
-                                                            .block
-                                                            .header
-                                                            .validator
-                                                            .parse()
-                                                            .unwrap()
-                                                });
-                                                match index {
-                                                    Some(i) => {
-                                                        fullnodes.remove(i);
+                                                if e != "reject" {
+                                                    set_sync = false;
+                                                    write_log("verifying block error in syncing blocks of handle events(line 351)");
+                                                    write_log(&format!(
+                                                        "block insert error: {}",
+                                                        e
+                                                    ));
+                                                    //remove node from fullnodes list because its block is wrong!
+                                                    let index = fullnodes.iter().position(|node| {
+                                                        node.peer_id
+                                                            == gossipmsg
+                                                                .gossip
+                                                                .block
+                                                                .header
+                                                                .validator
+                                                                .parse()
+                                                                .unwrap()
+                                                    });
+                                                    match index {
+                                                        Some(i) => {
+                                                            fullnodes.remove(i);
+                                                        }
+                                                        None => {}
                                                     }
-                                                    None => {}
                                                 }
                                             }
                                         }
