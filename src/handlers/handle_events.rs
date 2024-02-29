@@ -62,6 +62,8 @@ pub async fn events(
                     if *sync {
                         send_addr_to_server(my_addresses[0].clone()).await;
                     }
+                } else {
+                    write_log("You dont have public IP!");
                 }
 
                 listeners.id.push(listener_id);
