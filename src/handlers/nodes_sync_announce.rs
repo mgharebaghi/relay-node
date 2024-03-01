@@ -5,7 +5,7 @@ pub fn handle_sync_message(fullnode_subs: &mut Vec<FullNodes>, str_msg: &String)
         let new_fullnode = FullNodes {
             relay: new_sync_node.relay,
             peer_id: new_sync_node.peerid,
-            waiting: fullnode_subs.len() as i64 + 1,
+            waiting: (fullnode_subs.len() as i64 + 1) * 2,
             public_key: new_sync_node.public_key,
         };
         let mut fullnodes_pid = Vec::new();
