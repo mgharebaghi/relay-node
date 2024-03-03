@@ -179,7 +179,7 @@ async fn submit_block<'a>(
             let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
             let same_block = blocks_coll.find_one(filter, None).await.unwrap();
 
-            let last_block_filter = doc! {"_id": -1};
+            let last_block_filter = doc! {"header.number": -1};
             let last_block_find_opt = FindOneOptions::builder().sort(last_block_filter).build();
             let last_block_doc = blocks_coll.find_one(None, last_block_find_opt).await;
 
@@ -221,14 +221,21 @@ async fn submit_block<'a>(
                                             for i in 0..fullnode_subs.len() {
                                                 if fullnode_subs[i].peer_id.to_string()
                                                     == gossip_message.block.header.validator
+                                                    && gossip_message.next_leader
+                                                        != gossip_message.block.header.validator
                                                 {
                                                     fullnode_subs[i].waiting =
                                                         fullnode_subs.len() as i64;
-                                                } else {
-                                                    if fullnode_subs[i].waiting > 0 {
-                                                        fullnode_subs[i].waiting =
-                                                            fullnode_subs[i].waiting - 1;
-                                                    }
+                                                } else if fullnode_subs[i].waiting > 0
+                                                    && fullnode_subs[i].peer_id.to_string()
+                                                        != gossip_message.next_leader
+                                                {
+                                                    fullnode_subs[i].waiting =
+                                                        fullnode_subs[i].waiting - 1;
+                                                } else if fullnode_subs[i].peer_id.to_string()
+                                                    == gossip_message.next_leader
+                                                {
+                                                    fullnode_subs[i].waiting = 0;
                                                 }
                                             }
 

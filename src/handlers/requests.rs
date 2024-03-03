@@ -125,7 +125,7 @@ pub async fn handle_requests(
                         }
                     }
                     Err(_) => {
-                        write_log("sending gossip message to relay topic has problem");
+                        // write_log("sending gossip message to relay topic has problem");
                     }
                 }
 
