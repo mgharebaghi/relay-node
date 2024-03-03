@@ -123,9 +123,6 @@ pub async fn handle_transactions(message: String) {
                                         )
                                         .await;
                                     } else {
-                                        write_log(
-                                            "discorrect trx in check trx line(127)",
-                                        );
                                         insert_reciept(
                                             transaction,
                                             None,
@@ -135,7 +132,6 @@ pub async fn handle_transactions(message: String) {
                                         .await;
                                     }
                                 } else {
-                                    write_log("discorrect trx in check trx line(138)");
                                     insert_reciept(
                                         transaction,
                                         None,
@@ -145,7 +141,6 @@ pub async fn handle_transactions(message: String) {
                                     .await;
                                 }
                             } else {
-                                write_log("discorrect trx in check trx line(148)");
                                 insert_reciept(
                                     transaction,
                                     None,
@@ -159,7 +154,9 @@ pub async fn handle_transactions(message: String) {
                     Err(_) => {}
                 }
             }
-            Err(_) => {}
+            Err(_) => {
+                write_log("database connection problem in check_trx.rs(line 158)");
+            }
         }
     }
 }

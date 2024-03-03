@@ -374,7 +374,10 @@ async fn submit_block<'a>(
                 }
             }
         }
-        Err(_e) => Err("reject"),
+        Err(_e) => {
+            write_log("database connection problem in recieved_block.rs(line 378)");
+            Err("reject")
+        }
     }
 }
 
