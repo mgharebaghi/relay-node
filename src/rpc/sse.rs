@@ -63,17 +63,19 @@ async fn swarm() -> Swarm<gossipsub::Behaviour> {
 
     let mut dial_addr = String::new();
 
-    let address_file = File::open("/etc/myaddress.dat").unwrap();
-    let reader = BufReader::new(address_file);
-    for i in reader.lines() {
-        match i {
-            Ok(addr) => {
-                if addr.trim().len() > 0 {
-                    dial_addr.push_str(&addr);
-                    break;
+    {
+        let address_file = File::open("/etc/myaddress.dat").unwrap();
+        let reader = BufReader::new(address_file);
+        for i in reader.lines() {
+            match i {
+                Ok(addr) => {
+                    if addr.trim().len() > 0 {
+                        dial_addr.push_str(&addr);
+                        break;
+                    }
                 }
+                Err(e) => write_log(&format!("{}", e)),
             }
-            Err(e) => write_log(&format!("{}", e)),
         }
     }
 
@@ -123,7 +125,7 @@ pub async fn trx_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 Event::default().data(serde_json::to_string(&reciept).unwrap())
                             )) {
                                 Ok(_) => {}
-                                Err(_) => write_log("error from send tx channel in block section!"),
+                                Err(_) => {}
                             }
                         }
                     }
@@ -152,9 +154,7 @@ pub async fn block_sse() -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
                                 .data(serde_json::to_string(&gossipmessage.block).unwrap())))
                             {
                                 Ok(_) => {}
-                                Err(_) => {
-                                    write_log("error from send tx channel in transaction section!")
-                                }
+                                Err(_) => {}
                             }
                         }
                     }

@@ -1,4 +1,8 @@
-use std::{env::consts::OS, fs::{self, OpenOptions, File}, io::{BufWriter, Write}};
+use std::{
+    env::consts::OS,
+    fs::{self, File, OpenOptions},
+    io::{BufWriter, Write},
+};
 
 pub fn write_log(log: &str) {
     let mut relaylog_path = "";
@@ -9,21 +13,27 @@ pub fn write_log(log: &str) {
     }
     let log_exist = fs::metadata(relaylog_path).is_ok();
     if log_exist {
-        let write_file = OpenOptions::new()
-            .append(true)
-            .write(true)
-            .open(relaylog_path)
-            .unwrap();
-        let mut writer = BufWriter::new(write_file);
-        writeln!(writer, "{}", log).ok();
+        {
+            let write_file = OpenOptions::new()
+                .append(true)
+                .write(true)
+                .open(relaylog_path)
+                .unwrap();
+            let mut writer = BufWriter::new(write_file);
+            writeln!(writer, "{}", log).ok();
+            writer.flush().unwrap();
+        }
     } else {
-        File::create(relaylog_path).unwrap();
-        let write_file = OpenOptions::new()
-            .append(true)
-            .write(true)
-            .open(relaylog_path)
-            .unwrap();
-        let mut writer = BufWriter::new(write_file);
-        writeln!(writer, "{}", log).ok();
+        {
+            File::create(relaylog_path).unwrap();
+            let write_file = OpenOptions::new()
+                .append(true)
+                .write(true)
+                .open(relaylog_path)
+                .unwrap();
+            let mut writer = BufWriter::new(write_file);
+            writeln!(writer, "{}", log).ok();
+            writer.flush().unwrap();
+        }
     }
 }
