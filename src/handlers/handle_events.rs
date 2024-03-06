@@ -68,7 +68,8 @@ pub async fn events(
         dialed_addr,
         syncing_blocks,
         im_first,
-    ).await;
+    )
+    .await;
 }
 
 pub async fn handle_new_trx(swarm: Arc<Mutex<Swarm<CustomBehav>>>, clients_topic: IdentTopic) {
@@ -78,51 +79,56 @@ pub async fn handle_new_trx(swarm: Arc<Mutex<Swarm<CustomBehav>>>, clients_topic
     let option = ChangeStreamOptions::builder()
         .full_document(Some(mongodb::options::FullDocumentType::UpdateLookup))
         .build();
-    let mut change_stream = trx_coll.watch(pipeline, option).await.unwrap();
+    let change_stream = trx_coll.watch(pipeline, option).await;
+    match change_stream {
+        Ok(mut stream) => {
+            loop {
+                match stream.next().await {
+                    Some(change) => {
+                        match change {
+                            Ok(change_event) => {
+                                if let Some(new_transaction) = change_event.full_document {
+                                    let transaction: Transaction =
+                                        from_document(new_transaction).unwrap();
+                                    let str_trx = serde_json::to_string(&transaction).unwrap();
 
-    loop {
-        match change_stream.next().await {
-            Some(change) => {
-                match change {
-                    Ok(change_event) => {
-                        if let Some(new_transaction) = change_event.full_document {
-                            let transaction: Transaction = from_document(new_transaction).unwrap();
-                            let str_trx = serde_json::to_string(&transaction).unwrap();
+                                    //send true transaction to sse servers
+                                    let sse_topic = IdentTopic::new("sse");
+                                    match swarm
+                                        .behaviour_mut()
+                                        .gossipsub
+                                        .publish(sse_topic, str_trx.as_bytes())
+                                    {
+                                        Ok(_) => {}
+                                        Err(_) => {}
+                                    }
 
-                            //send true transaction to sse servers
-                            let sse_topic = IdentTopic::new("sse");
-                            match swarm
-                                .behaviour_mut()
-                                .gossipsub
-                                .publish(sse_topic, str_trx.as_bytes())
-                            {
-                                Ok(_) => {}
-                                Err(_) => {}
+                                    //send true transaction to connected Validators and relays
+                                    match swarm
+                                        .behaviour_mut()
+                                        .gossipsub
+                                        .publish(clients_topic.clone(), str_trx.as_bytes())
+                                    {
+                                        Ok(_) => {}
+                                        Err(_) => {}
+                                    }
+
+                                    //delete transaction after sent it to the network
+                                    let filter = doc! {"tx_hash": transaction.tx_hash};
+                                    match trx_coll.delete_one(filter, None).await {
+                                        Ok(_) => {}
+                                        Err(_) => {}
+                                    }
+                                }
                             }
-
-                            //send true transaction to connected Validators and relays
-                            match swarm
-                                .behaviour_mut()
-                                .gossipsub
-                                .publish(clients_topic.clone(), str_trx.as_bytes())
-                            {
-                                Ok(_) => {}
-                                Err(_) => {}
-                            }
-
-                            //delete transaction after sent it to the network
-                            let filter = doc! {"tx_hash": transaction.tx_hash};
-                            match trx_coll.delete_one(filter, None).await {
-                                Ok(_) => {}
-                                Err(_) => {}
-                            }
+                            Err(_) => {}
                         }
                     }
-                    Err(_) => {}
+                    None => {}
                 }
             }
-            None => {}
         }
+        Err(e) => write_log(&e.to_string()),
     }
 }
 
