@@ -11,6 +11,8 @@ pub use rpc::handle_requests;
 use std::env::consts::OS;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use libp2p::{
@@ -112,9 +114,11 @@ pub async fn run() {
     let mut sync = false;
     let mut syncing_blocks = Vec::new();
 
+    let swarm = Arc::new(Mutex::new(swarm));
+
     handle_streams(
         local_peer_id,
-        &mut swarm,
+        swarm,
         clients_topic,
         &mut my_addresses,
         &mut relays,

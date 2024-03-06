@@ -1,12 +1,17 @@
 use std::net::Ipv4Addr;
 use std::process::Command;
+use std::sync::{Arc, Mutex};
 
 use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
+use mongodb::bson::{doc, from_document, Document};
+use mongodb::options::ChangeStreamOptions;
+use mongodb::Collection;
 
 use super::create_log::write_log;
+use super::db_connection::blockchain_db;
 use super::get_addresses::get_addresses;
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::{handle, send_addr_to_server};
@@ -27,7 +32,105 @@ struct Listeners {
 }
 
 pub async fn events(
-    swarm: &mut Swarm<CustomBehav>,
+    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
+    local_peer_id: PeerId,
+    my_addresses: &mut Vec<String>,
+    clients: &mut Vec<PeerId>,
+    relays: &mut Vec<PeerId>,
+    clients_topic: IdentTopic,
+    relay_topic: IdentTopic,
+    connections: &mut Vec<PeerId>,
+    relay_topic_subscribers: &mut Vec<PeerId>,
+    client_topic_subscriber: &mut Vec<PeerId>,
+    wallet: &mut String,
+    leader: &mut String,
+    fullnodes: &mut Vec<FullNodes>,
+    sync: &mut bool,
+    dialed_addr: &mut Vec<String>,
+    syncing_blocks: &mut Vec<GetGossipMsg>,
+    im_first: bool,
+) {
+    let (_, _) = tokio::join!(
+        handle_new_trx(Arc::clone(&swarm), clients_topic.clone()),
+        handle_new_swarm_events(
+            swarm,
+            local_peer_id,
+            my_addresses,
+            clients,
+            relays,
+            clients_topic,
+            relay_topic,
+            connections,
+            relay_topic_subscribers,
+            client_topic_subscriber,
+            wallet,
+            leader,
+            fullnodes,
+            sync,
+            dialed_addr,
+            syncing_blocks,
+            im_first
+        )
+    );
+}
+
+async fn handle_new_trx(swarm: Arc<Mutex<Swarm<CustomBehav>>>, clients_topic: IdentTopic) {
+    let mut swarm  = swarm.lock().unwrap();
+    let trx_coll: Collection<Document> = blockchain_db().await.unwrap().collection("Transaction");
+    let pipeline = vec![doc! { "$match": { "operationType": "insert" } }];
+    let option = ChangeStreamOptions::builder()
+        .full_document(Some(mongodb::options::FullDocumentType::UpdateLookup))
+        .build();
+    let mut change_stream = trx_coll.watch(pipeline, option).await.unwrap();
+
+    loop {
+        match change_stream.next().await {
+            Some(change) => {
+                match change {
+                    Ok(change_event) => {
+                        if let Some(new_transaction) = change_event.full_document {
+                            let transaction:Transaction = from_document(new_transaction).unwrap();
+                            let str_trx = serde_json::to_string(&transaction).unwrap();
+
+                            //send true transaction to sse servers
+                            let sse_topic = IdentTopic::new("sse");
+                            match swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(sse_topic, str_trx.as_bytes())
+                            {
+                                Ok(_) => {}
+                                Err(_) => {}
+                            }
+
+                            //send true transaction to connected Validators and relays
+                            match swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(clients_topic.clone(), str_trx.as_bytes())
+                            {
+                                Ok(_) => {}
+                                Err(_) => {}
+                            }
+
+                            //delete transaction after sent it to the network
+                            let filter = doc! {"tx_hash": transaction.tx_hash};
+                            match trx_coll.delete_one(filter, None).await {
+                                Ok(_) => {}
+                                Err(_) => {}
+                            }
+                        }
+                    }
+                    Err(_) => {}
+                }
+            }
+            None => {}
+        }
+    }
+}
+
+async fn handle_new_swarm_events(
+    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
     local_peer_id: PeerId,
     my_addresses: &mut Vec<String>,
     clients: &mut Vec<PeerId>,
@@ -47,7 +150,9 @@ pub async fn events(
 ) {
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
+    let mut swarm = swarm.lock().unwrap();
 
+    //check swarm events that come from libp2p
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::NewListenAddr {
@@ -160,7 +265,7 @@ pub async fn events(
 
                 handle_outnode(
                     peer_id,
-                    swarm,
+                    &mut swarm,
                     clients_topic.clone(),
                     relays,
                     clients,
@@ -221,7 +326,7 @@ pub async fn events(
                                 message,
                                 clients,
                                 relays,
-                                swarm,
+                                &mut swarm,
                                 relay_topic.clone(),
                                 connections,
                                 relay_topic_subscribers,
@@ -300,7 +405,7 @@ pub async fn events(
                     libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
                         topic,
                         peer_id,
-                        swarm,
+                        &mut swarm,
                         relay_topic_subscribers,
                         connections,
                         clients,
@@ -316,7 +421,7 @@ pub async fn events(
                             if *sync {
                                 handle_requests(
                                     request,
-                                    swarm,
+                                    &mut swarm,
                                     channel,
                                     wallet,
                                     fullnodes,

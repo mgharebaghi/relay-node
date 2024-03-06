@@ -2,7 +2,7 @@ use std::{
     env::consts::OS,
     fs::{self, File, OpenOptions},
     io::{BufRead, BufReader, BufWriter, Write},
-    net::TcpStream,
+    net::TcpStream, sync::{Arc, Mutex},
 };
 
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
@@ -18,7 +18,7 @@ mod send_address;
 pub mod structures;
 use handle_events::events;
 use structures::CustomBehav;
-mod check_trx;
+pub mod check_trx;
 pub mod create_log;
 pub mod db_connection;
 mod get_addresses;
@@ -41,7 +41,7 @@ struct Addresses {
 //handle streams that come to swarm events and relays.dat file to add or remove addresses
 pub async fn handle_streams(
     local_peer_id: PeerId,
-    swarm: &mut Swarm<CustomBehav>,
+    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
     clients_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
     relays: &mut Vec<PeerId>,
@@ -73,15 +73,14 @@ pub async fn handle_streams(
                 "Relay could not connect to centichain.org for get latest relays addresses! mod.rs(line 73)",
             ),
         }
-
-        let mut dialed_addr = dialing(relays_path, local_peer_id, swarm, sync, my_addresses).await;
+        let mut dialed_addr = dialing(relays_path, local_peer_id, Arc::clone(&swarm), sync, my_addresses).await;
         let mut im_first = false;
         if dialed_addr.len() == 0 {
             im_first = true;
         }
         write_log(&format!("im first: {}", im_first));
         events(
-            swarm,
+            Arc::clone(&swarm),
             local_peer_id,
             my_addresses,
             clients,
@@ -148,10 +147,11 @@ async fn get_addresses(relays_path: &str) {
 pub async fn dialing(
     relays_path: &str,
     local_peer_id: PeerId,
-    swarm: &mut Swarm<CustomBehav>,
+    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
     sync: &mut bool,
     my_addresses: &mut Vec<String>,
 ) -> Vec<String> {
+    let mut swarm = swarm.lock().unwrap();
     let relays_file_exist = fs::metadata(relays_path).is_ok();
     let mut dialed_addr: Vec<String> = Vec::new();
     if relays_file_exist {
