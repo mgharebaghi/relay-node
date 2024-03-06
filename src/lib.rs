@@ -22,6 +22,8 @@ use libp2p::{
     PeerId, StreamProtocol, SwarmBuilder,
 };
 
+use crate::handlers::handle_events::handle_new_trx;
+
 pub async fn run() {
     let mut wallet = String::new();
     let mut wallet_path = "";
@@ -116,22 +118,24 @@ pub async fn run() {
 
     let swarm = Arc::new(Mutex::new(swarm));
 
-    handle_streams(
-        local_peer_id,
-        swarm,
-        clients_topic,
-        &mut my_addresses,
-        &mut relays,
-        &mut clients,
-        relay_topic,
-        &mut connections,
-        &mut relay_topic_subscribers,
-        &mut client_topic_subscribers,
-        &mut wallet,
-        &mut leader,
-        &mut fullnode_subs,
-        &mut sync,
-        &mut syncing_blocks,
-    )
-    .await;
+    let (_, _) = tokio::join!(
+        handle_new_trx(Arc::clone(&swarm), clients_topic.clone()),
+        handle_streams(
+            local_peer_id,
+            swarm,
+            clients_topic,
+            &mut my_addresses,
+            &mut relays,
+            &mut clients,
+            relay_topic,
+            &mut connections,
+            &mut relay_topic_subscribers,
+            &mut client_topic_subscribers,
+            &mut wallet,
+            &mut leader,
+            &mut fullnode_subs,
+            &mut sync,
+            &mut syncing_blocks,
+        )
+    );
 }

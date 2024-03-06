@@ -50,43 +50,29 @@ pub async fn events(
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
 ) {
-    let breaker = Arc::new(Mutex::new(false));
-    let (_, _) = tokio::join!(
-        handle_new_trx(
-            Arc::clone(&swarm),
-            clients_topic.clone(),
-            Arc::clone(&breaker)
-        ),
-        handle_new_swarm_events(
-            swarm,
-            local_peer_id,
-            my_addresses,
-            clients,
-            relays,
-            clients_topic,
-            relay_topic,
-            connections,
-            relay_topic_subscribers,
-            client_topic_subscriber,
-            wallet,
-            leader,
-            fullnodes,
-            sync,
-            dialed_addr,
-            syncing_blocks,
-            im_first,
-            breaker
-        )
-    );
+    handle_new_swarm_events(
+        swarm,
+        local_peer_id,
+        my_addresses,
+        clients,
+        relays,
+        clients_topic,
+        relay_topic,
+        connections,
+        relay_topic_subscribers,
+        client_topic_subscriber,
+        wallet,
+        leader,
+        fullnodes,
+        sync,
+        dialed_addr,
+        syncing_blocks,
+        im_first,
+    ).await;
 }
 
-async fn handle_new_trx(
-    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
-    clients_topic: IdentTopic,
-    breaker: Arc<Mutex<bool>>,
-) {
+pub async fn handle_new_trx(swarm: Arc<Mutex<Swarm<CustomBehav>>>, clients_topic: IdentTopic) {
     let mut swarm = swarm.lock().unwrap();
-    let breaker = breaker.lock().unwrap();
     let trx_coll: Collection<Document> = blockchain_db().await.unwrap().collection("Transaction");
     let pipeline = vec![doc! { "$match": { "operationType": "insert" } }];
     let option = ChangeStreamOptions::builder()
@@ -95,52 +81,47 @@ async fn handle_new_trx(
     let mut change_stream = trx_coll.watch(pipeline, option).await.unwrap();
 
     loop {
-        if *breaker == true {
-            break;
-        } else {
-            match change_stream.next().await {
-                Some(change) => {
-                    match change {
-                        Ok(change_event) => {
-                            if let Some(new_transaction) = change_event.full_document {
-                                let transaction: Transaction =
-                                    from_document(new_transaction).unwrap();
-                                let str_trx = serde_json::to_string(&transaction).unwrap();
+        match change_stream.next().await {
+            Some(change) => {
+                match change {
+                    Ok(change_event) => {
+                        if let Some(new_transaction) = change_event.full_document {
+                            let transaction: Transaction = from_document(new_transaction).unwrap();
+                            let str_trx = serde_json::to_string(&transaction).unwrap();
 
-                                //send true transaction to sse servers
-                                let sse_topic = IdentTopic::new("sse");
-                                match swarm
-                                    .behaviour_mut()
-                                    .gossipsub
-                                    .publish(sse_topic, str_trx.as_bytes())
-                                {
-                                    Ok(_) => {}
-                                    Err(_) => {}
-                                }
+                            //send true transaction to sse servers
+                            let sse_topic = IdentTopic::new("sse");
+                            match swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(sse_topic, str_trx.as_bytes())
+                            {
+                                Ok(_) => {}
+                                Err(_) => {}
+                            }
 
-                                //send true transaction to connected Validators and relays
-                                match swarm
-                                    .behaviour_mut()
-                                    .gossipsub
-                                    .publish(clients_topic.clone(), str_trx.as_bytes())
-                                {
-                                    Ok(_) => {}
-                                    Err(_) => {}
-                                }
+                            //send true transaction to connected Validators and relays
+                            match swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(clients_topic.clone(), str_trx.as_bytes())
+                            {
+                                Ok(_) => {}
+                                Err(_) => {}
+                            }
 
-                                //delete transaction after sent it to the network
-                                let filter = doc! {"tx_hash": transaction.tx_hash};
-                                match trx_coll.delete_one(filter, None).await {
-                                    Ok(_) => {}
-                                    Err(_) => {}
-                                }
+                            //delete transaction after sent it to the network
+                            let filter = doc! {"tx_hash": transaction.tx_hash};
+                            match trx_coll.delete_one(filter, None).await {
+                                Ok(_) => {}
+                                Err(_) => {}
                             }
                         }
-                        Err(_) => {}
                     }
+                    Err(_) => {}
                 }
-                None => {}
             }
+            None => {}
         }
     }
 }
@@ -163,12 +144,10 @@ async fn handle_new_swarm_events(
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
-    breaker: Arc<Mutex<bool>>,
 ) {
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
-    let mut breaker = breaker.lock().unwrap();
 
     //check swarm events that come from libp2p
     loop {
@@ -241,7 +220,6 @@ async fn handle_new_swarm_events(
                     syncing_blocks.clear();
                     my_addresses.clear();
                     *sync = false;
-                    *breaker = true;
                     break;
                 }
             }
@@ -327,7 +305,6 @@ async fn handle_new_swarm_events(
                     syncing_blocks.clear();
                     my_addresses.clear();
                     *sync = false;
-                    *breaker = true;
                     break;
                 }
             }

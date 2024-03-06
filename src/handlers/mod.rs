@@ -9,7 +9,7 @@ use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use rand::seq::SliceRandom;
 
 mod gossip_messages;
-mod handle_events;
+pub mod handle_events;
 mod handle_listeners;
 mod outnodes;
 mod remove_relays;
