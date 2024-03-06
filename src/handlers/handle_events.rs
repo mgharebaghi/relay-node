@@ -8,7 +8,7 @@ use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 use mongodb::bson::{doc, from_document, Document};
 use mongodb::options::ChangeStreamOptions;
-use mongodb::Collection;
+use mongodb::{change_stream, Collection};
 
 use super::create_log::write_log;
 use super::db_connection::blockchain_db;
@@ -74,73 +74,32 @@ pub async fn events(
 
 pub async fn handle_new_trx(swarm: Arc<Mutex<Swarm<CustomBehav>>>, clients_topic: IdentTopic) {
     let mut swarm = swarm.lock().unwrap();
-    match blockchain_db()
-        .await
-        .unwrap()
-        .create_collection("Transaction", None)
-        .await
-    {
-        Ok(_) => {
-            let trx_coll: Collection<Document> =
-                blockchain_db().await.unwrap().collection("Transaction");
-            let pipeline = vec![doc! { "$match": { "operationType": "insert" } }];
-            let option = ChangeStreamOptions::builder()
-                .full_document(Some(mongodb::options::FullDocumentType::UpdateLookup))
-                .build();
-            let change_stream = trx_coll.watch(pipeline, option).await;
-            match change_stream {
-                Ok(mut stream) => {
+    match blockchain_db().await{
+        Ok(database) => {
+            let trx_coll:Collection<Document> = database.collection("Transactions");
+            match trx_coll.watch(None, None).await {
+                Ok(mut change_stream) => {
                     loop {
-                        match stream.next().await {
-                            Some(change) => {
-                                match change {
-                                    Ok(change_event) => {
-                                        if let Some(new_transaction) = change_event.full_document {
-                                            let transaction: Transaction =
-                                                from_document(new_transaction).unwrap();
-                                            let str_trx =
-                                                serde_json::to_string(&transaction).unwrap();
-
-                                            //send true transaction to sse servers
-                                            let sse_topic = IdentTopic::new("sse");
-                                            match swarm
-                                                .behaviour_mut()
-                                                .gossipsub
-                                                .publish(sse_topic, str_trx.as_bytes())
-                                            {
-                                                Ok(_) => {}
-                                                Err(_) => {}
-                                            }
-
-                                            //send true transaction to connected Validators and relays
-                                            match swarm
-                                                .behaviour_mut()
-                                                .gossipsub
-                                                .publish(clients_topic.clone(), str_trx.as_bytes())
-                                            {
-                                                Ok(_) => {}
-                                                Err(_) => {}
-                                            }
-
-                                            //delete transaction after sent it to the network
-                                            let filter = doc! {"tx_hash": transaction.tx_hash};
-                                            match trx_coll.delete_one(filter, None).await {
-                                                Ok(_) => {}
-                                                Err(_) => {}
-                                            }
-                                        }
-                                    }
-                                    Err(_) => {}
+                        match change_stream.next().await.transpose() {
+                            Ok(stream) => {
+                                if let Some(event) = stream {
+                                    write_log(&format!("operation type: {:?}", event.operation_type));
                                 }
                             }
-                            None => {}
+                            Err(e) => {
+                                write_log(&format!("error from change stream: {}", e));
+                            }
                         }
                     }
                 }
-                Err(e) => write_log(&e.to_string()),
+                Err(e) => {
+                    write_log(&format!("error from watch: {}", e));
+                }
             }
         }
-        Err(e) => {write_log(&e.to_string())}
+        Err(e) => {
+            write_log(&format!("error ffrom db connection in handle new trx: {}", e));
+        }
     }
 }
 
