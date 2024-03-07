@@ -92,7 +92,6 @@ pub async fn handle_requests(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
         .route("/trx", post(handle_transaction))
-        .with_state(swarm)
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))

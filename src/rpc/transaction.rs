@@ -17,19 +17,8 @@ use crate::{
 use super::server::TxRes;
 
 pub async fn handle_transaction(
-    State(swarm): State<Arc<Mutex<Swarm<CustomBehav>>>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
-    match swarm.lock() {
-        Ok(mut s) => {
-            let str_gossip = serde_json::to_string(&transaction).unwrap();
-            s.behaviour_mut().gossipsub.publish(IdentTopic::new("client"), str_gossip.as_bytes()).unwrap();
-        }
-        Err(_) => {
-            write_log("error from mutext guard in transaction handle on rpc server!");
-        }
-    }
-
     //insert transaction into db at first
     let trx_todoc = to_document(&transaction).unwrap();
     let transactions_coll: Collection<Document> =
