@@ -1,16 +1,39 @@
-use axum::{extract, Json};
-use mongodb::{bson::{to_document, Document}, Collection};
+use std::sync::{Arc, Mutex};
 
-use crate::handlers::{check_trx, db_connection::blockchain_db, structures::Transaction};
+use axum::{
+    extract::{self},
+    Json,
+};
+use libp2p::{gossipsub::IdentTopic, Swarm};
+use mongodb::{
+    bson::{to_document, Document},
+    Collection,
+};
+
+use crate::{
+    handlers::{check_trx, db_connection::blockchain_db, structures::Transaction}, write_log, CustomBehav
+};
 
 use super::server::TxRes;
 
 pub async fn handle_transaction(
+    axum::Extension(swarm): axum::Extension<Arc<Mutex<Swarm<CustomBehav>>>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
+    match swarm.lock() {
+        Ok(mut s) => {
+            let str_gossip = serde_json::to_string(&transaction).unwrap();
+            s.behaviour_mut().gossipsub.publish(IdentTopic::new("client"), str_gossip.as_bytes()).unwrap();
+        }
+        Err(_) => {
+            write_log("error from mutext guard in transaction handle on rpc server!");
+        }
+    }
+
     //insert transaction into db at first
     let trx_todoc = to_document(&transaction).unwrap();
-    let transactions_coll:Collection<Document> = blockchain_db().await.unwrap().collection("Transactions");
+    let transactions_coll: Collection<Document> =
+        blockchain_db().await.unwrap().collection("Transactions");
     transactions_coll.insert_one(trx_todoc, None).await.unwrap();
 
     //insert transaction reciept into db

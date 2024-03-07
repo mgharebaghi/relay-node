@@ -1,30 +1,27 @@
 mod handlers;
 pub mod rpc;
-use handlers::create_log::write_log;
+pub use handlers::create_log::write_log;
 use handlers::handle_streams;
-use handlers::structures::CustomBehav;
+pub use handlers::structures::CustomBehav;
 use handlers::structures::FullNodes;
-use handlers::structures::Req;
-use handlers::structures::Res;
-use libp2p::Multiaddr;
+use libp2p::Swarm;
 pub use rpc::handle_requests;
 use std::env::consts::OS;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::time::Duration;
 
 use libp2p::{
     gossipsub::IdentTopic,
-    identity::Keypair,
-    request_response::{cbor, ProtocolSupport},
-    PeerId, StreamProtocol, SwarmBuilder,
+    PeerId,
 };
 
-use crate::handlers::handle_events::handle_new_trx;
+pub mod swarm_config;
+pub use swarm_config::new_swarm;
 
-pub async fn run() {
+
+pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let mut wallet = String::new();
     let mut wallet_path = "";
     if OS == "linux" {
@@ -49,62 +46,6 @@ pub async fn run() {
         }
     }
 
-    let relay_topic = IdentTopic::new("relay");
-    let clients_topic = IdentTopic::new("client");
-
-    //generate peer keys and peer id for network
-    let keypair = Keypair::generate_ecdsa();
-    let local_peer_id = PeerId::from(keypair.public());
-
-    //gossip protocol config
-    let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
-    let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
-    gossip_cfg.duplicate_cache_time();
-    let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-    //request and response protocol config
-    let req_res = cbor::Behaviour::<Req, Res>::new(
-        [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
-        libp2p::request_response::Config::default(),
-    );
-
-    //Definition of behavior
-    let mut behaviour = CustomBehav { gossipsub, req_res };
-
-    behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
-    behaviour
-        .gossipsub
-        .subscribe(&clients_topic.clone())
-        .unwrap();
-
-    //config swarm
-    let swarm_config = libp2p::swarm::Config::with_tokio_executor()
-        .with_idle_connection_timeout(Duration::from_secs(u64::MAX));
-
-    let mut swarm = SwarmBuilder::with_existing_identity(keypair)
-        .with_tokio()
-        .with_tcp(
-            Default::default(),
-            (libp2p::tls::Config::new, libp2p::noise::Config::new),
-            libp2p::yamux::Config::default,
-        )
-        .unwrap()
-        .with_quic()
-        .with_dns()
-        .unwrap()
-        .with_websocket(
-            (libp2p::tls::Config::new, libp2p::noise::Config::new),
-            libp2p::yamux::Config::default,
-        )
-        .await
-        .unwrap()
-        .with_behaviour(|_key| behaviour)
-        .unwrap()
-        .with_swarm_config(|_conf| swarm_config)
-        .build();
-
-    let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
-    swarm.listen_on(listener).unwrap();
-
     let mut connections: Vec<PeerId> = Vec::new();
     let mut relay_topic_subscribers: Vec<PeerId> = Vec::new();
     let mut client_topic_subscribers: Vec<PeerId> = Vec::new();
@@ -115,27 +56,25 @@ pub async fn run() {
     let mut my_addresses = Vec::new();
     let mut sync = false;
     let mut syncing_blocks = Vec::new();
+    let relay_topic = IdentTopic::new("relay");
+    let clients_topic = IdentTopic::new("client");
 
-    let swarm = Arc::new(Mutex::new(swarm));
-
-    let (_, _) = tokio::join!(
-        handle_new_trx(Arc::clone(&swarm), clients_topic.clone()),
-        handle_streams(
-            local_peer_id,
-            swarm,
-            clients_topic,
-            &mut my_addresses,
-            &mut relays,
-            &mut clients,
-            relay_topic,
-            &mut connections,
-            &mut relay_topic_subscribers,
-            &mut client_topic_subscribers,
-            &mut wallet,
-            &mut leader,
-            &mut fullnode_subs,
-            &mut sync,
-            &mut syncing_blocks,
-        )
-    );
+    handle_streams(
+        local_peer_id,
+        swarm,
+        clients_topic,
+        &mut my_addresses,
+        &mut relays,
+        &mut clients,
+        relay_topic,
+        &mut connections,
+        &mut relay_topic_subscribers,
+        &mut client_topic_subscribers,
+        &mut wallet,
+        &mut leader,
+        &mut fullnode_subs,
+        &mut sync,
+        &mut syncing_blocks,
+    )
+    .await;
 }

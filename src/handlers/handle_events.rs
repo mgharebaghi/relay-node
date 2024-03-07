@@ -72,34 +72,33 @@ pub async fn events(
     .await;
 }
 
-pub async fn handle_new_trx(swarm: Arc<Mutex<Swarm<CustomBehav>>>, clients_topic: IdentTopic) {
+pub async fn handle_new_trx(
+    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
+    clients_topic: IdentTopic,
+    transaction: Transaction,
+) {
     let mut swarm = swarm.lock().unwrap();
-    match blockchain_db().await{
-        Ok(database) => {
-            let trx_coll:Collection<Document> = database.collection("Transactions");
-            match trx_coll.watch(None, None).await {
-                Ok(mut change_stream) => {
-                    loop {
-                        match change_stream.next().await.transpose() {
-                            Ok(stream) => {
-                                if let Some(event) = stream {
-                                    write_log(&format!("operation type: {:?}", event.operation_type));
-                                }
-                            }
-                            Err(e) => {
-                                write_log(&format!("error from change stream: {}", e));
-                            }
-                        }
-                    }
-                }
-                Err(e) => {
-                    write_log(&format!("error from watch: {}", e));
-                }
-            }
-        }
-        Err(e) => {
-            write_log(&format!("error ffrom db connection in handle new trx: {}", e));
-        }
+    let str_trx = serde_json::to_string(&transaction).unwrap();
+
+    //send true transaction to connected Validators and relays
+    match swarm
+        .behaviour_mut()
+        .gossipsub
+        .publish(clients_topic, str_trx.as_bytes())
+    {
+        Ok(_) => {}
+        Err(_) => {}
+    }
+    
+    //send true transaction to sse servers
+    let sse_topic = IdentTopic::new("sse");
+    match swarm
+        .behaviour_mut()
+        .gossipsub
+        .publish(sse_topic, str_trx.as_bytes())
+    {
+        Ok(_) => {}
+        Err(_) => {}
     }
 }
 
