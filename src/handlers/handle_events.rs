@@ -6,12 +6,8 @@ use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
-use mongodb::bson::{doc, from_document, Document};
-use mongodb::options::ChangeStreamOptions;
-use mongodb::{change_stream, Collection};
 
 use super::create_log::write_log;
-use super::db_connection::blockchain_db;
 use super::get_addresses::get_addresses;
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::{handle, send_addr_to_server};
@@ -70,36 +66,6 @@ pub async fn events(
         im_first,
     )
     .await;
-}
-
-pub async fn handle_new_trx(
-    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
-    clients_topic: IdentTopic,
-    transaction: Transaction,
-) {
-    let mut swarm = swarm.lock().unwrap();
-    let str_trx = serde_json::to_string(&transaction).unwrap();
-
-    //send true transaction to connected Validators and relays
-    match swarm
-        .behaviour_mut()
-        .gossipsub
-        .publish(clients_topic, str_trx.as_bytes())
-    {
-        Ok(_) => {}
-        Err(_) => {}
-    }
-    
-    //send true transaction to sse servers
-    let sse_topic = IdentTopic::new("sse");
-    match swarm
-        .behaviour_mut()
-        .gossipsub
-        .publish(sse_topic, str_trx.as_bytes())
-    {
-        Ok(_) => {}
-        Err(_) => {}
-    }
 }
 
 async fn handle_new_swarm_events(

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use axum::{
-    extract::{self},
+    extract::{self, State},
     Json,
 };
 use libp2p::{gossipsub::IdentTopic, Swarm};
@@ -17,7 +17,7 @@ use crate::{
 use super::server::TxRes;
 
 pub async fn handle_transaction(
-    axum::Extension(swarm): axum::Extension<Arc<Mutex<Swarm<CustomBehav>>>>,
+    State(swarm): State<Arc<Mutex<Swarm<CustomBehav>>>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
     match swarm.lock() {
