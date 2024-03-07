@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use axum::{
-    extract::{self, State},
-    Json,
+    extract::{self},
+    Extension, Json,
 };
 use libp2p::{gossipsub::IdentTopic, Swarm};
 use mongodb::{
@@ -11,14 +11,27 @@ use mongodb::{
 };
 
 use crate::{
-    handlers::{check_trx, db_connection::blockchain_db, structures::Transaction}, write_log, CustomBehav
+    handlers::{check_trx, db_connection::blockchain_db, structures::Transaction},
+    write_log, CustomBehav,
 };
 
 use super::server::TxRes;
 
 pub async fn handle_transaction(
+    Extension(swarm): Extension<Arc<Mutex<Swarm<CustomBehav>>>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
+    match swarm.lock() {
+        Ok(mut swarm) => {
+            let str_trx = serde_json::to_string(&transaction).unwrap();
+            swarm
+                .behaviour_mut()
+                .gossipsub
+                .publish(IdentTopic::new("client"), str_trx.as_bytes())
+                .unwrap();
+        }
+        Err(e) => write_log(&format!("error from lock swarm in server: {}", e)),
+    }
     //insert transaction into db at first
     let trx_todoc = to_document(&transaction).unwrap();
     let transactions_coll: Collection<Document> =
