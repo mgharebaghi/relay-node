@@ -2,18 +2,26 @@ use libp2p::Swarm;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use std::{net::SocketAddr, sync::{Arc, Mutex}};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 use tower::limit::ConcurrencyLimitLayer;
 
 use axum::{
-    http::Method, routing::{get, post}, Extension, Router
+    http::Method,
+    routing::{get, post},
+    Extension, Router,
 };
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
     services::ServeDir,
 };
 
-use crate::{handlers::{create_log::write_log, structures::Block}, CustomBehav};
+use crate::{
+    handlers::{create_log::write_log, structures::Block},
+    CustomBehav,
+};
 
 use super::{
     block::handle_block,
@@ -84,6 +92,7 @@ pub async fn handle_requests(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
         .allow_origin(Any)
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
+        .layer(Extension(swarm))
         .route("/trx", post(handle_transaction))
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
@@ -93,7 +102,6 @@ pub async fn handle_requests(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
         .route("/blocksse", get(block_sse))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100))
-        .layer(Extension(swarm))
         .nest_service("/blockchain", ServeDir::new("/home"));
     let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
 
