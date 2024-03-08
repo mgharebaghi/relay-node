@@ -7,8 +7,7 @@ use tower::limit::ConcurrencyLimitLayer;
 
 use axum::{
     http::Method,
-    routing::{get, post},
-    Extension, Router,
+    routing::{get, post}, Router,
 };
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
@@ -90,7 +89,7 @@ pub async fn handle_requests(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
         .route("/trx", post(handle_transaction))
-        .layer(Extension(swarm.clone()))
+        .with_state(swarm)
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))
