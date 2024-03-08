@@ -20,7 +20,6 @@ use libp2p::{
 pub mod swarm_config;
 pub use swarm_config::new_swarm;
 
-
 pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let mut wallet = String::new();
     let mut wallet_path = "";
