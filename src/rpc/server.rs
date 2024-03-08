@@ -2,12 +2,16 @@ use libp2p::Swarm;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use std::{net::SocketAddr, sync::{Arc, Mutex}};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 use tower::limit::ConcurrencyLimitLayer;
 
 use axum::{
     http::Method,
-    routing::{get, post}, Router,
+    routing::{get, post},
+    Extension, Router,
 };
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
@@ -88,8 +92,8 @@ pub async fn handle_requests(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
         .allow_origin(Any)
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
+        .layer(Extension(swarm))
         .route("/trx", post(handle_transaction))
-        .with_state(swarm)
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))
