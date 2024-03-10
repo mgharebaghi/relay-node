@@ -21,7 +21,7 @@ pub use handlers::structures::Transaction;
 pub use swarm_config::new_swarm;
 
 pub static SWARM: Lazy<(Arc<Mutex<Swarm<CustomBehav>>>, PeerId)> =
-    Lazy::new(|| block_on(async { (Arc::new(Mutex::new(new_swarm().await.0)), new_swarm().await.1) }));
+    Lazy::new(|| (Arc::new(Mutex::new(block_on(async {new_swarm().await.0}))), block_on(async {new_swarm().await.1})));
 
 pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let mut wallet = String::new();
