@@ -18,16 +18,17 @@ use crate::{
 use super::server::TxRes;
 
 pub async fn handle_transaction(
-    mut tx: Extension<Sender<String>>,
+    // mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
 
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
-    match tx.send(str_trx.clone()).await {
-        Ok(_) => {write_log("tx send works")}
-        Err(e) => write_log(&format!("tx send problem: {}", e))
-    }
+    // match tx.send(str_trx.clone()).await {
+    //     Ok(_) => {write_log("tx send works")}
+    //     Err(e) => write_log(&format!("tx send problem: {}", e))
+    // }
+    write_log(&str_trx);
     check_trx::handle_transactions(str_trx).await;
 
     //send response to the client
