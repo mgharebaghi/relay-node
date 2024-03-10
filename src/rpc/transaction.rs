@@ -1,18 +1,11 @@
-use std::sync::{Arc, Mutex};
-
 use axum::{
     extract::{self},
-    Extension, Json,
-};
-use futures::{channel::mpsc::Sender, SinkExt};
-use libp2p::{gossipsub::IdentTopic, Swarm};
-use mongodb::{
-    bson::{to_document, Document},
-    Collection,
+    Json,
 };
 
 use crate::{
-    handlers::{check_trx, db_connection::blockchain_db, structures::Transaction}, write_log, CustomBehav
+    handlers::{check_trx, structures::Transaction},
+    propagate_trx,
 };
 
 use super::server::TxRes;
@@ -21,14 +14,9 @@ pub async fn handle_transaction(
     // mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
-
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
-    // match tx.send(str_trx.clone()).await {
-    //     Ok(_) => {write_log("tx send works")}
-    //     Err(e) => write_log(&format!("tx send problem: {}", e))
-    // }
-    write_log(&str_trx);
+    propagate_trx(str_trx.clone());
     check_trx::handle_transactions(str_trx).await;
 
     //send response to the client

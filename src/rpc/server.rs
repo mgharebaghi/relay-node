@@ -1,28 +1,20 @@
-use futures::channel::mpsc::Sender;
-use libp2p::Swarm;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use std::{
-    net::SocketAddr,
-    sync::{Arc, Mutex},
-};
+use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 
 use axum::{
     http::Method,
     routing::{get, post},
-    Extension, Router,
+    Router,
 };
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
     services::ServeDir,
 };
 
-use crate::{
-    handlers::{create_log::write_log, structures::{Block, Transaction}},
-    CustomBehav,
-};
+use crate::{handlers::create_log::write_log, handlers::structures::Block};
 
 use super::{
     block::handle_block,
@@ -87,14 +79,13 @@ pub struct TxRes {
     pub description: String,
 }
 
-pub async fn handle_requests(tx: Arc<Mutex<Sender<String>>>) {
+pub async fn handle_requests() {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
         .allow_origin(Any)
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
         .route("/trx", post(handle_transaction))
-        // .layer(Extension(tx))
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))

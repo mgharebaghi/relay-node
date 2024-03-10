@@ -1,10 +1,12 @@
 mod handlers;
 pub mod rpc;
+use futures::executor::block_on;
 pub use handlers::create_log::write_log;
 use handlers::handle_streams;
 pub use handlers::structures::CustomBehav;
 use handlers::structures::FullNodes;
 use libp2p::Swarm;
+use once_cell::sync::Lazy;
 pub use rpc::handle_requests;
 use std::env::consts::OS;
 use std::fs::File;
@@ -12,14 +14,14 @@ use std::io::{BufRead, BufReader};
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use libp2p::{
-    gossipsub::IdentTopic,
-    PeerId,
-};
+use libp2p::{gossipsub::IdentTopic, PeerId};
 
 pub mod swarm_config;
-pub use swarm_config::new_swarm;
 pub use handlers::structures::Transaction;
+pub use swarm_config::new_swarm;
+
+pub static SWARM: Lazy<(Arc<Mutex<Swarm<CustomBehav>>>, PeerId)> =
+    Lazy::new(|| block_on(async { (Arc::new(Mutex::new(new_swarm().await.0)), new_swarm().await.1) }));
 
 pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let mut wallet = String::new();
@@ -77,4 +79,10 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
         &mut syncing_blocks,
     )
     .await;
+}
+
+
+pub fn propagate_trx(trx: String) {
+    SWARM.0.lock().unwrap().behaviour_mut().gossipsub.publish(IdentTopic::new("client"), trx.as_bytes()).unwrap();
+    write_log(&trx)
 }
