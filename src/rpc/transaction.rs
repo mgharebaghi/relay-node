@@ -4,6 +4,7 @@ use axum::{
     extract::{self},
     Extension, Json,
 };
+use futures::{channel::mpsc::Sender, SinkExt};
 use libp2p::{gossipsub::IdentTopic, Swarm};
 use mongodb::{
     bson::{to_document, Document},
@@ -18,18 +19,12 @@ use crate::{
 use super::server::TxRes;
 
 pub async fn handle_transaction(
-    swarm: Extension<Arc<Mutex<Swarm<CustomBehav>>>>,
+    mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
-    {
-        let mut swarm = swarm.lock().unwrap();
-        let str_trx = serde_json::to_string(&transaction).unwrap();
-        swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(IdentTopic::new("client"), str_trx.as_bytes())
-            .unwrap();
-    }
+    let str_trx = serde_json::to_string(&transaction).unwrap();
+    tx.send(str_trx).await.unwrap();
+
     //insert transaction into db at first
     let trx_todoc = to_document(&transaction).unwrap();
     let transactions_coll: Collection<Document> =

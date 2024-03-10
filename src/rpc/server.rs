@@ -1,3 +1,4 @@
+use futures::channel::mpsc::Sender;
 use libp2p::Swarm;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -19,7 +20,7 @@ use tower_http::{
 };
 
 use crate::{
-    handlers::{create_log::write_log, structures::Block},
+    handlers::{create_log::write_log, structures::{Block, Transaction}},
     CustomBehav,
 };
 
@@ -86,13 +87,13 @@ pub struct TxRes {
     pub description: String,
 }
 
-pub async fn handle_requests(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
+pub async fn handle_requests(tx: Arc<Mutex<Sender<String>>>) {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
         .allow_origin(Any)
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
-        .layer(Extension(swarm))
+        .layer(Extension(tx))
         .route("/trx", post(handle_transaction))
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
