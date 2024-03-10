@@ -87,7 +87,7 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
 
 pub fn propagate_trx(trx: String) {
     write_log("in propagate trx");
-    match SWARM.0.lock() {
+    match SWARM.clone().0.lock() {
         Ok(mut swarm) => {
             match swarm
                 .behaviour_mut()
