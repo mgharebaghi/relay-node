@@ -12,8 +12,7 @@ use mongodb::{
 };
 
 use crate::{
-    handlers::{check_trx, db_connection::blockchain_db, structures::Transaction},
-    CustomBehav,
+    handlers::{check_trx, db_connection::blockchain_db, structures::Transaction}, write_log, CustomBehav
 };
 
 use super::server::TxRes;
@@ -22,17 +21,13 @@ pub async fn handle_transaction(
     mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
-    let str_trx = serde_json::to_string(&transaction).unwrap();
-    tx.send(str_trx).await.unwrap();
-
-    //insert transaction into db at first
-    let trx_todoc = to_document(&transaction).unwrap();
-    let transactions_coll: Collection<Document> =
-        blockchain_db().await.unwrap().collection("Transactions");
-    transactions_coll.insert_one(trx_todoc, None).await.unwrap();
 
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
+    match tx.send(str_trx.clone()).await {
+        Ok(_) => {write_log("tx send works")}
+        Err(e) => write_log(&format!("tx send problem: {}", e))
+    }
     check_trx::handle_transactions(str_trx).await;
 
     //send response to the client

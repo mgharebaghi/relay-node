@@ -93,8 +93,8 @@ pub async fn handle_requests(tx: Arc<Mutex<Sender<String>>>) {
         .allow_origin(Any)
         .allow_headers(AllowHeaders::any());
     let app: Router = Router::new()
-        .layer(Extension(tx))
         .route("/trx", post(handle_transaction))
+        .layer(Extension(tx))
         .route("/utxo", post(handle_utxo))
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))
