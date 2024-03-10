@@ -20,8 +20,12 @@ pub mod swarm_config;
 pub use handlers::structures::Transaction;
 pub use swarm_config::new_swarm;
 
-pub static SWARM: Lazy<(Arc<Mutex<Swarm<CustomBehav>>>, PeerId)> =
-    Lazy::new(|| (Arc::new(Mutex::new(block_on(async {new_swarm().await.0}))), block_on(async {new_swarm().await.1})));
+pub static SWARM: Lazy<(Arc<Mutex<Swarm<CustomBehav>>>, PeerId)> = Lazy::new(|| {
+    block_on(async {
+        let swarm = new_swarm().await;
+        (Arc::new(Mutex::new(swarm.0)), swarm.1)
+    })
+});
 
 pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let mut wallet = String::new();
@@ -81,8 +85,14 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     .await;
 }
 
-
 pub fn propagate_trx(trx: String) {
-    SWARM.0.lock().unwrap().behaviour_mut().gossipsub.publish(IdentTopic::new("client"), trx.as_bytes()).unwrap();
+    SWARM
+        .0
+        .lock()
+        .unwrap()
+        .behaviour_mut()
+        .gossipsub
+        .publish(IdentTopic::new("client"), trx.as_bytes())
+        .unwrap();
     write_log(&trx)
 }
