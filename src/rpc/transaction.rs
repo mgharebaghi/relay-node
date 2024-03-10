@@ -5,7 +5,7 @@ use axum::{
 
 use crate::{
     handlers::{check_trx, structures::Transaction},
-    propagate_trx,
+    propagate_trx, write_log,
 };
 
 use super::server::TxRes;
@@ -14,6 +14,7 @@ pub async fn handle_transaction(
     // mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
+    write_log("get transaction");
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
     propagate_trx(str_trx.clone());
