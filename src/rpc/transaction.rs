@@ -4,8 +4,7 @@ use axum::{
 };
 
 use crate::{
-    handlers::{check_trx, structures::Transaction},
-    propagate_trx, write_log,
+    handlers::{check_trx, structures::Transaction}, propagate_trx, write_log
 };
 
 use super::server::TxRes;
@@ -17,7 +16,7 @@ pub async fn handle_transaction(
     write_log("get transaction");
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
-    propagate_trx(str_trx.clone());
+    propagate_trx(str_trx.clone()).await;
     check_trx::handle_transactions(str_trx).await;
 
     //send response to the client

@@ -85,20 +85,15 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     .await;
 }
 
-pub fn propagate_trx(trx: String) {
-    write_log("in propagate trx");
-    match SWARM.clone().0.lock() {
-        Ok(mut swarm) => {
-            match swarm
-                .behaviour_mut()
-                .gossipsub
-                .publish(IdentTopic::new("client"), trx.as_bytes())
-            {
-                Ok(_) => write_log("successfully propagated transaction"),
-                Err(e) => write_log(&format!("error from swarm propagation: {}", e)),
-            }
-        }
-        Err(e) => write_log(&format!("error from swarm lock: {}", e)),
+pub async fn propagate_trx(trx: String) {
+    write_log("in propagation");
+    if let Ok(mut swarm) = Arc::clone(&SWARM.0).lock() {
+        swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(IdentTopic::new("client"), trx.as_bytes())
+            .unwrap();
+    } else {
+        write_log("error from lock of mutex");
     }
-    write_log(&trx)
 }
