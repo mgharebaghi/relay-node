@@ -1,10 +1,18 @@
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
+
 use axum::{
     extract::{self},
     Json,
 };
+use futures::StreamExt;
+use libp2p::{gossipsub::IdentTopic, swarm::SwarmEvent, Multiaddr};
 
 use crate::{
-    handlers::{check_trx, structures::Transaction}, propagate_trx, write_log
+    handlers::{check_trx, handle_events::Listeners, structures::Transaction},
+    new_swarm, write_log,
 };
 
 use super::server::TxRes;
@@ -16,7 +24,7 @@ pub async fn handle_transaction(
     write_log("get transaction");
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
-    propagate_trx(str_trx.clone()).await;
+    propagation(&str_trx).await;
     check_trx::handle_transactions(str_trx).await;
 
     //send response to the client
@@ -26,4 +34,49 @@ pub async fn handle_transaction(
         description: "Wait for submit".to_string(),
     };
     return Json(tx_res);
+}
+
+async fn propagation(str_trx: &String) {
+    {
+        let myaddr_file = File::open("/etc/myaddress.dat");
+        match myaddr_file {
+            Ok(file) => {
+                let reader = BufReader::new(file);
+                let mut my_addr = String::new();
+                for addr in reader.lines() {
+                    let address = addr.unwrap();
+                    my_addr.push_str(&address);
+                }
+                let mut swarm = new_swarm().await.0;
+                let my_multiaddr: Multiaddr = my_addr.parse().unwrap();
+                let mut listeners = Listeners { id: Vec::new() };
+                match swarm.dial(my_multiaddr) {
+                    Ok(_) => loop {
+                        match swarm.select_next_some().await {
+                            SwarmEvent::NewListenAddr { listener_id, .. } => {
+                                listeners.id.push(listener_id);
+                            }
+                            SwarmEvent::ConnectionEstablished { connection_id, .. } => {
+                                swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .publish(IdentTopic::new("client"), str_trx.as_bytes())
+                                    .unwrap();
+                                swarm.close_connection(connection_id);
+                                for listener in listeners.id {
+                                    swarm.remove_listener(listener);
+                                }
+                                break;
+                            }
+                            _ => {}
+                        }
+                    },
+                    Err(_) => {}
+                }
+            }
+            Err(e) => {
+                write_log(&format!("myaddress file opening problem: {}", e));
+            }
+        }
+    }
 }

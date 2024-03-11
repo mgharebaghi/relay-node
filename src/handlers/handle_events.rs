@@ -23,8 +23,8 @@ use super::structures::{
 use super::syncing::syncing;
 
 #[derive(Debug)]
-struct Listeners {
-    id: Vec<ListenerId>,
+pub struct Listeners {
+    pub id: Vec<ListenerId>,
 }
 
 pub async fn events(
