@@ -1,13 +1,15 @@
 use std::sync::Arc;
 use std::sync::Mutex;
-
-use relay_node::handle_requests;
-use relay_node::new_swarm;
-use relay_node::run;
+mod handlers;
+use handlers::run_relay::run;
+use handlers::swarm_config::CustomBehav;
+mod rpc;
+use handlers::swarm_config::SwarmConf;
+use rpc::handle_requests;
 
 #[tokio::main]
 async fn main() {
-    let swarm_config = new_swarm().await;
+    let swarm_config = CustomBehav::new().await;
     let local_peer_id = swarm_config.1;
     let swarm = Arc::new(Mutex::new(swarm_config.0));
     let (_, _) = tokio::join!(

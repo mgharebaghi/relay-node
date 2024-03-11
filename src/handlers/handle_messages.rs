@@ -7,7 +7,8 @@ use super::{
     check_trx::handle_transactions,
     nodes_sync_announce::handle_sync_message,
     recieved_block::verifying_block,
-    structures::{CustomBehav, FullNodes, GossipMessage},
+    structures::{FullNodes, GossipMessage},
+    CustomBehav
 };
 
 //check gossip messages and do its operations.....................................................................

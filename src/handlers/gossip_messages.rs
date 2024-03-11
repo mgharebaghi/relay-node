@@ -6,7 +6,7 @@ use libp2p::{
 
 use crate::handlers::structures::{ImSync, OutNode};
 
-use super::{create_log::write_log, get_addresses::get_addresses, handle_messages::msg_check, structures::{CustomBehav, FullNodes, NextLeader}};
+use super::{create_log::write_log, get_addresses::get_addresses, handle_messages::msg_check, structures::{FullNodes, NextLeader}, CustomBehav};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,

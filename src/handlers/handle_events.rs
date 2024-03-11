@@ -18,9 +18,10 @@ use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
 use super::send_address::send_address;
 use super::structures::{
-    CustomBehav, CustomBehavEvent, FullNodes, GetGossipMsg, GossipMessage, Req, Transaction,
+    FullNodes, GetGossipMsg, GossipMessage, Req, Transaction,
 };
 use super::syncing::syncing;
+use super::swarm_config::{CustomBehav, CustomBehavEvent};
 
 #[derive(Debug)]
 pub struct Listeners {

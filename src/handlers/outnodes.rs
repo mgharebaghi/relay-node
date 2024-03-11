@@ -2,7 +2,8 @@ use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
 
 use super::{
     create_log::write_log,
-    structures::{CustomBehav, FullNodes, OutNode},
+    structures::{FullNodes, OutNode},
+    CustomBehav
 };
 
 pub async fn handle_outnode(

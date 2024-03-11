@@ -1,23 +1,16 @@
-mod handlers;
-pub mod rpc;
-pub use handlers::create_log::write_log;
-use handlers::handle_streams;
-pub use handlers::structures::CustomBehav;
-use handlers::structures::FullNodes;
-use libp2p::Swarm;
+use std::{
+    env::consts::OS,
+    fs::File,
+    io::{BufRead, BufReader},
+    sync::{Arc, Mutex},
+};
 
-pub use rpc::handle_requests;
-use std::env::consts::OS;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::sync::Arc;
-use std::sync::Mutex;
+use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
 
-use libp2p::{gossipsub::IdentTopic, PeerId};
-
-pub mod swarm_config;
-pub use handlers::structures::Transaction;
-pub use swarm_config::new_swarm;
+use super::{
+    create_log::write_log, listening_dialing::start, structures::FullNodes,
+    swarm_config::CustomBehav,
+};
 
 pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let mut wallet = String::new();
@@ -57,7 +50,7 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
     let relay_topic = IdentTopic::new("relay");
     let clients_topic = IdentTopic::new("client");
 
-    handle_streams(
+    start(
         local_peer_id,
         swarm,
         clients_topic,

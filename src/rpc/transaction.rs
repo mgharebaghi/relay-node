@@ -15,14 +15,14 @@ use libp2p::{
 };
 
 use crate::{
-    handlers::{
-        handle_events::Listeners,
-        structures::{CustomBehavEvent, Req, Transaction},
-    },
-    new_swarm, write_log,
+    handlers::handle_events::Listeners,
+    handlers::{create_log::write_log, structures::Transaction},
 };
 
-use super::server::TxRes;
+use super::{
+    server::TxRes,
+    swarm_cfg::{CostumBehav, CostumBehavEvent, Req, SwarmConf},
+};
 
 struct Connection {
     id: Vec<ConnectionId>,
@@ -55,7 +55,7 @@ async fn propagation(str_trx: String, tx_res: &mut TxRes) -> &mut TxRes {
                     let address = addr.unwrap();
                     my_addr.push_str(&address);
                 }
-                let mut swarm = new_swarm().await.0;
+                let mut swarm = CostumBehav::new().await;
                 let my_multiaddr: Multiaddr = my_addr.parse().unwrap();
                 let mut listeners = Listeners { id: Vec::new() };
                 let mut connection = Connection { id: Vec::new() };
@@ -77,9 +77,9 @@ async fn propagation(str_trx: String, tx_res: &mut TxRes) -> &mut TxRes {
                                 connection.id.push(connection_id);
                             }
                             SwarmEvent::Behaviour(costume_behav) => match costume_behav {
-                                CustomBehavEvent::ReqRes(reqres) => match reqres {
+                                CostumBehavEvent::ReqRes(reqres) => match reqres {
                                     Event::Message { message, .. } => match message {
-                                        Message::Response {  response, .. } => {
+                                        Message::Response { response, .. } => {
                                             for conn in connection.id {
                                                 swarm.close_connection(conn);
                                             }
@@ -95,14 +95,12 @@ async fn propagation(str_trx: String, tx_res: &mut TxRes) -> &mut TxRes {
                                                 tx_res.status = "Error".to_string();
                                                 tx_res.description = msg;
                                                 return tx_res;
-
                                             }
                                         }
                                         _ => {}
-                                    }
+                                    },
                                     _ => {}
                                 },
-                                _ => {}
                             },
                             _ => {}
                         }

@@ -1,4 +1,4 @@
-use libp2p::{request_response::cbor, swarm::NetworkBehaviour, PeerId};
+use libp2p::PeerId;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -12,12 +12,6 @@ pub struct Req {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Res {
     pub res: String,
-}
-
-#[derive(NetworkBehaviour)]
-pub struct CustomBehav {
-    pub gossipsub: libp2p::gossipsub::Behaviour,
-    pub req_res: cbor::Behaviour<Req, Res>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

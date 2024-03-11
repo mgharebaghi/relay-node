@@ -3,7 +3,8 @@ use super::{
     create_log::write_log,
     outnodes::handle_outnode,
     recieved_block::verifying_block,
-    structures::{CustomBehav, FullNodes, GossipMessage, Req, Res, Transaction},
+    structures::{FullNodes, GossipMessage, Req, Res, Transaction},
+    CustomBehav, 
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use serde::{Deserialize, Serialize};

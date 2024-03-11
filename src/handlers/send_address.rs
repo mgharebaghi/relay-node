@@ -1,6 +1,6 @@
 use libp2p::{gossipsub::TopicHash, PeerId, Swarm};
 
-use super::{create_log::write_log, structures::CustomBehav};
+use super::{create_log::write_log, CustomBehav};
 
 //send listener addresses to another relays and clients
 pub fn send_address(
