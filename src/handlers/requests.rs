@@ -51,7 +51,7 @@ pub async fn handle_requests(
             Ok(_) => {}
             Err(e) => write_log(&format!("{:?}", e)),
         }
-    } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req.clone()) {
+    } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
         handle_transactions(request.req.clone()).await; //insert transaction to db
 
         //send true transaction to sse servers
@@ -97,7 +97,7 @@ pub async fn handle_requests(
             .behaviour_mut()
             .req_res
             .send_response(channel, response);
-    } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req.clone()) {
+    } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
         match verifying_block(&request.req, leader, fullnode_subs).await {
             Ok(_) => {

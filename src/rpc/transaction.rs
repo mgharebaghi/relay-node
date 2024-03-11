@@ -8,10 +8,10 @@ use axum::{
     Json,
 };
 use futures::StreamExt;
-use libp2p::{gossipsub::IdentTopic, swarm::SwarmEvent, Multiaddr};
+use libp2p::{swarm::SwarmEvent, Multiaddr};
 
 use crate::{
-    handlers::{handle_events::Listeners, structures::Transaction},
+    handlers::{handle_events::Listeners, structures::{Req, Transaction}},
     new_swarm, write_log,
 };
 
@@ -24,7 +24,7 @@ pub async fn handle_transaction(
     write_log("get transaction");
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
-    propagation(&str_trx).await;
+    propagation(str_trx).await;
 
     //send response to the client
     let tx_res = TxRes {
@@ -35,7 +35,7 @@ pub async fn handle_transaction(
     return Json(tx_res);
 }
 
-async fn propagation(str_trx: &String) {
+async fn propagation(str_trx: String) {
     write_log("in propagation");
     {
         let myaddr_file = File::open("/etc/myaddress.dat");
@@ -57,13 +57,12 @@ async fn propagation(str_trx: &String) {
                             SwarmEvent::NewListenAddr { listener_id, .. } => {
                                 listeners.id.push(listener_id);
                             }
-                            SwarmEvent::ConnectionEstablished { connection_id, .. } => {
+                            SwarmEvent::ConnectionEstablished { connection_id, peer_id, .. } => {
                                 write_log("connection established");
-                                swarm
-                                    .behaviour_mut()
-                                    .gossipsub
-                                    .publish(IdentTopic::new("client"), str_trx.as_bytes())
-                                    .unwrap();
+                                let req = Req {
+                                    req: str_trx
+                                };
+                                swarm.behaviour_mut().req_res.send_request(&peer_id, req);
                                 swarm.close_connection(connection_id);
                                 for listener in listeners.id {
                                     swarm.remove_listener(listener);
