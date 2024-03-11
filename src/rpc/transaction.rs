@@ -8,14 +8,25 @@ use axum::{
     Json,
 };
 use futures::StreamExt;
-use libp2p::{swarm::SwarmEvent, Multiaddr};
+use libp2p::{
+    request_response::Event,
+    swarm::{ConnectionId, SwarmEvent},
+    Multiaddr,
+};
 
 use crate::{
-    handlers::{handle_events::Listeners, structures::{Req, Transaction}},
+    handlers::{
+        handle_events::Listeners,
+        structures::{CustomBehavEvent, Req, Transaction},
+    },
     new_swarm, write_log,
 };
 
 use super::server::TxRes;
+
+struct Connection {
+    id: Vec<ConnectionId>,
+}
 
 pub async fn handle_transaction(
     // mut tx: Extension<Sender<String>>,
@@ -51,25 +62,42 @@ async fn propagation(str_trx: String) {
                 let mut swarm = new_swarm().await.0;
                 let my_multiaddr: Multiaddr = my_addr.parse().unwrap();
                 let mut listeners = Listeners { id: Vec::new() };
+                let mut connection = Connection { id: Vec::new() };
                 match swarm.dial(my_multiaddr) {
                     Ok(_) => loop {
                         match swarm.select_next_some().await {
                             SwarmEvent::NewListenAddr { listener_id, .. } => {
                                 listeners.id.push(listener_id);
                             }
-                            SwarmEvent::ConnectionEstablished { connection_id, peer_id, .. } => {
+                            SwarmEvent::ConnectionEstablished {
+                                connection_id,
+                                peer_id,
+                                ..
+                            } => {
                                 write_log("connection established");
                                 let req = Req {
-                                    req: str_trx
+                                    req: str_trx.clone(),
                                 };
                                 swarm.behaviour_mut().req_res.send_request(&peer_id, req);
-                                swarm.close_connection(connection_id);
-                                for listener in listeners.id {
-                                    swarm.remove_listener(listener);
-                                    write_log("remove listener");
-                                }
-                                break;
+                                connection.id.push(connection_id);
+                                write_log("request sent to relay");
                             }
+                            SwarmEvent::Behaviour(costume_behav) => match costume_behav {
+                                CustomBehavEvent::ReqRes(reqres) => match reqres {
+                                    Event::Message { .. } => {
+                                        for conn in connection.id {
+                                            swarm.close_connection(conn);
+                                        }
+                                        for listener in listeners.id {
+                                            swarm.remove_listener(listener);
+                                            write_log("remove listener");
+                                        }
+                                        break;
+                                    }
+                                    _ => {}
+                                },
+                                _ => {}
+                            },
                             _ => {}
                         }
                     },
