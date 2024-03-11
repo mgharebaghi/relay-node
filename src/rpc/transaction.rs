@@ -11,7 +11,7 @@ use futures::StreamExt;
 use libp2p::{gossipsub::IdentTopic, swarm::SwarmEvent, Multiaddr};
 
 use crate::{
-    handlers::{check_trx, handle_events::Listeners, structures::Transaction},
+    handlers::{handle_events::Listeners, structures::Transaction},
     new_swarm, write_log,
 };
 
@@ -25,7 +25,6 @@ pub async fn handle_transaction(
     //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
     propagation(&str_trx).await;
-    check_trx::handle_transactions(str_trx).await;
 
     //send response to the client
     let tx_res = TxRes {
@@ -37,10 +36,12 @@ pub async fn handle_transaction(
 }
 
 async fn propagation(str_trx: &String) {
+    write_log("in propagation");
     {
         let myaddr_file = File::open("/etc/myaddress.dat");
         match myaddr_file {
             Ok(file) => {
+                write_log("in ok file open");
                 let reader = BufReader::new(file);
                 let mut my_addr = String::new();
                 for addr in reader.lines() {
@@ -57,6 +58,7 @@ async fn propagation(str_trx: &String) {
                                 listeners.id.push(listener_id);
                             }
                             SwarmEvent::ConnectionEstablished { connection_id, .. } => {
+                                write_log("connection established");
                                 swarm
                                     .behaviour_mut()
                                     .gossipsub
@@ -65,6 +67,7 @@ async fn propagation(str_trx: &String) {
                                 swarm.close_connection(connection_id);
                                 for listener in listeners.id {
                                     swarm.remove_listener(listener);
+                                    write_log("remove listener");
                                 }
                                 break;
                             }
