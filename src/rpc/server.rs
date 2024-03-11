@@ -72,7 +72,7 @@ pub struct BlockRes {
     pub status: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TxRes {
     pub hash: String,
     pub status: String,

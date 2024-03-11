@@ -9,7 +9,7 @@ use axum::{
 };
 use futures::StreamExt;
 use libp2p::{
-    request_response::Event,
+    request_response::{Event, Message},
     swarm::{ConnectionId, SwarmEvent},
     Multiaddr,
 };
@@ -32,27 +32,23 @@ pub async fn handle_transaction(
     // mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
-    write_log("get transaction");
-    //insert transaction reciept into db
     let str_trx = serde_json::to_string(&transaction).unwrap();
-    propagation(str_trx).await;
 
     //send response to the client
-    let tx_res = TxRes {
+    let mut tx_res = TxRes {
         hash: transaction.tx_hash,
-        status: "sent".to_string(),
-        description: "Wait for submit".to_string(),
+        status: String::new(),
+        description: String::new(),
     };
-    return Json(tx_res);
+    let final_response = propagation(str_trx, &mut tx_res).await;
+    return Json(final_response.clone());
 }
 
-async fn propagation(str_trx: String) {
-    write_log("in propagation");
+async fn propagation(str_trx: String, tx_res: &mut TxRes) -> &mut TxRes {
     {
         let myaddr_file = File::open("/etc/myaddress.dat");
         match myaddr_file {
             Ok(file) => {
-                write_log("in ok file open");
                 let reader = BufReader::new(file);
                 let mut my_addr = String::new();
                 for addr in reader.lines() {
@@ -74,25 +70,35 @@ async fn propagation(str_trx: String) {
                                 peer_id,
                                 ..
                             } => {
-                                write_log("connection established");
                                 let req = Req {
                                     req: str_trx.clone(),
                                 };
                                 swarm.behaviour_mut().req_res.send_request(&peer_id, req);
                                 connection.id.push(connection_id);
-                                write_log("request sent to relay");
                             }
                             SwarmEvent::Behaviour(costume_behav) => match costume_behav {
                                 CustomBehavEvent::ReqRes(reqres) => match reqres {
-                                    Event::Message { .. } => {
-                                        for conn in connection.id {
-                                            swarm.close_connection(conn);
+                                    Event::Message { message, .. } => match message {
+                                        Message::Response {  response, .. } => {
+                                            for conn in connection.id {
+                                                swarm.close_connection(conn);
+                                            }
+                                            for listener in listeners.id {
+                                                swarm.remove_listener(listener);
+                                            }
+                                            let msg = response.res;
+                                            if msg == "Your transaction sent.".to_string() {
+                                                tx_res.status = "success".to_string();
+                                                tx_res.description = msg;
+                                                return tx_res;
+                                            } else {
+                                                tx_res.status = "Error".to_string();
+                                                tx_res.description = msg;
+                                                return tx_res;
+
+                                            }
                                         }
-                                        for listener in listeners.id {
-                                            swarm.remove_listener(listener);
-                                            write_log("remove listener");
-                                        }
-                                        break;
+                                        _ => {}
                                     }
                                     _ => {}
                                 },
@@ -101,11 +107,18 @@ async fn propagation(str_trx: String) {
                             _ => {}
                         }
                     },
-                    Err(_) => {}
+                    Err(_) => {
+                        tx_res.status = "Error".to_string();
+                        tx_res.description = "dialing with a relay error".to_string();
+                        return tx_res;
+                    }
                 }
             }
             Err(e) => {
                 write_log(&format!("myaddress file opening problem: {}", e));
+                tx_res.status = "Error".to_string();
+                tx_res.description = "problem from server".to_string();
+                return tx_res;
             }
         }
     }
