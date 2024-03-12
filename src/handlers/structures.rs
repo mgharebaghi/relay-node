@@ -67,7 +67,7 @@ pub struct TxInput {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct InputData {
-    pub number: u8,
+    pub number: u32,
     pub utxos: Vec<UtxoData>,
     pub script: TransactionScript,
 }
@@ -81,7 +81,7 @@ pub struct TxOutput {
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputData {
-    pub number: u8,
+    pub number: u32,
     pub utxos: Vec<OutputUtxo>,
     pub sigenr_public_keys: Vec<sp_core::ecdsa::Public>,
 }
@@ -165,7 +165,7 @@ pub struct CoinbaseData {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CoinbaseOutput {
     pub utxos: Vec<OutputUtxo>,
-    pub number: u8,
+    pub number: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
