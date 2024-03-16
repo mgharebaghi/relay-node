@@ -78,12 +78,9 @@ pub async fn start(
 async fn get_addresses(relays_path: &str) {
     match reqwest::get("https://centichain.org/api/relays")
         .await
-        .unwrap()
-        .text()
-        .await
     {
-        Ok(addr) => {
-            let addresses: Addresses = serde_json::from_str(&addr).unwrap();
+        Ok(response) => {
+            let addresses: Addresses = response.json().await.unwrap();
             write_log(&format!("addresses:\n{:?}", addresses));
             let path_exist = fs::metadata(relays_path).is_ok();
             if path_exist {
