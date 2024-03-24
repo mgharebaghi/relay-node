@@ -9,8 +9,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::handlers::{
-    db_connection::blockchain_db,
-    structures::{UtxoData, UTXO},
+    create_log::write_log, db_connection::blockchain_db, structures::{UtxoData, UTXO}
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,7 +72,15 @@ pub async fn a_utxo(extract::Json(request): extract::Json<ReqBody>) -> Json<ResB
 
 fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
     let utxo: UTXO = from_document(document).unwrap();
-    let value = Decimal::from_str(&request.value).unwrap(); //convert string of requst's value to Decimal
+    let value = match Decimal::from_str(&request.value) {
+        Ok(val) => {
+            val
+        }
+        Err(e) => {
+            write_log(&format!("err from decimal cast: {e}"));
+            Decimal::from_str("0.0").unwrap()
+        }
+    }; //convert string of requst's value to Decimal
     let fee = value * Decimal::from_str("0.01").unwrap();
     let mut all_utxos_data = Vec::new();
     let mut utxo_data = Vec::new();
