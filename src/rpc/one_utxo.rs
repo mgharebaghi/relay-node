@@ -72,15 +72,7 @@ pub async fn a_utxo(extract::Json(request): extract::Json<ReqBody>) -> Json<ResB
 
 fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
     let utxo: UTXO = from_document(document).unwrap();
-    let value = match Decimal::from_str(&request.value) {
-        Ok(val) => {
-            val
-        }
-        Err(e) => {
-            write_log(&format!("err from decimal cast: {e}"));
-            Decimal::from_str("0.0").unwrap()
-        }
-    }; //convert string of requst's value to Decimal
+    let value = Decimal::from_str(&request.value).unwrap(); //convert string of requst's value to Decimal
     let fee = value * Decimal::from_str("0.01").unwrap();
     let mut all_utxos_data = Vec::new();
     let mut utxo_data = Vec::new();
@@ -95,29 +87,36 @@ fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
         .sum();
     //get nearest unespent to value for send to client
     if unspents_sum >= value + fee {
+        let mut continue_loop = true;
         for i in 0..all_utxos_data.len() {
-            if all_utxos_data[i].unspent >= value + fee {
-                utxo_data.push(all_utxos_data[i].clone());
-                break;
-            } else {
-                let mut sum_data = vec![all_utxos_data[i].clone()];
-                for j in 0..all_utxos_data.len() {
-                    let sum_data_unspents_sum: Decimal =
-                        sum_data.iter().map(|data| data.unspent).sum();
-                    if (j + 1) <= all_utxos_data.len() {
-                        if (sum_data_unspents_sum.round_dp(12)
-                            + all_utxos_data[j + 1].unspent.round_dp(12))
-                            >= value + fee
-                        {
-                            for data in sum_data.clone() {
-                                utxo_data.push(data);
+            if continue_loop {
+                if all_utxos_data[i].unspent >= value + fee {
+                    utxo_data.push(all_utxos_data[i].clone());
+                    break;
+                } else {
+                    let mut sum_data = vec![all_utxos_data[i].clone()];
+                    for j in 0..all_utxos_data.len() {
+                        let sum_data_unspents_sum: Decimal =
+                            sum_data.iter().map(|data| data.unspent).sum();
+                        if (j + 1) <= all_utxos_data.len() {
+                            if (sum_data_unspents_sum.round_dp(12)
+                                + all_utxos_data[j + 1].unspent.round_dp(12))
+                                >= value + fee
+                            {
+                                for data in sum_data.clone() {
+                                    utxo_data.push(data);
+                                }
+                                utxo_data.push(all_utxos_data[j + 1].clone());
+                                continue_loop = false;
+                                break;
+                            } else {
+                                sum_data.push(all_utxos_data[j + 1].clone())
                             }
-                            utxo_data.push(all_utxos_data[j + 1].clone())
-                        } else {
-                            sum_data.push(all_utxos_data[j + 1].clone())
                         }
                     }
                 }
+            } else {
+                break;
             }
         }
         let res = ResBody {
