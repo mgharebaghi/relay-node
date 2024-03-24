@@ -8,8 +8,7 @@ use mongodb::{
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::{
-    create_log::write_log, db_connection::blockchain_db, structures::{UtxoData, UTXO}
+use crate::handlers::{db_connection::blockchain_db, structures::{UtxoData, UTXO}
 };
 
 #[derive(Debug, Serialize, Deserialize)]
