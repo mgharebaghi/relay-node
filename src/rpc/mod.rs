@@ -4,5 +4,5 @@ mod transaction;
 mod utxo;
 mod reciept;
 mod block;
-mod sse;
 pub mod swarm_cfg;
+pub mod one_utxo;

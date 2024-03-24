@@ -6,7 +6,7 @@ use tower::limit::ConcurrencyLimitLayer;
 
 use axum::{
     http::Method,
-    routing::{get, post},
+    routing::post,
     Router,
 };
 use tower_http::{
@@ -17,11 +17,7 @@ use tower_http::{
 use crate::{handlers::create_log::write_log, handlers::structures::Block};
 
 use super::{
-    block::handle_block,
-    reciept::{handle_reciept, handle_user_reciepts},
-    sse::{block_sse, trx_sse},
-    transaction::handle_transaction,
-    utxo::handle_utxo,
+    block::handle_block, one_utxo::a_utxo, reciept::{handle_reciept, handle_user_reciepts}, transaction::handle_transaction, utxo::handle_utxo
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,8 +86,7 @@ pub async fn handle_requests() {
         .route("/reciept", post(handle_reciept))
         .route("/urec", post(handle_user_reciepts))
         .route("/block", post(handle_block))
-        .route("/trxsse", get(trx_sse))
-        .route("/blocksse", get(block_sse))
+        .route("/autxo", post(a_utxo))
         .layer(cors)
         .layer(ConcurrencyLimitLayer::new(100))
         .nest_service("/blockchain", ServeDir::new("/home"));
