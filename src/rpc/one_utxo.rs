@@ -8,7 +8,9 @@ use mongodb::{
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::{db_connection::blockchain_db, structures::{UtxoData, UTXO}
+use crate::handlers::{
+    db_connection::blockchain_db,
+    structures::{UtxoData, UTXO},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,9 +35,7 @@ pub async fn a_utxo(extract::Json(request): extract::Json<ReqBody>) -> Json<ResB
             let filter = doc! {"public_key": request.public_key.clone()};
             match utxos_coll.find_one(filter, None).await {
                 Ok(doc) => match doc {
-                    Some(document) => {
-                        set_response_utxos(document, request)
-                    }
+                    Some(document) => set_response_utxos(document, request),
                     None => {
                         let res = ResBody {
                             public_key: request.public_key,
@@ -95,21 +95,28 @@ fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
                 } else {
                     let mut sum_data = vec![all_utxos_data[i].clone()];
                     for j in 0..all_utxos_data.len() {
-                        let sum_data_unspents_sum: Decimal =
-                            sum_data.iter().map(|data| data.unspent).sum();
                         if (j + 1) <= all_utxos_data.len() {
-                            if (sum_data_unspents_sum.round_dp(12)
-                                + all_utxos_data[j + 1].unspent.round_dp(12))
-                                >= value + fee
-                            {
-                                for data in sum_data.clone() {
-                                    utxo_data.push(data);
-                                }
+                            let sum_data_unspents_sum: Decimal =
+                                sum_data.iter().map(|data| data.unspent).sum();
+
+                            if all_utxos_data[j + 1].unspent >= value + fee {
                                 utxo_data.push(all_utxos_data[j + 1].clone());
                                 continue_loop = false;
                                 break;
                             } else {
-                                sum_data.push(all_utxos_data[j + 1].clone())
+                                if (sum_data_unspents_sum.round_dp(12)
+                                    + all_utxos_data[j + 1].unspent.round_dp(12))
+                                    >= value + fee
+                                {
+                                    for data in sum_data.clone() {
+                                        utxo_data.push(data);
+                                    }
+                                    utxo_data.push(all_utxos_data[j + 1].clone());
+                                    continue_loop = false;
+                                    break;
+                                } else {
+                                    sum_data.push(all_utxos_data[j + 1].clone())
+                                }
                             }
                         }
                     }
