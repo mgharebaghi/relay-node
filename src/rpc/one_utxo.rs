@@ -86,7 +86,6 @@ fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
         .sum();
     //get nearest unespent to value for send to client
     if unspents_sum >= value + fee {
-        let mut continue_loop = true;
         match all_utxos_data
             .iter()
             .position(|data| data.unspent >= value + fee)
@@ -95,31 +94,22 @@ fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
                 utxo_data.push(all_utxos_data[index].clone());
             }
             None => {
+                let mut sum_data = vec![all_utxos_data.pop().unwrap()];
                 for i in 0..all_utxos_data.len() {
-                    if continue_loop {
-                        let mut sum_data = vec![all_utxos_data[i].clone()];
-                        for j in 0..all_utxos_data.len() {
-                            if (j + 1) <= all_utxos_data.len() {
-                                let sum_data_unspents_sum: Decimal =
-                                    sum_data.iter().map(|data| data.unspent).sum();
+                    let sum_data_unspents_sum: Decimal =
+                        sum_data.iter().map(|data| data.unspent).sum();
 
-                                if (sum_data_unspents_sum.round_dp(12)
-                                    + all_utxos_data[j + 1].unspent.round_dp(12))
-                                    >= value + fee
-                                {
-                                    for data in sum_data.clone() {
-                                        utxo_data.push(data);
-                                    }
-                                    utxo_data.push(all_utxos_data[j + 1].clone());
-                                    continue_loop = false;
-                                    break;
-                                } else {
-                                    sum_data.push(all_utxos_data[j + 1].clone())
-                                }
-                            }
+                    if (sum_data_unspents_sum.round_dp(12)
+                        + all_utxos_data[i].unspent.round_dp(12))
+                        >= value + fee
+                    {
+                        for data in sum_data.clone() {
+                            utxo_data.push(data);
                         }
-                    } else {
+                        utxo_data.push(all_utxos_data[i].clone());
                         break;
+                    } else {
+                        sum_data.push(all_utxos_data[i].clone())
                     }
                 }
             }
