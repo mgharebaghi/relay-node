@@ -73,6 +73,7 @@ pub async fn events(
 }
 
 async fn handle_mongod_changes(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
+    write_log("in handle mongod");
     let _swarm = swarm.lock().unwrap();
     let db = blockchain_db().await.unwrap();
     let blocks_coll: Collection<Document> = db.collection("Blocks");
@@ -101,6 +102,7 @@ async fn handle_new_swarm_events(
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
 ) {
+    write_log("in handle swarm events");
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
