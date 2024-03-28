@@ -103,7 +103,10 @@ async fn handle_new_swarm_events(
                 // swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("client"), "text".as_bytes()).unwrap();
                 write_log("new document add in Blocks collection");
             }
-            None => {}
+            None => {
+                write_log("There is no any new document in Blocks");
+                continue;
+            }
         } 
 
         let event = swarm.select_next_some().await;
@@ -478,10 +481,10 @@ async fn handle_new_swarm_events(
                             }
                         }
                     },
-                    _ => (),
+                    _ => {},
                 },
             },
-            _ => (),
+            _ => {},
         }
     }
 }
