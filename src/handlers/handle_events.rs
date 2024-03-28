@@ -98,16 +98,9 @@ async fn handle_new_swarm_events(
     //check swarm events that come from libp2p
     loop {
 
-        match watching.next().await {
-            Some(mut _stream) => {
-                // swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("client"), "text".as_bytes()).unwrap();
-                write_log("new document add in Blocks collection");
-            }
-            None => {
-                write_log("There is no any new document in Blocks");
-                continue;
-            }
-        } 
+        if let Some(_stream) = watching.next().await {
+            write_log("new document add in Blocks collection");
+        }
 
         let event = swarm.select_next_some().await;
         match event {
