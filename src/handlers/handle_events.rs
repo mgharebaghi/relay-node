@@ -100,6 +100,9 @@ async fn handle_new_swarm_events(
 
         if let Some(_stream) = watching.next().await {
             write_log("new document add in Blocks collection");
+        } else {
+            write_log("no document");
+            continue;
         }
 
         let event = swarm.select_next_some().await;
