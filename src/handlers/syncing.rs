@@ -18,7 +18,6 @@ use super::{
 pub async fn syncing(dialed_addr: String) -> Result<(), ()> {
     match blockchain_db().await {
         Ok(db) => {
-            db.run_command(doc! {"rs.initiate()": {}}, None).await.unwrap();
             let trim_addr = dialed_addr.trim_start_matches("/ip4/");
             let split_addr = trim_addr.split("/").next();
             match split_addr {
