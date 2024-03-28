@@ -67,14 +67,14 @@ pub async fn events(
         syncing_blocks,
         im_first,
     );
-    let mongod_events = handle_mongod_changes(swarm.clone());
+    let mongod_events = handle_mongod_changes();
 
     tokio::join!(swarm_events, mongod_events);
 }
 
-async fn handle_mongod_changes(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
+async fn handle_mongod_changes() {
     write_log("in handle mongod");
-    let _swarm = swarm.lock().unwrap();
+    // let _swarm = swarm.lock().unwrap();
     let db = blockchain_db().await.unwrap();
     let blocks_coll: Collection<Document> = db.collection("Blocks");
     let mut watching = blocks_coll.watch(None, None).await.unwrap();
