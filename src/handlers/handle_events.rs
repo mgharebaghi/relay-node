@@ -98,12 +98,12 @@ async fn handle_new_swarm_events(
     //check swarm events that come from libp2p
     loop {
 
-        if let Some(_stream) = watching.next().await {
-            write_log("new document add in Blocks collection");
-        } else {
-            write_log("no document");
-            continue;
-        }
+        // if let Some(_stream) = watching.next().await {
+        //     write_log("new document add in Blocks collection");
+        // } else {
+        //     write_log("no document");
+        //     continue;
+        // }
 
         let event = swarm.select_next_some().await;
         match event {
