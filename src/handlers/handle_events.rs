@@ -108,6 +108,7 @@ async fn handle_new_swarm_events(
     let mut swarm = swarm.lock().unwrap();
     //check swarm events that come from libp2p
     loop {
+        write_log("in loop of swarm events");
         let event = swarm.select_next_some().await;
         match event {
             SwarmEvent::NewListenAddr {
