@@ -93,18 +93,10 @@ async fn handle_new_swarm_events(
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
     let db = blockchain_db().await.unwrap();
-    let blocks_coll:Collection<Document> = db.collection("Blocks");
+    let blocks_coll: Collection<Document> = db.collection("Blocks");
     let mut watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
-
-        // if let Some(_stream) = watching.next().await {
-        //     write_log("new document add in Blocks collection");
-        // } else {
-        //     write_log("no document");
-        //     continue;
-        // }
-
         let event = swarm.select_next_some().await;
         match event {
             SwarmEvent::NewListenAddr {
@@ -477,10 +469,23 @@ async fn handle_new_swarm_events(
                             }
                         }
                     },
-                    _ => {},
+                    _ => {}
                 },
             },
-            _ => {},
+            _ => {
+                if let Some(_stream) = watching.next().await {
+                    write_log("new document add in Blocks collection");
+                } else {
+                    write_log("no document");
+                    continue;
+                }
+            }
+        }
+        if let Some(_stream) = watching.next().await {
+            write_log("new document add in Blocks collection");
+        } else {
+            write_log("no document");
+            continue;
         }
     }
 }
