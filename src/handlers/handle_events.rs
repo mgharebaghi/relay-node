@@ -110,6 +110,7 @@ async fn handle_new_swarm_events(
     loop {
         write_log("in loop of swarm events");
         let event = swarm.select_next_some().await;
+        write_log("after swarm select next some");
         match event {
             SwarmEvent::NewListenAddr {
                 address,
