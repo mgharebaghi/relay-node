@@ -17,11 +17,9 @@ use super::recieved_block::verifying_block;
 use super::remove_relays::remove_peer;
 use super::requests::handle_requests;
 use super::send_address::send_address;
-use super::structures::{
-    FullNodes, GetGossipMsg, GossipMessage, Req, Transaction,
-};
-use super::syncing::syncing;
+use super::structures::{FullNodes, GetGossipMsg, GossipMessage, Req, Transaction};
 use super::swarm_config::{CustomBehav, CustomBehavEvent};
+use super::syncing::syncing;
 
 #[derive(Debug)]
 pub struct Listeners {
@@ -94,7 +92,8 @@ async fn handle_new_swarm_events(
 
     //check swarm events that come from libp2p
     loop {
-        match swarm.select_next_some().await {
+        let event = swarm.select_next_some().await;
+        match event {
             SwarmEvent::NewListenAddr {
                 address,
                 listener_id,
