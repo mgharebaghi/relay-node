@@ -473,19 +473,17 @@ async fn handle_new_swarm_events(
                 },
             },
             _ => {
-                if let Some(_stream) = watching.next().await {
-                    write_log("new document add in Blocks collection");
-                } else {
-                    write_log("no document");
-                    continue;
+                if watching.next_if_any().await.is_ok() {
+                    if let Some(_stream) = watching.next().await {
+                        write_log("Blocks changes")
+                    }
                 }
             }
         }
-        if let Some(_stream) = watching.next().await {
-            write_log("new document add in Blocks collection");
-        } else {
-            write_log("no document");
-            continue;
+        if watching.next_if_any().await.is_ok() {
+            if let Some(_stream) = watching.next().await {
+                write_log("Blocks changes")
+            }
         }
     }
 }
