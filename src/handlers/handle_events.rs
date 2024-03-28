@@ -48,8 +48,8 @@ pub async fn events(
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
 ) {
-    handle_new_swarm_events(
-        swarm,
+    let swarm_events = handle_new_swarm_events(
+        swarm.clone(),
         local_peer_id,
         my_addresses,
         clients,
@@ -66,8 +66,20 @@ pub async fn events(
         dialed_addr,
         syncing_blocks,
         im_first,
-    )
-    .await;
+    );
+    let mongod_events = handle_mongod_changes(swarm.clone());
+
+    tokio::join!(swarm_events, mongod_events);
+}
+
+async fn handle_mongod_changes(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
+    let _swarm = swarm.lock().unwrap();
+    let db = blockchain_db().await.unwrap();
+    let blocks_coll: Collection<Document> = db.collection("Blocks");
+    let mut watching = blocks_coll.watch(None, None).await.unwrap();
+    while let Some(_stream) = watching.next().await {
+        write_log("Blocks changes")
+    }
 }
 
 async fn handle_new_swarm_events(
@@ -92,9 +104,6 @@ async fn handle_new_swarm_events(
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
-    let db = blockchain_db().await.unwrap();
-    let blocks_coll: Collection<Document> = db.collection("Blocks");
-    let mut watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
         let event = swarm.select_next_some().await;
@@ -472,18 +481,7 @@ async fn handle_new_swarm_events(
                     _ => {}
                 },
             },
-            _ => {
-                if *sync {
-                    if let Some(_stream) = watching.next().await {
-                        write_log("Blocks changes")
-                    }
-                }
-            }
-        }
-        if *sync {
-            if let Some(_stream) = watching.next().await {
-                write_log("Blocks changes")
-            }
+            _ => {}
         }
     }
 }
