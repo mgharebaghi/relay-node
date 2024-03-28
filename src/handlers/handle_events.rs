@@ -473,14 +473,14 @@ async fn handle_new_swarm_events(
                 },
             },
             _ => {
-                if watching.next_if_any().await.is_ok() {
+                if *sync {
                     if let Some(_stream) = watching.next().await {
                         write_log("Blocks changes")
                     }
                 }
             }
         }
-        if watching.next_if_any().await.is_ok() {
+        if *sync {
             if let Some(_stream) = watching.next().await {
                 write_log("Blocks changes")
             }
