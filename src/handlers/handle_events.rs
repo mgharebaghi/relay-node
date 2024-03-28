@@ -6,8 +6,11 @@ use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
+use mongodb::bson::Document;
+use mongodb::Collection;
 
 use super::create_log::write_log;
+use super::db_connection::blockchain_db;
 use super::get_addresses::get_addresses;
 use super::gossip_messages::handle_gossip_message;
 use super::handle_listeners::{handle, send_addr_to_server};
@@ -89,9 +92,20 @@ async fn handle_new_swarm_events(
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
-
+    let db = blockchain_db().await.unwrap();
+    let blocks_coll:Collection<Document> = db.collection("Blocks");
+    let mut watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
+
+        match watching.next().await {
+            Some(mut _stream) => {
+                // swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("client"), "text".as_bytes()).unwrap();
+                write_log("new document add in Blocks collection");
+            }
+            None => {}
+        } 
+
         let event = swarm.select_next_some().await;
         match event {
             SwarmEvent::NewListenAddr {
