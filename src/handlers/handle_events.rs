@@ -7,7 +7,7 @@ use libp2p::futures::StreamExt;
 // use futures::stream::TryStreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
-use mongodb::bson::Document;
+use mongodb::bson::{from_document, Document};
 use mongodb::Collection;
 
 use super::create_log::write_log;
@@ -95,14 +95,22 @@ async fn handle_new_swarm_events(
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
     let db = blockchain_db().await.unwrap();
-    let blocks_coll: Collection<Document> = db.collection("Blocks");
+    let blocks_coll: Collection<Document> = db.collection("Transactions");
     let mut watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
-        if let Ok(ch) = watching.next_if_any().await {
-            match ch {
-                Some(_) => {
-                    write_log("change!");
+        if let Ok(change) = watching.next_if_any().await {
+            match change {
+                Some(change_stream) => {
+                    let doc = change_stream.full_document.unwrap();
+                    let transaction:Transaction = from_document(doc).unwrap();
+                    let str_trx = serde_json::to_string(&transaction).unwrap();
+                    match swarm.behaviour_mut().gossipsub.publish(clients_topic.clone(), str_trx.as_bytes()) {
+                        Ok(_) => { 
+                            write_log("new transaction sent.");
+                        }
+                        Err(_) => {}
+                    }
                 }
                 None => {
                     match swarm.select_next_some().await {
