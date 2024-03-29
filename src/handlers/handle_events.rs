@@ -2,6 +2,7 @@ use std::net::Ipv4Addr;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
+use futures::TryStreamExt;
 use libp2p::core::transport::ListenerId;
 // use libp2p::futures::StreamExt;
 use futures::stream::StreamExt;
@@ -99,7 +100,7 @@ async fn handle_new_swarm_events(
     let mut watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
-        if let Ok(_) = watching.next_if_any().await {
+        if let Ok(_) = watching.try_next().await {
             write_log("Blocks changes")
         } else {
             let event = swarm.select_next_some().await;
