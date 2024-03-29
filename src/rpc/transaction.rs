@@ -45,6 +45,7 @@ pub async fn handle_transaction(
             let trx_doc = to_document(&transaction).unwrap();
             trx_coll.insert_one(trx_doc, None).await.unwrap();
             handle_transactions(serde_json::to_string(&transaction).unwrap()).await;
+            tx_res.status = "trx sent".to_string();
         }
         Err(_) => {
             tx_res.status = "error".to_string();
