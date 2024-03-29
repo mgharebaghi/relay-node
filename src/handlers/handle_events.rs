@@ -3,7 +3,8 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 
 use libp2p::core::transport::ListenerId;
-use libp2p::futures::StreamExt;
+// use libp2p::futures::StreamExt;
+use futures::stream::StreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
 use mongodb::bson::Document;
@@ -48,9 +49,8 @@ pub async fn events(
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
 ) {
-    let mongod_mutex = Arc::new(Mutex::new(swarm.clone()));
-    let swarm_events = handle_new_swarm_events(
-        swarm.clone(),
+    handle_new_swarm_events(
+        swarm,
         local_peer_id,
         my_addresses,
         clients,
@@ -67,21 +67,7 @@ pub async fn events(
         dialed_addr,
         syncing_blocks,
         im_first,
-    );
-    let mongod_events = handle_mongod_changes(mongod_mutex.lock().unwrap().clone());
-
-    tokio::join!(swarm_events, mongod_events);
-}
-
-async fn handle_mongod_changes(swarm: Arc<Mutex<Swarm<CustomBehav>>>) {
-    write_log("in handle mongod");
-    let _swarm = swarm.lock().unwrap();
-    let db = blockchain_db().await.unwrap();
-    let blocks_coll: Collection<Document> = db.collection("Blocks");
-    let mut watching = blocks_coll.watch(None, None).await.unwrap();
-    while let Some(_stream) = watching.next().await {
-        write_log("Blocks changes")
-    }
+    ).await
 }
 
 async fn handle_new_swarm_events(
@@ -107,11 +93,16 @@ async fn handle_new_swarm_events(
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();
+    let db = blockchain_db().await.unwrap();
+    let blocks_coll: Collection<Document> = db.collection("Blocks");
+    let mut watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
-        write_log("in loop of swarm events");
+        if let Some(_stream) = watching.next().await {
+            write_log("Blocks changes")
+        }
+
         let event = swarm.select_next_some().await;
-        write_log("after swarm select next some");
         match event {
             SwarmEvent::NewListenAddr {
                 address,
