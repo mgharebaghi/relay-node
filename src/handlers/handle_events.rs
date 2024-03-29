@@ -100,15 +100,12 @@ async fn handle_new_swarm_events(
     //check swarm events that come from libp2p
     loop {
         if let Ok(ch) = watching.next_if_any().await {
-            write_log("in ch");
-
             match ch {
                 Some(_) => {
                     write_log("change!");
                 }
                 None => {
-                    let event = swarm.select_next_some().await;
-                    match event {
+                    match swarm.select_next_some().await {
                         SwarmEvent::NewListenAddr {
                             address,
                             listener_id,
