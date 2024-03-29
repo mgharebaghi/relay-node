@@ -95,10 +95,10 @@ async fn handle_new_swarm_events(
     let mut swarm = swarm.lock().unwrap();
     let db = blockchain_db().await.unwrap();
     let blocks_coll: Collection<Document> = db.collection("Blocks");
-    let mut watching = blocks_coll.watch(None, None).await.unwrap();
+    let watching = blocks_coll.watch(None, None).await.unwrap();
     //check swarm events that come from libp2p
     loop {
-        if let Some(_stream) = watching.next().await.transpose().unwrap() {
+        if watching.is_alive() {
             write_log("Blocks changes")
         }
 
