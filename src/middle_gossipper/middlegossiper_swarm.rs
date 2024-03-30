@@ -1,10 +1,13 @@
-use std::{fs::File, io::{BufRead, BufReader}, time::Duration};
-
-use libp2p::{
-    gossipsub::IdentTopic, identity::Keypair, swarm::NetworkBehaviour, Multiaddr, Swarm, SwarmBuilder
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    time::Duration,
 };
 
-use crate::handlers::create_log::write_log;
+use libp2p::{
+    gossipsub::IdentTopic, identity::Keypair, swarm::NetworkBehaviour, Multiaddr, Swarm,
+    SwarmBuilder,
+};
 
 pub trait MiddleSwarmConf {
     async fn new() -> Swarm<MyBehaviour>;
@@ -19,14 +22,16 @@ impl MiddleSwarmConf for MyBehaviour {
     async fn new() -> Swarm<Self> {
         //generate peer keys and peer id for network
         let keypair = Keypair::generate_ecdsa();
-        let topic = IdentTopic::new("relay");
+        let relay_topic = IdentTopic::new("relay");
+        let clients_topic = IdentTopic::new("client");
 
         //gossip protocol config
         let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
         let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
         gossip_cfg.duplicate_cache_time();
         let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-        gossipsub.subscribe(&topic).unwrap();
+        gossipsub.subscribe(&relay_topic).unwrap();
+        gossipsub.subscribe(&clients_topic).unwrap();
 
         //Definition of behavior
         let behaviour = MyBehaviour { gossipsub };
@@ -65,19 +70,15 @@ impl MiddleSwarmConf for MyBehaviour {
             let reader = BufReader::new(file);
             for line in reader.lines() {
                 if let Ok(addr) = line {
-                    let multiaddr:Multiaddr = addr.parse().unwrap();
+                    let multiaddr: Multiaddr = addr.parse().unwrap();
                     match swarm.dial(multiaddr) {
-                        Ok(_) => {
-                            write_log(&format!("midle gossiper dilaing with: {}", addr));
-                        }
-                        Err(_) => {
-
-                        }
+                        Ok(_) => {}
+                        Err(_) => {}
                     }
                 }
             }
         }
-        
+
         swarm
     }
 }

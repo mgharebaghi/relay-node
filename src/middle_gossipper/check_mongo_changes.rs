@@ -52,6 +52,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                     db.collection("Transactions");
                                 let mut watchin =
                                     transactions_coll.watch(None, None).await.unwrap();
+                                    let clients_topic = IdentTopic::new("client");
                                 loop {
                                     println!("in loop of subscriber");
                                     if let Some(change) = watchin.next().await {
@@ -64,8 +65,8 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                 let str_trx =
                                                     serde_json::to_string(&transaction).unwrap();
                                                 match swarm.behaviour_mut().gossipsub.publish(
-                                                    IdentTopic::new("client"),
-                                                    str_trx,
+                                                    clients_topic.clone(),
+                                                    str_trx.as_bytes(),
                                                 ) {
                                                     Ok(_) => {
                                                         write_log("new trx sent to network");
