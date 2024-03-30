@@ -5,7 +5,6 @@ use std::{
 
 use futures::StreamExt;
 use libp2p::{
-    gossipsub::{Event, IdentTopic},
     swarm::SwarmEvent,
     Multiaddr, Swarm,
 };
@@ -15,7 +14,9 @@ use mongodb::{
 };
 
 use crate::handlers::{
-    create_log::write_log, db_connection::blockchain_db, structures::Transaction,
+    create_log::write_log,
+    db_connection::blockchain_db,
+    structures::{Req, Transaction},
 };
 
 use super::middlegossiper_swarm::{MyBehaviour, MyBehaviourEvent};
@@ -24,8 +25,36 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
     write_log("in middle gossipper");
     loop {
         match swarm.select_next_some().await {
-            SwarmEvent::ConnectionEstablished { .. } => {
+            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 write_log("middle gossiper connection stablished");
+                match blockchain_db().await {
+                    Ok(db) => {
+                        let transactions_coll: Collection<Document> = db.collection("Transactions");
+                        let mut watchin = transactions_coll.watch(None, None).await.unwrap();
+                        loop {
+                            println!("in loop of subscriber");
+                            if let Some(change) = watchin.next().await {
+                                write_log("new transaction find!");
+                                match change {
+                                    Ok(data) => {
+                                        let doc = data.full_document.unwrap();
+                                        let transaction: Transaction = from_document(doc).unwrap();
+                                        let str_trx = serde_json::to_string(&transaction).unwrap();
+                                        let request = Req { req: str_trx };
+                                        swarm
+                                            .behaviour_mut()
+                                            .req_res
+                                            .send_request(&peer_id, request);
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        break;
+                    }
+                }
             }
             SwarmEvent::OutgoingConnectionError { .. } => {
                 let my_addr_file = File::open("/etc/myaddress.dat");
@@ -44,48 +73,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
             }
             SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                 MyBehaviourEvent::Gossipsub(event) => match event {
-                    Event::Subscribed { .. } => {
-                        write_log("new subscriber");
-                        match blockchain_db().await {
-                            Ok(db) => {
-                                let transactions_coll: Collection<Document> =
-                                    db.collection("Transactions");
-                                let mut watchin =
-                                    transactions_coll.watch(None, None).await.unwrap();
-                                    let clients_topic = IdentTopic::new("client");
-                                loop {
-                                    println!("in loop of subscriber");
-                                    if let Some(change) = watchin.next().await {
-                                        write_log("new transaction find!");
-                                        match change {
-                                            Ok(data) => {
-                                                let doc = data.full_document.unwrap();
-                                                let transaction: Transaction =
-                                                    from_document(doc).unwrap();
-                                                let str_trx =
-                                                    serde_json::to_string(&transaction).unwrap();
-                                                match swarm.behaviour_mut().gossipsub.publish(
-                                                    clients_topic.clone(),
-                                                    str_trx.as_bytes(),
-                                                ) {
-                                                    Ok(_) => {
-                                                        write_log("new trx sent to network");
-                                                    }
-                                                    Err(e) => {
-                                                        write_log(&format!("problem sending new trx to network: {e}"));
-                                                    }
-                                                }
-                                            }
-                                            Err(_) => {}
-                                        }
-                                    }
-                                }
-                            }
-                            Err(_) => {
-                                break;
-                            }
-                        }
-                    }
+                    _ => {}
+                },
+                MyBehaviourEvent::ReqRes(event) => match event {
                     _ => {}
                 },
             },

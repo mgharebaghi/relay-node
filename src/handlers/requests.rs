@@ -4,7 +4,7 @@ use super::{
     outnodes::handle_outnode,
     recieved_block::verifying_block,
     structures::{FullNodes, GossipMessage, Req, Res, Transaction},
-    CustomBehav, 
+    CustomBehav,
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use serde::{Deserialize, Serialize};
@@ -54,42 +54,15 @@ pub async fn handle_requests(
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
         handle_transactions(request.req.clone()).await; //insert transaction to db
-
-        //send true transaction to sse servers
-        let sse_topic = IdentTopic::new("sse");
-        match swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(sse_topic, request.req.clone())
-        {
-            Ok(_) => {}
-            Err(_) => {}
-        }
-
+        write_log("get trx request");
         //send true transaction to connected Validators and relays
         let send_transaction = swarm
             .behaviour_mut()
             .gossipsub
             .publish(clients_topic, request.req);
         match send_transaction {
-            Ok(_) => {
-                let response = Res {
-                    res: "Your transaction sent.".to_string(),
-                };
-                let _ = swarm
-                    .behaviour_mut()
-                    .req_res
-                    .send_response(channel, response);
-            }
-            Err(_) => {
-                let response = Res {
-                    res: "sending error!".to_string(),
-                };
-                let _ = swarm
-                    .behaviour_mut()
-                    .req_res
-                    .send_response(channel, response);
-            }
+            Ok(_) => {}
+            Err(_) => {}
         }
     } else if request.req.clone() == "fullnodes".to_string() {
         let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();

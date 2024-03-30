@@ -5,9 +5,10 @@ use std::{
 };
 
 use libp2p::{
-    gossipsub::IdentTopic, identity::Keypair, swarm::NetworkBehaviour, Multiaddr, Swarm,
-    SwarmBuilder,
+    gossipsub::IdentTopic, identity::Keypair, request_response::{cbor, ProtocolSupport}, swarm::NetworkBehaviour, Multiaddr, StreamProtocol, Swarm, SwarmBuilder
 };
+
+use crate::handlers::structures::{Req, Res};
 
 pub trait MiddleSwarmConf {
     async fn new() -> Swarm<MyBehaviour>;
@@ -16,6 +17,7 @@ pub trait MiddleSwarmConf {
 #[derive(NetworkBehaviour)]
 pub struct MyBehaviour {
     pub gossipsub: libp2p::gossipsub::Behaviour,
+    pub req_res: cbor::Behaviour<Req, Res>,
 }
 
 impl MiddleSwarmConf for MyBehaviour {
@@ -33,8 +35,14 @@ impl MiddleSwarmConf for MyBehaviour {
         gossipsub.subscribe(&relay_topic).unwrap();
         gossipsub.subscribe(&clients_topic).unwrap();
 
+        //request and response protocol config
+        let req_res = cbor::Behaviour::<Req, Res>::new(
+            [(StreamProtocol::new("/mg/1.0"), ProtocolSupport::Full)],
+            libp2p::request_response::Config::default(),
+        );
+
         //Definition of behavior
-        let behaviour = MyBehaviour { gossipsub };
+        let behaviour = MyBehaviour { gossipsub, req_res };
 
         //config swarm
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
