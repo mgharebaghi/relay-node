@@ -1,12 +1,8 @@
 use super::{
-    check_trx::handle_transactions,
-    create_log::write_log,
-    outnodes::handle_outnode,
-    recieved_block::verifying_block,
-    structures::{FullNodes, GossipMessage, Req, Res, Transaction},
-    CustomBehav, 
+    check_trx::handle_transactions, create_log::write_log, db_connection::blockchain_db, outnodes::handle_outnode, recieved_block::verifying_block, structures::{FullNodes, GossipMessage, Req, Res, Transaction}, CustomBehav 
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
+use mongodb::{bson::Document, Collection};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,12 +25,15 @@ pub async fn handle_requests(
     local_peer_id: PeerId,
 ) {
     if request.req == "handshake".to_string() {
+        let db  = blockchain_db().await.unwrap();
+        let blocks_coll:Collection<Document> = db.collection("Blocks");
+        let count_docs = blocks_coll.count_documents(None, None).await.unwrap();
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
         };
 
-        if fullnode_subs.len() > 0 {
+        if fullnode_subs.len() > 0 || count_docs > 0{
             handshake_res.first_node.push_str(&"no".to_string());
         } else {
             handshake_res.first_node.push_str(&"yes".to_string());
