@@ -24,6 +24,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
     write_log("in middle gossipper");
     loop {
         match swarm.select_next_some().await {
+            SwarmEvent::ConnectionEstablished {..} => {
+                write_log("middle gossiper connection stablished");
+            }
             SwarmEvent::OutgoingConnectionError { .. } => {
                 write_log("middle gossiper diailing failed!");
                 let my_addr_file = File::open("/etc/myaddress.dat");
@@ -45,7 +48,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
             SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                 MyBehaviourEvent::Gossipsub(event) => match event {
                     Event::Subscribed { .. } => {
-                        println!("new subscriber");
+                        write_log("new subscriber");
                         match blockchain_db().await {
                             Ok(db) => {
                                 let transactions_coll: Collection<Document> =
