@@ -68,7 +68,7 @@ impl MiddleSwarmConf for MyBehaviour {
                     let multiaddr:Multiaddr = addr.parse().unwrap();
                     match swarm.dial(multiaddr) {
                         Ok(_) => {
-                            write_log(&format!("dilaing with: {}", addr));
+                            write_log(&format!("midle gossiper dilaing with: {}", addr));
                         }
                         Err(_) => {
 

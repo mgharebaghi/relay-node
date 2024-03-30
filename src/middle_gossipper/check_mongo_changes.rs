@@ -1,15 +1,22 @@
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
+
 use futures::StreamExt;
 use libp2p::{
     gossipsub::{Event, IdentTopic},
     swarm::SwarmEvent,
-    Swarm,
+    Multiaddr, Swarm,
 };
 use mongodb::{
     bson::{from_document, Document},
     Collection,
 };
 
-use crate::handlers::{create_log::write_log, db_connection::blockchain_db, structures::Transaction};
+use crate::handlers::{
+    create_log::write_log, db_connection::blockchain_db, structures::Transaction,
+};
 
 use super::middlegossiper_swarm::{MyBehaviour, MyBehaviourEvent};
 
@@ -17,39 +24,61 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
     write_log("in middle gossipper");
     loop {
         match swarm.select_next_some().await {
+            SwarmEvent::OutgoingConnectionError { .. } => {
+                write_log("middle gossiper diailing failed!");
+                let my_addr_file = File::open("/etc/myaddress.dat");
+                if let Ok(file) = my_addr_file {
+                    let reader = BufReader::new(file);
+                    for line in reader.lines() {
+                        if let Ok(addr) = line {
+                            let multiaddr: Multiaddr = addr.parse().unwrap();
+                            match swarm.dial(multiaddr) {
+                                Ok(_) => {
+                                    write_log(&format!("midle gossiper dilaing with: {}", addr));
+                                }
+                                Err(_) => {}
+                            }
+                        }
+                    }
+                }
+            }
             SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                 MyBehaviourEvent::Gossipsub(event) => match event {
-                    Event::Subscribed { .. } => match blockchain_db().await {
-                        Ok(db) => {
-                            let transactions_coll: Collection<Document> =
-                                db.collection("Transactions");
-                            let mut watchin = transactions_coll.watch(None, None).await.unwrap();
-                            loop {
-                                if let Some(change) = watchin.next().await {
-                                    match change {
-                                        Ok(data) => {
-                                            let doc = data.full_document.unwrap();
-                                            let transaction: Transaction =
-                                                from_document(doc).unwrap();
-                                            let str_trx =
-                                                serde_json::to_string(&transaction).unwrap();
-                                            match swarm.behaviour_mut().gossipsub.publish(
-                                                IdentTopic::new("client"),
-                                                str_trx.as_bytes(),
-                                            ) {
-                                                Ok(_) => {}
-                                                Err(_) => {}
+                    Event::Subscribed { .. } => {
+                        println!("new subscriber");
+                        match blockchain_db().await {
+                            Ok(db) => {
+                                let transactions_coll: Collection<Document> =
+                                    db.collection("Transactions");
+                                let mut watchin =
+                                    transactions_coll.watch(None, None).await.unwrap();
+                                loop {
+                                    if let Some(change) = watchin.next().await {
+                                        match change {
+                                            Ok(data) => {
+                                                let doc = data.full_document.unwrap();
+                                                let transaction: Transaction =
+                                                    from_document(doc).unwrap();
+                                                let str_trx =
+                                                    serde_json::to_string(&transaction).unwrap();
+                                                match swarm.behaviour_mut().gossipsub.publish(
+                                                    IdentTopic::new("client"),
+                                                    str_trx.as_bytes(),
+                                                ) {
+                                                    Ok(_) => {}
+                                                    Err(_) => {}
+                                                }
                                             }
+                                            Err(_) => {}
                                         }
-                                        Err(_) => {}
                                     }
                                 }
                             }
+                            Err(_) => {
+                                break;
+                            }
                         }
-                        Err(_) => {
-                            break;
-                        }
-                    },
+                    }
                     _ => {}
                 },
             },
