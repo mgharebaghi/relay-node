@@ -70,8 +70,8 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                     Ok(_) => {
                                                         write_log("new trx sent to network");
                                                     }
-                                                    Err(_) => {
-                                                        write_log("problem sending new trx to network");
+                                                    Err(e) => {
+                                                        write_log(&format!("problem sending new trx to network: {e}"));
                                                     }
                                                 }
                                             }
