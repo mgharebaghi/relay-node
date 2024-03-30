@@ -20,6 +20,7 @@ use mongodb::{
 
 pub async fn handle_transactions(message: String) {
     if let Ok(mut transaction) = serde_json::from_str::<Transaction>(&message) {
+        write_log("get new trx in gossip msg");
         match blockchain_db().await {
             Ok(db) => {
                 let reciept_coll: Collection<Document> = db.collection("reciept");

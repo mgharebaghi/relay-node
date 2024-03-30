@@ -65,7 +65,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                     serde_json::to_string(&transaction).unwrap();
                                                 match swarm.behaviour_mut().gossipsub.publish(
                                                     IdentTopic::new("client"),
-                                                    str_trx.as_bytes(),
+                                                    str_trx,
                                                 ) {
                                                     Ok(_) => {
                                                         write_log("new trx sent to network");

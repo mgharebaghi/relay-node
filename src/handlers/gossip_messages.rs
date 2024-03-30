@@ -22,7 +22,7 @@ pub async fn handle_gossip_message(
     leader: &mut String, 
     fullnodes: &mut Vec<FullNodes>,
 ) {
-    
+    write_log("get new gossip msg");
     msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id).await;
 
     match String::from_utf8(message.data.clone()) {

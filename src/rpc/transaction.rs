@@ -15,8 +15,7 @@ use axum::{
 // };
 use mongodb::{bson::{to_document, Document}, Collection};
 
-use crate::handlers::{
-    check_trx::handle_transactions, create_log::write_log, db_connection::blockchain_db, structures::Transaction
+use crate::handlers::{create_log::write_log, db_connection::blockchain_db, structures::Transaction
 };
 
 use super::{
@@ -45,7 +44,7 @@ pub async fn handle_transaction(
             let trx_coll:Collection<Document> = db.collection("Transactions");
             let trx_doc = to_document(&transaction).unwrap();
             trx_coll.insert_one(trx_doc, None).await.unwrap();
-            handle_transactions(serde_json::to_string(&transaction).unwrap()).await;
+            // handle_transactions(serde_json::to_string(&transaction).unwrap()).await;
             tx_res.status = "success".to_string();
         }
         Err(_) => {
