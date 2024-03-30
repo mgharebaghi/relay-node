@@ -16,7 +16,7 @@ use axum::{
 use mongodb::{bson::{to_document, Document}, Collection};
 
 use crate::handlers::{
-    check_trx::handle_transactions, db_connection::blockchain_db, structures::Transaction
+    check_trx::handle_transactions, create_log::write_log, db_connection::blockchain_db, structures::Transaction
 };
 
 use super::{
@@ -41,6 +41,7 @@ pub async fn handle_transaction(
 
     match blockchain_db().await {
         Ok(db) => {
+            write_log("inserting new transaction...");
             let trx_coll:Collection<Document> = db.collection("Transactions");
             let trx_doc = to_document(&transaction).unwrap();
             trx_coll.insert_one(trx_doc, None).await.unwrap();

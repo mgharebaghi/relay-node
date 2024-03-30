@@ -24,11 +24,10 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
     write_log("in middle gossipper");
     loop {
         match swarm.select_next_some().await {
-            SwarmEvent::ConnectionEstablished {..} => {
+            SwarmEvent::ConnectionEstablished { .. } => {
                 write_log("middle gossiper connection stablished");
             }
             SwarmEvent::OutgoingConnectionError { .. } => {
-                write_log("middle gossiper diailing failed!");
                 let my_addr_file = File::open("/etc/myaddress.dat");
                 if let Ok(file) = my_addr_file {
                     let reader = BufReader::new(file);
@@ -36,9 +35,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                         if let Ok(addr) = line {
                             let multiaddr: Multiaddr = addr.parse().unwrap();
                             match swarm.dial(multiaddr) {
-                                Ok(_) => {
-                                    write_log(&format!("midle gossiper dilaing with: {}", addr));
-                                }
+                                Ok(_) => {}
                                 Err(_) => {}
                             }
                         }
@@ -56,7 +53,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                 let mut watchin =
                                     transactions_coll.watch(None, None).await.unwrap();
                                 loop {
+                                    println!("in loop of subscriber");
                                     if let Some(change) = watchin.next().await {
+                                        write_log("new transaction find!");
                                         match change {
                                             Ok(data) => {
                                                 let doc = data.full_document.unwrap();
@@ -68,8 +67,12 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                     IdentTopic::new("client"),
                                                     str_trx.as_bytes(),
                                                 ) {
-                                                    Ok(_) => {}
-                                                    Err(_) => {}
+                                                    Ok(_) => {
+                                                        write_log("new trx sent to network");
+                                                    }
+                                                    Err(_) => {
+                                                        write_log("problem sending new trx to network");
+                                                    }
                                                 }
                                             }
                                             Err(_) => {}
