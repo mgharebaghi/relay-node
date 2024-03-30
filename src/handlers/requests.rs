@@ -4,7 +4,7 @@ use super::{
     outnodes::handle_outnode,
     recieved_block::verifying_block,
     structures::{FullNodes, GossipMessage, Req, Res, Transaction},
-    CustomBehav,
+    CustomBehav, 
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use serde::{Deserialize, Serialize};
@@ -61,8 +61,24 @@ pub async fn handle_requests(
             .gossipsub
             .publish(clients_topic, request.req);
         match send_transaction {
-            Ok(_) => {}
-            Err(_) => {}
+            Ok(_) => {
+                let response = Res {
+                    res: "Your transaction sent.".to_string(),
+                };
+                let _ = swarm
+                    .behaviour_mut()
+                    .req_res
+                    .send_response(channel, response);
+            }
+            Err(_) => {
+                let response = Res {
+                    res: "sending error!".to_string(),
+                };
+                let _ = swarm
+                    .behaviour_mut()
+                    .req_res
+                    .send_response(channel, response);
+            }
         }
     } else if request.req.clone() == "fullnodes".to_string() {
         let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();
