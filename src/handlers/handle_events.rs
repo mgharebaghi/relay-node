@@ -87,7 +87,6 @@ async fn handle_new_swarm_events(
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
 ) {
-    write_log("in handle swarm events");
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
     let mut swarm = swarm.lock().unwrap();

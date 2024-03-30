@@ -6,6 +6,8 @@ use libp2p::{
     Multiaddr, Swarm, SwarmBuilder,
 };
 
+use crate::handlers::create_log::write_log;
+
 pub trait MiddleSwarmConf {
     async fn new() -> Swarm<MyBehaviour>;
 }
@@ -66,7 +68,7 @@ impl MiddleSwarmConf for MyBehaviour {
                     let multiaddr:Multiaddr = addr.parse().unwrap();
                     match swarm.dial(multiaddr) {
                         Ok(_) => {
-
+                            write_log(&format!("dilaing with: {}", addr));
                         }
                         Err(_) => {
 

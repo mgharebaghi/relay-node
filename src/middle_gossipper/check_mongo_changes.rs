@@ -9,11 +9,12 @@ use mongodb::{
     Collection,
 };
 
-use crate::handlers::{db_connection::blockchain_db, structures::Transaction};
+use crate::handlers::{create_log::write_log, db_connection::blockchain_db, structures::Transaction};
 
 use super::middlegossiper_swarm::{MyBehaviour, MyBehaviourEvent};
 
 pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
+    write_log("in middle gossipper");
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
