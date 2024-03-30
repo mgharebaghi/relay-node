@@ -44,7 +44,6 @@ pub async fn handle_transaction(
             let trx_coll:Collection<Document> = db.collection("Transactions");
             let trx_doc = to_document(&transaction).unwrap();
             trx_coll.insert_one(trx_doc, None).await.unwrap();
-            // handle_transactions(serde_json::to_string(&transaction).unwrap()).await;
             tx_res.status = "success".to_string();
         }
         Err(_) => {

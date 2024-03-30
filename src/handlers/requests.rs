@@ -54,7 +54,6 @@ pub async fn handle_requests(
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
         handle_transactions(request.req.clone()).await; //insert transaction to db
-        write_log("get trx request");
         //send true transaction to connected Validators and relays
         let send_transaction = swarm
             .behaviour_mut()
