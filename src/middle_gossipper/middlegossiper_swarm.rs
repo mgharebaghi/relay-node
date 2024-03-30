@@ -1,9 +1,7 @@
 use std::{fs::File, io::{BufRead, BufReader}, time::Duration};
 
 use libp2p::{
-    identity::Keypair,
-    swarm::NetworkBehaviour,
-    Multiaddr, Swarm, SwarmBuilder,
+    gossipsub::IdentTopic, identity::Keypair, swarm::NetworkBehaviour, Multiaddr, Swarm, SwarmBuilder
 };
 
 use crate::handlers::create_log::write_log;
@@ -21,12 +19,14 @@ impl MiddleSwarmConf for MyBehaviour {
     async fn new() -> Swarm<Self> {
         //generate peer keys and peer id for network
         let keypair = Keypair::generate_ecdsa();
+        let topic = IdentTopic::new("relay");
 
         //gossip protocol config
         let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
         let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
         gossip_cfg.duplicate_cache_time();
-        let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
+        let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
+        gossipsub.subscribe(&topic).unwrap();
 
         //Definition of behavior
         let behaviour = MyBehaviour { gossipsub };
