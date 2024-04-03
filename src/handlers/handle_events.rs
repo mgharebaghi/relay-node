@@ -193,6 +193,7 @@ async fn handle_new_swarm_events(
                             relay_topic_subscribers.remove(index);
                             if relay_topic_subscribers.len() == 0 {
                                 *im_first = true;
+                                write_log(&format!("Im first: {}", im_first));
                             }
                             // remove_peer(peer_id).await; //remove from .dat file and send address to server for remove from relays list
                         }
