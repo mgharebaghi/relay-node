@@ -6,13 +6,14 @@ use std::{
 };
 
 use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
+use mongodb::Database;
 
 use super::{
     create_log::write_log, listening_dialing::start, structures::FullNodes,
     swarm_config::CustomBehav,
 };
 
-pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
+pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId, db: Database) {
     let mut wallet = String::new();
     let mut wallet_path = "";
     if OS == "linux" {
@@ -66,6 +67,7 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId) {
         &mut fullnode_subs,
         &mut sync,
         &mut syncing_blocks,
+        db
     )
     .await;
 }

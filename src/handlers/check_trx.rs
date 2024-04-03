@@ -7,156 +7,148 @@ use sha2::{Digest, Sha256};
 use sp_core::Pair;
 
 use super::{
-    create_log::write_log,
-    db_connection::blockchain_db,
     reciept::insert_reciept,
     structures::{Transaction, UTXO},
 };
 
 use mongodb::{
     bson::{doc, from_document, to_document, Document},
-    Collection,
+    Collection, Database,
 };
 
-pub async fn handle_transactions(message: String) {
+pub async fn handle_transactions(message: String, db: Database) {
     if let Ok(mut transaction) = serde_json::from_str::<Transaction>(&message) {
-        match blockchain_db().await {
-            Ok(db) => {
-                let reciept_coll: Collection<Document> = db.collection("reciept");
-                let reciept_filter = doc! {"hash": transaction.tx_hash.clone()};
-                let reciept = reciept_coll.find_one(reciept_filter, None).await;
-                match reciept {
-                    Ok(is) => {
-                        if is.is_none() {
-                            transaction.fee =
-                                transaction.value * Decimal::from_str("0.01").unwrap();
-                            //create hash of transaction
-                            let mut check_hasher = Sha256::new();
-                            check_hasher.update(transaction.input.input_hash.clone());
-                            check_hasher.update(transaction.output.output_hash.clone());
-                            let check_hash = format!("{:x}", check_hasher.finalize());
+        let reciept_coll: Collection<Document> = db.collection("reciept");
+        let reciept_filter = doc! {"hash": transaction.tx_hash.clone()};
+        let reciept = reciept_coll.find_one(reciept_filter, None).await;
+        match reciept {
+            Ok(is) => {
+                if is.is_none() {
+                    transaction.fee = transaction.value * Decimal::from_str("0.01").unwrap();
+                    //create hash of transaction
+                    let mut check_hasher = Sha256::new();
+                    check_hasher.update(transaction.input.input_hash.clone());
+                    check_hasher.update(transaction.output.output_hash.clone());
+                    let check_hash = format!("{:x}", check_hasher.finalize());
 
-                            //create hash of inputs
-                            let tx_input_str =
-                                serde_json::to_string(&transaction.input.input_data).unwrap();
-                            let mut input_hasher = Sha256::new();
-                            input_hasher.update(tx_input_str);
-                            let inputs_hash = format!("{:x}", input_hasher.finalize());
+                    //create hash of inputs
+                    let tx_input_str =
+                        serde_json::to_string(&transaction.input.input_data).unwrap();
+                    let mut input_hasher = Sha256::new();
+                    input_hasher.update(tx_input_str);
+                    let inputs_hash = format!("{:x}", input_hasher.finalize());
 
-                            //create hash of outputs
-                            let tx_output_str =
-                                serde_json::to_string(&transaction.output.output_data).unwrap();
-                            let mut output_hasher = Sha256::new();
-                            output_hasher.update(tx_output_str.clone());
-                            let output_hash = format!("{:x}", output_hasher.finalize());
+                    //create hash of outputs
+                    let tx_output_str =
+                        serde_json::to_string(&transaction.output.output_data).unwrap();
+                    let mut output_hasher = Sha256::new();
+                    output_hasher.update(tx_output_str.clone());
+                    let output_hash = format!("{:x}", output_hasher.finalize());
 
-                            //check transaction signature
-                            let signed_message = transaction.tx_hash.clone();
-                            let sign_verify = sp_core::ecdsa::Pair::verify(
-                                &transaction.input.signatures[0],
-                                signed_message,
-                                &transaction.output.output_data.sigenr_public_keys[0],
-                            );
+                    //check transaction signature
+                    let signed_message = transaction.tx_hash.clone();
+                    let sign_verify = sp_core::ecdsa::Pair::verify(
+                        &transaction.input.signatures[0],
+                        signed_message,
+                        &transaction.output.output_data.sigenr_public_keys[0],
+                    );
 
-                            //get bool as verify of hashs
-                            let outputhash_check = output_hash == transaction.output.output_hash;
-                            let inputhash_check = inputs_hash == transaction.input.input_hash;
-                            let hash_verify = transaction.tx_hash == check_hash;
+                    //get bool as verify of hashs
+                    let outputhash_check = output_hash == transaction.output.output_hash;
+                    let inputhash_check = inputs_hash == transaction.input.input_hash;
+                    let hash_verify = transaction.tx_hash == check_hash;
 
-                            let mut unvalidity_num = 0 as usize;
-                            for i in transaction.output.output_data.utxos.clone() {
-                                if i.output_unspent.public_key
-                                    == transaction.output.output_data.sigenr_public_keys[0]
-                                        .to_string()
-                                {
-                                    unvalidity_num += 1;
+                    let mut unvalidity_num = 0 as usize;
+                    for i in transaction.output.output_data.utxos.clone() {
+                        if i.output_unspent.public_key
+                            == transaction.output.output_data.sigenr_public_keys[0].to_string()
+                        {
+                            unvalidity_num += 1;
+                        }
+                    }
+                    let trx_validity = transaction.output.output_data.utxos.len() != unvalidity_num;
+
+                    //check if all of hashs is verify and trx_validity is legit then handle the trx
+                    if trx_validity
+                        && sign_verify
+                        && hash_verify
+                        && inputhash_check
+                        && outputhash_check
+                    {
+                        let filter = doc! {"public_key": &transaction.output.output_data.sigenr_public_keys[0].to_string()};
+                        let utxos_coll = db.collection("UTXOs");
+                        let utxo_doc = utxos_coll.find_one(filter.clone(), None).await.unwrap();
+                        if let Some(doc) = utxo_doc {
+                            let mut user_utxos: UTXO = from_document(doc).unwrap();
+                            let mut correct_tx = true;
+                            for utxo in transaction.input.input_data.utxos.clone() {
+                                let index = user_utxos
+                                    .utxos
+                                    .iter()
+                                    .position(|u| *u.output_hash == utxo.output_hash.clone());
+                                match index {
+                                    Some(i) => {
+                                        user_utxos.utxos.remove(i);
+                                    }
+                                    None => {
+                                        correct_tx = false;
+                                        break;
+                                    }
                                 }
                             }
-                            let trx_validity =
-                                transaction.output.output_data.utxos.len() != unvalidity_num;
 
-                            //check if all of hashs is verify and trx_validity is legit then handle the trx
-                            if trx_validity
-                                && sign_verify
-                                && hash_verify
-                                && inputhash_check
-                                && outputhash_check
-                            {
-                                let filter = doc! {"public_key": &transaction.output.output_data.sigenr_public_keys[0].to_string()};
-                                let utxos_coll = db.collection("UTXOs");
-                                let utxo_doc =
-                                    utxos_coll.find_one(filter.clone(), None).await.unwrap();
-                                if let Some(doc) = utxo_doc {
-                                    let mut user_utxos: UTXO = from_document(doc).unwrap();
-                                    let mut correct_tx = true;
-                                    for utxo in transaction.input.input_data.utxos.clone() {
-                                        let index = user_utxos.utxos.iter().position(|u| {
-                                            *u.output_hash == utxo.output_hash.clone()
-                                        });
-                                        match index {
-                                            Some(i) => {
-                                                user_utxos.utxos.remove(i);
-                                            }
-                                            None => {
-                                                correct_tx = false;
-                                                break;
-                                            }
-                                        }
-                                    }
-
-                                    if correct_tx {
-                                        let user_utxo_updated = to_document(&user_utxos).unwrap();
-                                        utxos_coll
-                                            .replace_one(filter.clone(), user_utxo_updated, None)
-                                            .await
-                                            .unwrap();
-                                        //set fee
-                                        transaction.date.clear();
-                                        transaction
-                                            .date
-                                            .push_str(&Utc::now().round_subsecs(0).to_string());
-                                        insert_reciept(
-                                            transaction.clone(),
-                                            None,
-                                            "pending".to_string(),
-                                            "".to_string(),
-                                        )
-                                        .await;
-                                    } else {
-                                        insert_reciept(
-                                            transaction,
-                                            None,
-                                            "Error".to_string(),
-                                            "There is not input UTXOs".to_string(),
-                                        )
-                                        .await;
-                                    }
-                                } else {
-                                    insert_reciept(
-                                        transaction,
-                                        None,
-                                        "Error".to_string(),
-                                        "There is not input UTXOs".to_string(),
-                                    )
-                                    .await;
-                                }
+                            if correct_tx {
+                                let user_utxo_updated = to_document(&user_utxos).unwrap();
+                                utxos_coll
+                                    .replace_one(filter.clone(), user_utxo_updated, None)
+                                    .await
+                                    .unwrap();
+                                //set fee
+                                transaction.date.clear();
+                                transaction
+                                    .date
+                                    .push_str(&Utc::now().round_subsecs(0).to_string());
+                                insert_reciept(
+                                    transaction.clone(),
+                                    None,
+                                    "pending".to_string(),
+                                    "".to_string(),
+                                    db
+                                )
+                                .await;
                             } else {
                                 insert_reciept(
                                     transaction,
                                     None,
                                     "Error".to_string(),
-                                    "Transaction verify problem!".to_string(),
+                                    "There is not input UTXOs".to_string(),
+                                    db
                                 )
                                 .await;
                             }
+                        } else {
+                            insert_reciept(
+                                transaction,
+                                None,
+                                "Error".to_string(),
+                                "There is not input UTXOs".to_string(),
+                                db
+                            )
+                            .await;
                         }
+                    } else {
+                        insert_reciept(
+                            transaction,
+                            None,
+                            "Error".to_string(),
+                            "Transaction verify problem!".to_string(),
+                            db
+                        )
+                        .await;
                     }
-                    Err(_) => {}
                 }
             }
-            Err(_) => {
-                write_log("database connection problem in check_trx.rs(line 158)");
-            }
+            Err(_) => {}
         }
     }
 }

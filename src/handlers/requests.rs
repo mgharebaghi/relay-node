@@ -2,7 +2,7 @@ use super::{
     check_trx::handle_transactions, create_log::write_log, db_connection::blockchain_db, outnodes::handle_outnode, recieved_block::verifying_block, structures::{FullNodes, GossipMessage, Req, Res, Transaction}, CustomBehav 
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
-use mongodb::{bson::Document, Collection};
+use mongodb::{bson::Document, Collection, Database};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -23,6 +23,7 @@ pub async fn handle_requests(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     local_peer_id: PeerId,
+    db: Database
 ) {
     if request.req == "handshake".to_string() {
         let db  = blockchain_db().await.unwrap();
@@ -52,7 +53,7 @@ pub async fn handle_requests(
             Err(e) => write_log(&format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
-        handle_transactions(request.req.clone()).await; //insert transaction to db
+        handle_transactions(request.req.clone(), db).await; //insert transaction to db
         //send true transaction to connected Validators and relays
         let send_transaction = swarm
             .behaviour_mut()
@@ -87,7 +88,7 @@ pub async fn handle_requests(
             .send_response(channel, response);
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
-        match verifying_block(&request.req, leader, fullnode_subs).await {
+        match verifying_block(&request.req, leader, fullnode_subs, db).await {
             Ok(_) => {
                 match swarm
                     .behaviour_mut()

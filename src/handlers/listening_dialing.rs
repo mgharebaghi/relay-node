@@ -1,6 +1,7 @@
 use std::{env::consts::OS, fs::{self, File, OpenOptions}, io::{BufRead, BufReader, BufWriter, Write}, net::TcpStream, sync::{Arc, Mutex}};
 
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
+use mongodb::Database;
 use rand::seq::SliceRandom;
 
 use super::{create_log::write_log, handle_events::events, handle_listeners::send_addr_to_server, structures::{FullNodes, GetGossipMsg}, swarm_config::CustomBehav, Addresses};
@@ -21,6 +22,7 @@ pub async fn start(
     fullnodes: &mut Vec<FullNodes>,
     sync: &mut bool,
     syncing_blocks: &mut Vec<GetGossipMsg>,
+    db: Database
 ) {
     loop {
         let server_address = "www.centichain.org:80";
@@ -70,6 +72,7 @@ pub async fn start(
             &mut dialed_addr,
             syncing_blocks,
             im_first,
+            db.clone()
         )
         .await;
     }

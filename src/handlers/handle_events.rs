@@ -7,6 +7,7 @@ use libp2p::futures::StreamExt;
 // use futures::stream::TryStreamExt;
 use libp2p::Multiaddr;
 use libp2p::{gossipsub::IdentTopic, request_response::Event, swarm::SwarmEvent, PeerId, Swarm};
+use mongodb::Database;
 
 use super::create_log::write_log;
 use super::get_addresses::get_addresses;
@@ -45,6 +46,7 @@ pub async fn events(
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
+    db: Database
 ) {
     handle_new_swarm_events(
         swarm,
@@ -64,6 +66,7 @@ pub async fn events(
         dialed_addr,
         syncing_blocks,
         im_first,
+        db
     )
     .await
 }
@@ -86,6 +89,7 @@ async fn handle_new_swarm_events(
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: bool,
+    db: Database
 ) {
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
@@ -271,6 +275,7 @@ async fn handle_new_swarm_events(
                                 my_addresses,
                                 leader,
                                 fullnodes,
+                                db.clone()
                             )
                             .await;
                         } else {
@@ -296,6 +301,7 @@ async fn handle_new_swarm_events(
                                     None,
                                     "pending".to_string(),
                                     "".to_string(),
+                                    db.clone()
                                 )
                                 .await;
                                 write_log("reciept inserted while syncing");
@@ -320,7 +326,7 @@ async fn handle_new_swarm_events(
                                         }
                                     }
 
-                                    match syncing(addr.clone()).await {
+                                    match syncing(addr.clone(), db.clone()).await {
                                         Ok(_) => {
                                             write_log("syncing completed");
                                             let fullnodes_req = Req {
@@ -369,6 +375,7 @@ async fn handle_new_swarm_events(
                                     clients,
                                     relay_topic.clone(),
                                     local_peer_id,
+                                    db.clone()
                                 )
                                 .await;
                             }
@@ -389,6 +396,7 @@ async fn handle_new_swarm_events(
                                             str_msg,
                                             leader,
                                             &mut fullnode_subs.clone(),
+                                            db.clone()
                                         )
                                         .await
                                         {

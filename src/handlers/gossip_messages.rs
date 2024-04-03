@@ -3,6 +3,7 @@ use std::{fs::OpenOptions, io::{BufWriter, Write}};
 use libp2p::{
     gossipsub::{IdentTopic, Message}, Multiaddr, PeerId, Swarm
 };
+use mongodb::Database;
 
 use crate::handlers::structures::{ImSync, OutNode};
 
@@ -21,8 +22,9 @@ pub async fn handle_gossip_message(
     my_addresses: &mut Vec<String>,
     leader: &mut String, 
     fullnodes: &mut Vec<FullNodes>,
+    db: Database
 ) {
-    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id).await;
+    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id, db).await;
 
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {

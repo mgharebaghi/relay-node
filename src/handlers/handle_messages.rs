@@ -2,6 +2,7 @@ use libp2p::{
     gossipsub::{IdentTopic, Message},
     PeerId, Swarm,
 };
+use mongodb::Database;
 
 use super::{
     check_trx::handle_transactions,
@@ -21,14 +22,15 @@ pub async fn msg_check(
     swarm: &mut Swarm<CustomBehav>,
     connections: &mut Vec<PeerId>,
     local_peer_id: PeerId,
+    db: Database
 ) {
     let str_msg = String::from_utf8(message.data.clone()).unwrap();
 
     handle_sync_message(fullnodes, &str_msg);
 
-    handle_transactions(String::from_utf8(message.data).unwrap()).await;
+    handle_transactions(String::from_utf8(message.data).unwrap(), db.clone()).await;
 
-    match verifying_block(&str_msg, &mut leader, fullnodes).await {
+    match verifying_block(&str_msg, &mut leader, fullnodes, db).await {
         Ok(_) => {
             //send true block to sse servers
             let sse_topic = IdentTopic::new("sse");
