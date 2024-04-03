@@ -1,5 +1,5 @@
 use super::{
-    check_trx::handle_transactions, create_log::write_log, db_connection::blockchain_db, outnodes::handle_outnode, recieved_block::verifying_block, structures::{FullNodes, GossipMessage, Req, Res, Transaction}, CustomBehav 
+    check_trx::handle_transactions, create_log::write_log, outnodes::handle_outnode, recieved_block::verifying_block, structures::{FullNodes, GossipMessage, Req, Res, Transaction}, CustomBehav 
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use mongodb::{bson::Document, Collection, Database};
@@ -26,7 +26,6 @@ pub async fn handle_requests(
     db: Database
 ) {
     if request.req == "handshake".to_string() {
-        let db  = blockchain_db().await.unwrap();
         let blocks_coll:Collection<Document> = db.collection("Blocks");
         let count_docs = blocks_coll.count_documents(None, None).await.unwrap();
         let mut handshake_res = Handshake {
