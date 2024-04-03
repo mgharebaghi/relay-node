@@ -71,7 +71,7 @@ pub async fn start(
             sync,
             &mut dialed_addr,
             syncing_blocks,
-            im_first,
+            &mut im_first,
             db.clone()
         )
         .await;

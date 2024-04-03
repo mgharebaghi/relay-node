@@ -45,7 +45,7 @@ pub async fn events(
     sync: &mut bool,
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
-    im_first: bool,
+    im_first: &mut bool,
     db: Database
 ) {
     handle_new_swarm_events(
@@ -88,7 +88,7 @@ async fn handle_new_swarm_events(
     sync: &mut bool,
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
-    im_first: bool,
+    im_first: &mut bool,
     db: Database
 ) {
     let mut listeners = Listeners { id: Vec::new() };
@@ -191,6 +191,9 @@ async fn handle_new_swarm_events(
                                 relay_topic_subscribers[index]
                             ));
                             relay_topic_subscribers.remove(index);
+                            if relay_topic_subscribers.len() == 0 {
+                                *im_first = true;
+                            }
                             // remove_peer(peer_id).await; //remove from .dat file and send address to server for remove from relays list
                         }
                         None => {}
@@ -229,7 +232,7 @@ async fn handle_new_swarm_events(
                 }
 
                 //break for dial with other relays if there is not connection with any relays
-                if !im_first && relays.len() < 1 {
+                if !*im_first && relays.len() < 1 {
                     write_log("going for break in removed dialed addresses");
                     write_log(&format!(
                         "relay topic subscribers:\n{:?}",
