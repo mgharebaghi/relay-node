@@ -14,6 +14,7 @@ pub async fn handle_outnode(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     fullnodes: &mut Vec<FullNodes>,
+    leader: &mut String
 ) {
     if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
         //remove validator if left the network
@@ -31,6 +32,11 @@ pub async fn handle_outnode(
                 }
             }
         }
+    }
+
+    //remove next leader if there is no validator in the network
+    if fullnodes.len() < 1 {
+        leader.clear()
     }
 
     //say to network that a validator left from the network

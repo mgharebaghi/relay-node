@@ -217,6 +217,7 @@ async fn handle_new_swarm_events(
                     clients,
                     relay_topic.clone(),
                     fullnodes,
+                    leader
                 )
                 .await;
 

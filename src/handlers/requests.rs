@@ -16,7 +16,7 @@ pub async fn handle_requests(
     swarm: &mut Swarm<CustomBehav>,
     channel: ResponseChannel<Res>,
     wallet: &mut String,
-    fullnode_subs: &mut Vec<FullNodes>,
+    fullnodes: &mut Vec<FullNodes>,
     leader: &mut String,
     clients_topic: IdentTopic,
     relays: &mut Vec<PeerId>,
@@ -33,7 +33,7 @@ pub async fn handle_requests(
             first_node: String::new(),
         };
 
-        if fullnode_subs.len() > 0 || count_docs > 0{
+        if fullnodes.len() > 0 || count_docs > 0{
             handshake_res.first_node.push_str(&"no".to_string());
         } else {
             handshake_res.first_node.push_str(&"yes".to_string());
@@ -79,7 +79,7 @@ pub async fn handle_requests(
             }
         }
     } else if request.req.clone() == "fullnodes".to_string() {
-        let str_fullnodes = serde_json::to_string(&fullnode_subs).unwrap();
+        let str_fullnodes = serde_json::to_string(&fullnodes).unwrap();
         let response = Res { res: str_fullnodes };
         let _ = swarm
             .behaviour_mut()
@@ -87,7 +87,7 @@ pub async fn handle_requests(
             .send_response(channel, response);
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
-        match verifying_block(&request.req, leader, fullnode_subs, db).await {
+        match verifying_block(&request.req, leader, fullnodes, db).await {
             Ok(_) => {
                 match swarm
                     .behaviour_mut()
@@ -137,7 +137,8 @@ pub async fn handle_requests(
                         relays,
                         clients,
                         relay_topic,
-                        fullnode_subs,
+                        fullnodes,
+                        leader
                     )
                     .await;
                     swarm.disconnect_peer_id(propagation_source).unwrap();
