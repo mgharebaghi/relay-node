@@ -36,15 +36,16 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                         if let Some(change) = watchin.next().await {
                             match change {
                                 Ok(data) => {
-                                    let doc = data.full_document.unwrap();
-                                    let transaction: Transaction = from_document(doc).unwrap();
-                                    let str_trx = serde_json::to_string(&transaction).unwrap();
-                                    let request = Req { req: str_trx };
-                                    swarm
-                                        .behaviour_mut()
-                                        .req_res
-                                        .send_request(&peer_id, request);
-                                    write_log("transactions request sent...");
+                                    if let Some(doc) = data.full_document {
+                                        let transaction: Transaction = from_document(doc).unwrap();
+                                        let str_trx = serde_json::to_string(&transaction).unwrap();
+                                        let request = Req { req: str_trx };
+                                        swarm
+                                            .behaviour_mut()
+                                            .req_res
+                                            .send_request(&peer_id, request);
+                                        write_log("transactions request sent...");
+                                    }
                                 }
                                 Err(_) => {}
                             }
