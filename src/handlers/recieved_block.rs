@@ -518,45 +518,49 @@ async fn handle_tx_utxos(
 
         for utxo in tx.output.output_data.utxos {
             let tx_utxo_filter = doc! {"public_key": &utxo.output_unspent.public_key};
-            write_log(&format!("utxo filter for in sert trx of block:\n{}", utxo.output_unspent.public_key));
-            let utxo_doc = utxos_coll
-                .find_one(tx_utxo_filter.clone(), None)
-                .await
-                .unwrap();
-            let new_utxo = UtxoData {
-                transaction_hash: tx.tx_hash.clone(),
-                unspent: utxo.output_unspent.unspent.round_dp(12),
-                output_hash: utxo.hash.clone(),
-                block_number: gossip_message.block.header.number,
-            };
-            if let Some(doc) = utxo_doc {
-                let mut user_utxo: UTXO = from_document(doc).unwrap();
-                let mut user_utxos_outout_hashs = Vec::new();
-                for i in user_utxo.utxos.clone() {
-                    user_utxos_outout_hashs.push(i.output_hash);
-                }
-                let mut exist_hash = 0;
-                for hash in user_utxos_outout_hashs {
-                    if hash == utxo.hash.clone() {
-                        exist_hash += 1;
-                        break;
+            write_log(&format!(
+                "utxo filter for in sert trx of block:\n{}",
+                utxo.output_unspent.public_key
+            ));
+            if let Ok(utxo_doc) = utxos_coll.find_one(tx_utxo_filter.clone(), None).await {
+                write_log("in ok of find utxo in recieved block - line 526");
+                let new_utxo = UtxoData {
+                    transaction_hash: tx.tx_hash.clone(),
+                    unspent: utxo.output_unspent.unspent.round_dp(12),
+                    output_hash: utxo.hash.clone(),
+                    block_number: gossip_message.block.header.number,
+                };
+                if let Some(doc) = utxo_doc {
+                    let mut user_utxo: UTXO = from_document(doc).unwrap();
+                    let mut user_utxos_outout_hashs = Vec::new();
+                    for i in user_utxo.utxos.clone() {
+                        user_utxos_outout_hashs.push(i.output_hash);
                     }
+                    let mut exist_hash = 0;
+                    for hash in user_utxos_outout_hashs {
+                        if hash == utxo.hash.clone() {
+                            exist_hash += 1;
+                            break;
+                        }
+                    }
+                    if exist_hash == 0 {
+                        user_utxo.utxos.push(new_utxo);
+                    }
+                    let user_utxo_doc = to_document(&user_utxo).unwrap();
+                    utxos_coll
+                        .replace_one(tx_utxo_filter.clone(), user_utxo_doc, None)
+                        .await
+                        .unwrap();
+                } else {
+                    let public_key = utxo.output_unspent.public_key.clone();
+                    let mut utxos = Vec::new();
+                    utxos.push(new_utxo);
+                    let new_utxo = UTXO { public_key, utxos };
+                    let user_utxo_doc = to_document(&new_utxo).unwrap();
+                    utxos_coll.insert_one(user_utxo_doc, None).await.unwrap();
                 }
-                if exist_hash == 0 {
-                    user_utxo.utxos.push(new_utxo);
-                }
-                let user_utxo_doc = to_document(&user_utxo).unwrap();
-                utxos_coll
-                    .replace_one(tx_utxo_filter.clone(), user_utxo_doc, None)
-                    .await
-                    .unwrap();
             } else {
-                let public_key = utxo.output_unspent.public_key.clone();
-                let mut utxos = Vec::new();
-                utxos.push(new_utxo);
-                let new_utxo = UTXO { public_key, utxos };
-                let user_utxo_doc = to_document(&new_utxo).unwrap();
-                utxos_coll.insert_one(user_utxo_doc, None).await.unwrap();
+                write_log("Error utxo doc in recieved block - line 563");
             }
         }
     }
