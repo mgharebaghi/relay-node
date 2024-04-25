@@ -518,6 +518,7 @@ async fn handle_tx_utxos(
 
         for utxo in tx.output.output_data.utxos {
             let tx_utxo_filter = doc! {"public_key": &utxo.output_unspent.public_key};
+            write_log(&format!("utxo filter for in sert trx of block:\n{}", utxo.output_unspent.public_key));
             let utxo_doc = utxos_coll
                 .find_one(tx_utxo_filter.clone(), None)
                 .await
