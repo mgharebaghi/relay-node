@@ -10,11 +10,12 @@ use libp2p::{
     Multiaddr, PeerId, Swarm,
 };
 use mongodb::{
-    bson::{doc, from_document, Document},
+    bson::{from_document, Document},
     Collection,
 };
 
 use crate::handlers::{
+    create_log::write_log,
     db_connection::blockchain_db,
     structures::{Req, Transaction},
 };
@@ -43,8 +44,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                         .behaviour_mut()
                                         .req_res
                                         .send_request(&peer_id, request);
-                                    // let filter = doc! {"tx_hash": transaction.tx_hash};
-                                    // transactions_coll.delete_one(filter, None).await.unwrap();
+                                    write_log("transactions request sent...");
                                 }
                                 Err(_) => {}
                             }
@@ -100,12 +100,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                         .behaviour_mut()
                                                         .req_res
                                                         .send_request(&peer_id, request);
-                                                    let filter =
-                                                        doc! {"tx_hash": transaction.tx_hash};
-                                                    transactions_coll
-                                                        .delete_one(filter, None)
-                                                        .await
-                                                        .unwrap();
+                                                    write_log("transactions request sent...");
                                                 }
                                                 Err(_) => {}
                                             }
