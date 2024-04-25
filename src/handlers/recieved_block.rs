@@ -181,7 +181,6 @@ async fn submit_block<'a>(
                                     == gossip_message.block.header.prevhash
                                 {
                                     let new_block_doc = to_document(&gossip_message.block).unwrap();
-                                    blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
 
                                     handle_block_reward(
                                         gossip_message.clone(),
@@ -194,7 +193,7 @@ async fn submit_block<'a>(
                                         gossip_message.clone(),
                                         utxos_coll.clone(),
                                         db.clone(),
-                                        trxs_coll
+                                        trxs_coll,
                                     )
                                     .await;
 
@@ -222,6 +221,9 @@ async fn submit_block<'a>(
                                     //check next leader
                                     leader.clear();
                                     leader.push_str(&gossip_message.next_leader);
+
+                                    blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+
                                     Ok(())
                                 } else {
                                     write_log("block prev hash problem! recieved block (line 241)");
@@ -250,10 +252,7 @@ async fn submit_block<'a>(
                                             Ok(_) => {
                                                 let new_block_doc =
                                                     to_document(&gossip_message.block).unwrap();
-                                                blocks_coll
-                                                    .insert_one(new_block_doc, None)
-                                                    .await
-                                                    .unwrap(); //insert block to DB
+
                                                 handle_block_reward(
                                                     gossip_message.clone(),
                                                     utxos_coll.clone(),
@@ -265,13 +264,19 @@ async fn submit_block<'a>(
                                                     gossip_message.clone(),
                                                     utxos_coll.clone(),
                                                     db.clone(),
-                                                    trxs_coll
+                                                    trxs_coll,
                                                 )
                                                 .await;
 
                                                 //check next leader
                                                 leader.clear();
                                                 leader.push_str(&gossip_message.next_leader);
+
+                                                blocks_coll
+                                                    .insert_one(new_block_doc, None)
+                                                    .await
+                                                    .unwrap(); //insert block to DB
+
                                                 Ok(())
                                             }
                                             Err(_) => {
@@ -311,7 +316,7 @@ async fn submit_block<'a>(
                                     Ok(_) => {
                                         let new_block_doc =
                                             to_document(&gossip_message.block).unwrap();
-                                        blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+
                                         handle_block_reward(
                                             gossip_message.clone(),
                                             utxos_coll.clone(),
@@ -323,13 +328,15 @@ async fn submit_block<'a>(
                                             gossip_message.clone(),
                                             utxos_coll.clone(),
                                             db,
-                                            trxs_coll
+                                            trxs_coll,
                                         )
                                         .await;
 
                                         //check next leader
                                         leader.clear();
                                         leader.push_str(&gossip_message.next_leader);
+                                        blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+
                                         Ok(())
                                     }
                                     Err(_) => {
@@ -352,6 +359,7 @@ async fn submit_block<'a>(
                     }
                 }
             } else {
+                write_log("error in recieved block - line 362");
                 Err("probelm")
             }
         }
@@ -487,6 +495,7 @@ async fn handle_tx_utxos(
     db: Database,
     trxs_coll: Collection<Document>,
 ) {
+    write_log("in handle utxos of block");
     for tx in gossip_message.block.body.transactions.clone() {
         insert_reciept(
             tx.clone(),
@@ -500,7 +509,9 @@ async fn handle_tx_utxos(
         //remove true transaction from Transactions collection
         let trx_filter = doc! {"tx_hash": tx.tx_hash.clone()};
         match trxs_coll.delete_one(trx_filter, None).await {
-            Ok(_) => {}
+            Ok(_) => {
+                write_log("remove trx from transactions collection");
+            }
             Err(_) => {}
         }
         //---
