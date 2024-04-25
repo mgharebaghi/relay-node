@@ -10,7 +10,7 @@ use libp2p::{
     Multiaddr, PeerId, Swarm,
 };
 use mongodb::{
-    bson::{from_document, Document},
+    bson::{doc, from_document, Document},
     Collection,
 };
 
@@ -31,7 +31,12 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                 match blockchain_db().await {
                     Ok(db) => {
                         let transactions_coll: Collection<Document> = db.collection("Transactions");
-                        let mut watchin = transactions_coll.watch(None, None).await.unwrap();
+                        let pipeline = vec![doc! {
+                            "$match": {
+                                "operationType": "insert"
+                            }
+                        }];
+                        let mut watchin = transactions_coll.watch(pipeline, None).await.unwrap();
 
                         if let Some(change) = watchin.next().await {
                             match change {
@@ -84,8 +89,13 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                     Ok(db) => {
                                         let transactions_coll: Collection<Document> =
                                             db.collection("Transactions");
+                                        let pipeline = vec![doc! {
+                                            "$match": {
+                                                "operationType": "insert"
+                                            }
+                                        }];
                                         let mut watchin =
-                                            transactions_coll.watch(None, None).await.unwrap();
+                                            transactions_coll.watch(pipeline, None).await.unwrap();
 
                                         if let Some(change) = watchin.next().await {
                                             match change {
