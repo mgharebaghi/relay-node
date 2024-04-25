@@ -21,7 +21,10 @@ pub fn write_log(log: &str) {
                 .unwrap();
             let mut writer = BufWriter::new(write_file);
             writeln!(writer, "{}", log).ok();
-            writer.flush().unwrap();
+            match writer.flush() {
+                Ok(_) => {}
+                Err(_) => {}
+            }
         }
     } else {
         {
@@ -33,7 +36,10 @@ pub fn write_log(log: &str) {
                 .unwrap();
             let mut writer = BufWriter::new(write_file);
             writeln!(writer, "{}", log).ok();
-            writer.flush().unwrap();
+            match writer.flush() {
+                Ok(_) => {}
+                Err(_) => {}
+            }
         }
     }
 }

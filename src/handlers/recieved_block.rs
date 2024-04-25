@@ -519,9 +519,10 @@ async fn handle_tx_utxos(
         for utxo in tx.output.output_data.utxos {
             let tx_utxo_filter = doc! {"public_key": &utxo.output_unspent.public_key};
             write_log(&format!(
-                "utxo filter for in sert trx of block:\n{}",
+                "utxo filter for insert trx of block:\n{}",
                 utxo.output_unspent.public_key
             ));
+            
             if let Ok(utxo_doc) = utxos_coll.find_one(tx_utxo_filter.clone(), None).await {
                 write_log("in ok of find utxo in recieved block - line 526");
                 let new_utxo = UtxoData {
