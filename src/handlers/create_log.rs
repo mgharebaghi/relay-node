@@ -14,30 +14,36 @@ pub fn write_log(log: &str) {
     let log_exist = fs::metadata(relaylog_path).is_ok();
     if log_exist {
         {
-            let write_file = OpenOptions::new()
+            if let Ok(write_file) = OpenOptions::new()
                 .append(true)
                 .write(true)
                 .open(relaylog_path)
-                .unwrap();
-            let mut writer = BufWriter::new(write_file);
-            writeln!(writer, "{}", log).ok();
-            match writer.flush() {
-                Ok(_) => {}
-                Err(_) => {}
+            {
+                let mut writer = BufWriter::new(write_file);
+                writeln!(writer, "{}", log).ok();
+                match writer.flush() {
+                    Ok(_) => {}
+                    Err(_) => {}
+                }
             }
         }
     } else {
         {
-            File::create(relaylog_path).unwrap();
-            let write_file = OpenOptions::new()
-                .append(true)
-                .write(true)
-                .open(relaylog_path)
-                .unwrap();
-            let mut writer = BufWriter::new(write_file);
-            writeln!(writer, "{}", log).ok();
-            match writer.flush() {
-                Ok(_) => {}
+            match File::create(relaylog_path) {
+                Ok(_) => {
+                    if let Ok(write_file) = OpenOptions::new()
+                        .append(true)
+                        .write(true)
+                        .open(relaylog_path)
+                    {
+                        let mut writer = BufWriter::new(write_file);
+                        writeln!(writer, "{}", log).ok();
+                        match writer.flush() {
+                            Ok(_) => {}
+                            Err(_) => {}
+                        }
+                    }
+                }
                 Err(_) => {}
             }
         }
