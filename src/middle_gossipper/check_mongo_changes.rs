@@ -43,8 +43,8 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                         .behaviour_mut()
                                         .req_res
                                         .send_request(&peer_id, request);
-                                    let filter = doc! {"tx_hash": transaction.tx_hash};
-                                    transactions_coll.delete_one(filter, None).await.unwrap();
+                                    // let filter = doc! {"tx_hash": transaction.tx_hash};
+                                    // transactions_coll.delete_one(filter, None).await.unwrap();
                                 }
                                 Err(_) => {}
                             }

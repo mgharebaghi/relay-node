@@ -72,7 +72,7 @@ pub async fn verifying_block<'a>(
                                                 gossip_message,
                                                 leader,
                                                 fullnode_subs,
-                                                db
+                                                db,
                                             )
                                             .await
                                             {
@@ -158,6 +158,7 @@ async fn submit_block<'a>(
     let blocks_coll: Collection<Document> = db.collection("Blocks");
     let utxos_coll: Collection<Document> = db.collection("UTXOs");
     let reciept_coll: Collection<Document> = db.collection("reciept");
+    let trxs_coll: Collection<Document> = db.collection("Transactions");
     let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
     let same_block = blocks_coll.find_one(filter, None).await.unwrap();
 
@@ -182,11 +183,20 @@ async fn submit_block<'a>(
                                     let new_block_doc = to_document(&gossip_message.block).unwrap();
                                     blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
 
-                                    handle_block_reward(gossip_message.clone(), utxos_coll.clone(), db.clone())
-                                        .await; //insert or update node utxos for rewards and fees
+                                    handle_block_reward(
+                                        gossip_message.clone(),
+                                        utxos_coll.clone(),
+                                        db.clone(),
+                                    )
+                                    .await; //insert or update node utxos for rewards and fees
 
-                                    handle_tx_utxos(gossip_message.clone(), utxos_coll.clone(), db.clone())
-                                        .await;
+                                    handle_tx_utxos(
+                                        gossip_message.clone(),
+                                        utxos_coll.clone(),
+                                        db.clone(),
+                                        trxs_coll
+                                    )
+                                    .await;
 
                                     //set block generator waiting for next round
                                     for i in 0..fullnode_subs.len() {
@@ -247,14 +257,15 @@ async fn submit_block<'a>(
                                                 handle_block_reward(
                                                     gossip_message.clone(),
                                                     utxos_coll.clone(),
-                                                    db.clone()
+                                                    db.clone(),
                                                 )
                                                 .await;
                                                 //update utxos in database for transactions
                                                 handle_tx_utxos(
                                                     gossip_message.clone(),
                                                     utxos_coll.clone(),
-                                                    db.clone()
+                                                    db.clone(),
+                                                    trxs_coll
                                                 )
                                                 .await;
 
@@ -304,12 +315,17 @@ async fn submit_block<'a>(
                                         handle_block_reward(
                                             gossip_message.clone(),
                                             utxos_coll.clone(),
-                                            db.clone()
+                                            db.clone(),
                                         )
                                         .await;
                                         //update utxos in database for transactions
-                                        handle_tx_utxos(gossip_message.clone(), utxos_coll.clone(), db)
-                                            .await;
+                                        handle_tx_utxos(
+                                            gossip_message.clone(),
+                                            utxos_coll.clone(),
+                                            db,
+                                            trxs_coll
+                                        )
+                                        .await;
 
                                         //check next leader
                                         leader.clear();
@@ -375,29 +391,29 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
 
         if sign_verify && input_checker && output_checker && txhash_checker {
             let user_utxo_filter = doc! {"public_key": tx.output.output_data.sigenr_public_keys[0].clone().to_string()};
-            let find_utxo_doc = utxos_coll
-                .find_one(user_utxo_filter.clone(), None)
-                .await
-                .unwrap();
-            if let Some(doc) = find_utxo_doc {
-                let mut user_utxo: UTXO = from_document(doc).unwrap();
-                for utxo in tx.input.input_data.utxos {
-                    let index = user_utxo
-                        .utxos
-                        .iter()
-                        .position(|uu| *uu.output_hash == utxo.output_hash);
-                    match index {
-                        Some(i) => {
-                            user_utxo.utxos.remove(i);
-                            let user_utxo_todoc = to_document(&user_utxo).unwrap();
-                            utxos_coll
-                                .replace_one(user_utxo_filter.clone(), user_utxo_todoc, None)
-                                .await
-                                .unwrap();
+            if let Ok(find_utxo_doc) = utxos_coll.find_one(user_utxo_filter.clone(), None).await {
+                if let Some(doc) = find_utxo_doc {
+                    let mut user_utxo: UTXO = from_document(doc).unwrap();
+                    for utxo in tx.input.input_data.utxos {
+                        let index = user_utxo
+                            .utxos
+                            .iter()
+                            .position(|uu| *uu.output_hash == utxo.output_hash);
+                        match index {
+                            Some(i) => {
+                                user_utxo.utxos.remove(i);
+                                let user_utxo_todoc = to_document(&user_utxo).unwrap();
+                                utxos_coll
+                                    .replace_one(user_utxo_filter.clone(), user_utxo_todoc, None)
+                                    .await
+                                    .unwrap();
+                            }
+                            None => {}
                         }
-                        None => {}
                     }
                 }
+            } else {
+                block_verify = false
             }
         } else {
             block_verify = false;
@@ -406,14 +422,18 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
     block_verify
 }
 
-async fn handle_block_reward(gossip_message: GossipMessage, utxos_coll: Collection<Document>, db: Database) {
+async fn handle_block_reward(
+    gossip_message: GossipMessage,
+    utxos_coll: Collection<Document>,
+    db: Database,
+) {
     coinbase_reciept(
         gossip_message.block.body.coinbase.clone(),
         Some(gossip_message.block.header.number.clone()),
         "Confirmed".to_string(),
         "Coinbase".to_string(),
         gossip_message.block.header.clone(),
-        db
+        db,
     )
     .await;
     for i in gossip_message.block.body.coinbase.output.utxos.clone() {
@@ -461,16 +481,30 @@ async fn handle_block_reward(gossip_message: GossipMessage, utxos_coll: Collecti
     }
 }
 
-async fn handle_tx_utxos(gossip_message: GossipMessage, utxos_coll: Collection<Document>, db: Database) {
+async fn handle_tx_utxos(
+    gossip_message: GossipMessage,
+    utxos_coll: Collection<Document>,
+    db: Database,
+    trxs_coll: Collection<Document>,
+) {
     for tx in gossip_message.block.body.transactions.clone() {
         insert_reciept(
             tx.clone(),
             Some(gossip_message.block.header.number),
             "Confirmed".to_string(),
             "".to_string(),
-            db.clone()
+            db.clone(),
         )
         .await;
+
+        //remove true transaction from Transactions collection
+        let trx_filter = doc! {"tx_hash": tx.tx_hash.clone()};
+        match trxs_coll.delete_one(trx_filter, None).await {
+            Ok(_) => {}
+            Err(_) => {}
+        }
+        //---
+
         for utxo in tx.output.output_data.utxos {
             let tx_utxo_filter = doc! {"public_key": &utxo.output_unspent.public_key};
             let utxo_doc = utxos_coll

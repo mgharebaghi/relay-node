@@ -52,14 +52,13 @@ pub async fn handle_requests(
             Err(e) => write_log(&format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
-        handle_transactions(request.req.clone(), db).await; //insert transaction to db
-        //send true transaction to connected Validators and relays
         let send_transaction = swarm
             .behaviour_mut()
             .gossipsub
-            .publish(clients_topic, request.req);
+            .publish(clients_topic, request.req.clone());
         match send_transaction {
             Ok(_) => {
+                handle_transactions(request.req, db).await;//insert transaction to db
                 let response = Res {
                     res: "Your transaction sent.".to_string(),
                 };
@@ -76,6 +75,7 @@ pub async fn handle_requests(
                     .behaviour_mut()
                     .req_res
                     .send_response(channel, response);
+                write_log("Sending Trx to Client Error!");
             }
         }
     } else if request.req.clone() == "fullnodes".to_string() {
