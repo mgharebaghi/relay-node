@@ -31,6 +31,7 @@ pub async fn verifying_block<'a>(
             let block = block_coll.find_one(filter, None).await;
             match block {
                 Ok(is) => {
+                    write_log("gets block");
                     if is.is_none() {
                         let validator_peerid: PeerId =
                             gossip_message.block.header.validator.parse().unwrap();
