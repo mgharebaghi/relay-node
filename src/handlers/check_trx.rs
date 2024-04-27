@@ -7,7 +7,8 @@ use sha2::{Digest, Sha256};
 use sp_core::Pair;
 
 use super::{
-    create_log::write_log, reciept::insert_reciept, structures::{Transaction, UTXO}
+    reciept::insert_reciept,
+    structures::{Transaction, UTXO},
 };
 
 use mongodb::{
@@ -16,7 +17,6 @@ use mongodb::{
 };
 
 pub async fn handle_transactions(message: String, db: Database) {
-    write_log("get trx from middle gossiper");
     if let Ok(mut transaction) = serde_json::from_str::<Transaction>(&message) {
         let reciept_coll: Collection<Document> = db.collection("reciept");
         let reciept_filter = doc! {"hash": transaction.tx_hash.clone()};
@@ -113,7 +113,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                     None,
                                     "pending".to_string(),
                                     "".to_string(),
-                                    db
+                                    db,
                                 )
                                 .await;
                             } else {
@@ -122,7 +122,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                     None,
                                     "Error".to_string(),
                                     "There is not input UTXOs".to_string(),
-                                    db
+                                    db,
                                 )
                                 .await;
                             }
@@ -132,7 +132,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                 None,
                                 "Error".to_string(),
                                 "There is not input UTXOs".to_string(),
-                                db
+                                db,
                             )
                             .await;
                         }
@@ -142,7 +142,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                             None,
                             "Error".to_string(),
                             "Transaction verify problem!".to_string(),
-                            db
+                            db,
                         )
                         .await;
                     }
