@@ -24,11 +24,8 @@ pub async fn handle_outnode(
         for validator in fullnodes.clone() {
             if peerid == validator.relay {
                 let index = fullnodes.iter().position(|f| peerid == f.relay);
-                match index {
-                    Some(i) => {
-                        fullnodes.remove(i);
-                    }
-                    None => {}
+                if let Some(i) = index {
+                    fullnodes.remove(i);
                 }
             }
         }

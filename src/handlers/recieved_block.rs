@@ -495,7 +495,6 @@ async fn handle_tx_utxos(
     db: Database,
     trxs_coll: Collection<Document>,
 ) {
-    write_log("in handle utxos of block");
     for tx in gossip_message.block.body.transactions.clone() {
         insert_reciept(
             tx.clone(),
@@ -509,22 +508,15 @@ async fn handle_tx_utxos(
         //remove true transaction from Transactions collection
         let trx_filter = doc! {"tx_hash": tx.tx_hash.clone()};
         match trxs_coll.delete_one(trx_filter, None).await {
-            Ok(_) => {
-                write_log("remove trx from transactions collection");
-            }
+            Ok(_) => {}
             Err(_) => {}
         }
         //---
 
         for utxo in tx.output.output_data.utxos {
             let tx_utxo_filter = doc! {"public_key": &utxo.output_unspent.public_key};
-            write_log(&format!(
-                "utxo filter for insert trx of block:\n{}",
-                utxo.output_unspent.public_key
-            ));
-            
+
             if let Ok(utxo_doc) = utxos_coll.find_one(tx_utxo_filter.clone(), None).await {
-                write_log("in ok of find utxo in recieved block - line 526");
                 let new_utxo = UtxoData {
                     transaction_hash: tx.tx_hash.clone(),
                     unspent: utxo.output_unspent.unspent.round_dp(12),

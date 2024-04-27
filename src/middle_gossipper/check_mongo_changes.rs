@@ -15,7 +15,6 @@ use mongodb::{
 };
 
 use crate::handlers::{
-    create_log::write_log,
     db_connection::blockchain_db,
     structures::{Req, Transaction},
 };
@@ -49,7 +48,6 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                             .behaviour_mut()
                                             .req_res
                                             .send_request(&peer_id, request);
-                                        write_log("transactions request sent...");
                                     }
                                 }
                                 Err(_) => {}
@@ -111,7 +109,6 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                             .behaviour_mut()
                                                             .req_res
                                                             .send_request(&peer_id, request);
-                                                        write_log("transactions request sent...");
                                                     }
                                                 }
                                                 Err(_) => {}
