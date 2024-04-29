@@ -12,10 +12,8 @@ use crate::handlers::{db_connection::blockchain_db, structures::Transaction};
 use super::server::TxRes;
 
 pub async fn handle_transaction(
-    // mut tx: Extension<Sender<String>>,
     extract::Json(transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
-    //structure of response
     let mut tx_res = TxRes {
         hash: transaction.tx_hash.clone(),
         status: String::new(),
