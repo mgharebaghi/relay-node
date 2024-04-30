@@ -30,18 +30,25 @@ pub async fn handle_gossip_message(
         Ok(msg) => {
 
             //handle next leader msg
-            let mut fpids = Vec::new();
-            for fullnode in fullnodes.clone() {
-                fpids.push(fullnode.peer_id);
-            }
             if let Ok(identifier) = serde_json::from_str::<NextLeader>(&msg) {
+                let mut fpids = Vec::new();
+                for fullnode in fullnodes.clone() {
+                    fpids.push(fullnode.peer_id);
+                }
                 if fpids.contains(&identifier.identifier_peer_id) && fpids.contains(&identifier.next_leader) {
+                    //remove fullnodes from left leader
+                    let loser_leader:PeerId = leader.parse().unwrap();
+                    if let Some(index) = fullnodes.iter().position(|f| f.peer_id == loser_leader) {
+                        fullnodes.remove(index);
+                    }
+                    //set new leader that recieved from tru identifier
                     leader.clear();
                     leader.push_str(&identifier.next_leader.to_string());
                 } else {
                     write_log("identifier is not true! gossip_messages (line 41)")
                 }
             }
+
             //get new realay addresses and add it to relays file
             if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&msg) {
                 get_addresses(addresses, local_peer_id, my_addresses);
