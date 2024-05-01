@@ -45,28 +45,31 @@ pub fn handle_outnode(
         .position(|fullnode| fullnode.peer_id == peerid || fullnode.relay == peerid)
     {
         fullnodes.remove(index); //remove validator if left the network
-
+        write_log("fullnode removed");
         //remove next leader if there is no validator in the network
         if fullnodes.len() < 1 {
-            leader.clear()
-        }
-
-        //say to network that a validator left from the network
-        let outnode = OutNode { peer_id: peerid };
-        let serialize_out_node = serde_json::to_string(&outnode).unwrap();
-        match swarm
-            .behaviour_mut()
-            .gossipsub
-            .publish(clients_topic, serialize_out_node.as_bytes())
-        {
-            Ok(_) => {}
-            Err(_) => write_log("problem with gossipping left node! outnodes - line(34)"),
+            leader.clear();
+            write_log("fulnode is 0 and leader is cleared");
         }
     }
 
     //remove left node from clients that have connection with current leader and synced
     if let Some(index) = clients.iter().position(|client| client == &peerid) {
+        //say to network that a validator left from the network
         clients.remove(index);
+        write_log("client removed");
+    }
+
+    //propagate left node to the network
+    let outnode = OutNode { peer_id: peerid };
+    let serialize_out_node = serde_json::to_string(&outnode).unwrap();
+    match swarm
+        .behaviour_mut()
+        .gossipsub
+        .publish(clients_topic, serialize_out_node.as_bytes())
+    {
+        Ok(_) => {}
+        Err(_) => {}
     }
 
     //remove peer from dialed address if it is in the dialed addresses
