@@ -3,10 +3,10 @@ use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
 use super::{
     create_log::write_log,
     structures::{FullNodes, OutNode},
-    CustomBehav
+    CustomBehav,
 };
 
-pub async fn handle_outnode(
+pub fn handle_outnode(
     peerid: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     clients_topic: IdentTopic,
@@ -14,40 +14,70 @@ pub async fn handle_outnode(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     fullnodes: &mut Vec<FullNodes>,
-    leader: &mut String
+    leader: &mut String,
+    relay_topic_subscribers: &mut Vec<PeerId>,
+    client_topic_subscriber: &mut Vec<PeerId>,
+    im_first: &mut bool,
+    dialed_addr: &mut Vec<String>,
 ) {
-    if let Some(index) = fullnodes.iter().position(|x| x.peer_id == peerid) {
-        //remove validator if left the network
-        fullnodes.remove(index);
-    } else {
-        //remove validator if its relay left the network
-        for validator in fullnodes.clone() {
-            if peerid == validator.relay {
-                let index = fullnodes.iter().position(|f| peerid == f.relay);
-                if let Some(i) = index {
-                    fullnodes.remove(i);
-                }
-            }
+    //remove from clients topic if peerid is in the client topic subs
+    if let Some(index) = client_topic_subscriber.iter().position(|c| c == &peerid) {
+        write_log(&format!("connection closed with: {}", peerid));
+        client_topic_subscriber.remove(index);
+    }
+
+    //remove from relay topic subscribers && remove from relays.dat file
+    if let Some(index) = relay_topic_subscribers.iter().position(|id| id == &peerid) {
+        relay_topic_subscribers.remove(index);
+        if relay_topic_subscribers.len() == 0 {
+            *im_first = true;
+            write_log(&format!("Im first: {}", im_first));
         }
     }
 
-    //remove next leader if there is no validator in the network
-    if fullnodes.len() < 1 {
-        leader.clear()
+    //remove peer from relays if it is in the relays
+    if let Some(index) = relays.iter().position(|id| id == &peerid) {
+        relays.remove(index);
     }
 
-    //say to network that a validator left from the network
-    let outnode = OutNode { peer_id: peerid };
-    let serialize_out_node = serde_json::to_string(&outnode).unwrap();
-    match swarm
-        .behaviour_mut()
-        .gossipsub
-        .publish(clients_topic, serialize_out_node.as_bytes())
+    if let Some(index) = fullnodes
+        .iter()
+        .position(|fullnode| fullnode.peer_id == peerid || fullnode.relay == peerid)
     {
-        Ok(_) => {}
-        Err(_) => {}
+        fullnodes.remove(index); //remove validator if left the network
+
+        //remove next leader if there is no validator in the network
+        if fullnodes.len() < 1 {
+            leader.clear()
+        }
+
+        //say to network that a validator left from the network
+        let outnode = OutNode { peer_id: peerid };
+        let serialize_out_node = serde_json::to_string(&outnode).unwrap();
+        match swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(clients_topic, serialize_out_node.as_bytes())
+        {
+            Ok(_) => {}
+            Err(_) => write_log("problem with gossipping left node! outnodes - line(34)"),
+        }
     }
 
+    //remove left node from clients that have connection with current leader and synced
+    if let Some(index) = clients.iter().position(|client| client == &peerid) {
+        clients.remove(index);
+    }
+
+    //remove peer from dialed address if it is in the dialed addresses
+    if let Some(index) = dialed_addr
+        .iter()
+        .position(|dialed| dialed.contains(&peerid.to_string()))
+    {
+        dialed_addr.remove(index);
+    }
+
+    //propagate don't have client to netwotk if clinets == 0
     if relays.len() > 0 && clients.len() == 0 {
         match swarm
             .behaviour_mut()

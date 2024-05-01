@@ -57,15 +57,8 @@ pub async fn handle_gossip_message(
             //Relay announcement
             if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&msg) {
                 if !relay_topic_subscribers.contains(&propagation_source) {
-                    let new_sync_node_pid = new_sync_node.peerid;
-                    let mut count_exist = 0;
-                    for i in clients.clone() {
-                        if i == new_sync_node_pid {
-                            count_exist += 1;
-                        }
-                    }
-                    if count_exist == 0 {
-                        clients.push(new_sync_node_pid);
+                    if connections.contains(&new_sync_node.peerid) && !clients.contains(&new_sync_node.peerid) {
+                        clients.push(new_sync_node.peerid);
                     }
                     if relay_topic_subscribers.len() > 0 && clients.len() == 1 {
                         match swarm
@@ -75,7 +68,7 @@ pub async fn handle_gossip_message(
                                 Ok(_) => {
                           
                                 }
-                                Err(_) => write_log("gossipsub publish problem in gossip_messasged(relay announcement)!")
+                                Err(_) => write_log("gossipsub publish problem in gossip_messasges(relay announcement - line 71)!")
                             }
                     }
                 }

@@ -23,7 +23,11 @@ pub async fn handle_requests(
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
     local_peer_id: PeerId,
-    db: Database
+    db: Database,
+    relay_topic_subscribers: &mut Vec<PeerId>,
+    client_topic_subscriber: &mut Vec<PeerId>,
+    im_first: &mut bool,
+    dialed_addr: &mut Vec<String>,
 ) {
     if request.req == "handshake".to_string() {
         let blocks_coll:Collection<Document> = db.collection("Blocks");
@@ -138,9 +142,12 @@ pub async fn handle_requests(
                         clients,
                         relay_topic,
                         fullnodes,
-                        leader
-                    )
-                    .await;
+                        leader,
+                        relay_topic_subscribers,
+                        client_topic_subscriber,
+                        im_first,
+                        dialed_addr
+                    );
                     swarm.disconnect_peer_id(propagation_source).unwrap();
                 }
             }

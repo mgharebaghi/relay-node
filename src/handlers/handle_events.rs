@@ -46,50 +46,7 @@ pub async fn events(
     dialed_addr: &mut Vec<String>,
     syncing_blocks: &mut Vec<GetGossipMsg>,
     im_first: &mut bool,
-    db: Database
-) {
-    handle_new_swarm_events(
-        swarm,
-        local_peer_id,
-        my_addresses,
-        clients,
-        relays,
-        clients_topic,
-        relay_topic,
-        connections,
-        relay_topic_subscribers,
-        client_topic_subscriber,
-        wallet,
-        leader,
-        fullnodes,
-        sync,
-        dialed_addr,
-        syncing_blocks,
-        im_first,
-        db
-    )
-    .await
-}
-
-async fn handle_new_swarm_events(
-    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
-    local_peer_id: PeerId,
-    my_addresses: &mut Vec<String>,
-    clients: &mut Vec<PeerId>,
-    relays: &mut Vec<PeerId>,
-    clients_topic: IdentTopic,
-    relay_topic: IdentTopic,
-    connections: &mut Vec<PeerId>,
-    relay_topic_subscribers: &mut Vec<PeerId>,
-    client_topic_subscriber: &mut Vec<PeerId>,
-    wallet: &mut String,
-    leader: &mut String,
-    fullnodes: &mut Vec<FullNodes>,
-    sync: &mut bool,
-    dialed_addr: &mut Vec<String>,
-    syncing_blocks: &mut Vec<GetGossipMsg>,
-    im_first: &mut bool,
-    db: Database
+    db: Database,
 ) {
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
@@ -169,46 +126,6 @@ async fn handle_new_swarm_events(
                 }
             }
             SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                if client_topic_subscriber.contains(&peer_id) {
-                    write_log(&format!("connection closed with: {}", peer_id));
-                    let index = client_topic_subscriber.iter().position(|c| *c == peer_id);
-                    match index {
-                        Some(i) => {
-                            client_topic_subscriber.remove(i);
-                        }
-                        None => {}
-                    }
-                }
-                //remove from relay topic subscribers && remove from relays.dat file
-                if relay_topic_subscribers.contains(&peer_id) {
-                    let i_relay_subscriber = relay_topic_subscribers
-                        .iter()
-                        .position(|pid| *pid == peer_id);
-                    match i_relay_subscriber {
-                        Some(index) => {
-                            write_log(&format!(
-                                "rm relay topic subscriber: {}",
-                                relay_topic_subscribers[index]
-                            ));
-                            relay_topic_subscribers.remove(index);
-                            if relay_topic_subscribers.len() == 0 {
-                                *im_first = true;
-                                write_log(&format!("Im first: {}", im_first));
-                            }
-                            // remove_peer(peer_id).await; //remove from .dat file and send address to server for remove from relays list
-                        }
-                        None => {}
-                    }
-                }
-                //remove peer from relays if it is in the relays
-                match relays.iter().position(|pid| pid == &peer_id) {
-                    Some(index) => {
-                        write_log(&format!("remove relay: {}", relays[index]));
-                        relays.remove(index);
-                    }
-                    None => {}
-                }
-
                 handle_outnode(
                     peer_id,
                     &mut swarm,
@@ -217,21 +134,12 @@ async fn handle_new_swarm_events(
                     clients,
                     relay_topic.clone(),
                     fullnodes,
-                    leader
-                )
-                .await;
-
-                //remove peer from dialed address if it is in the dialed addresses
-                let dialed_index = dialed_addr
-                    .iter()
-                    .position(|dialed| dialed.contains(&peer_id.to_string()));
-
-                match dialed_index {
-                    Some(index) => {
-                        dialed_addr.remove(index);
-                    }
-                    None => {}
-                }
+                    leader,
+                    relay_topic_subscribers,
+                    client_topic_subscriber,
+                    im_first,
+                    dialed_addr
+                );
 
                 //break for dial with other relays if there is not connection with any relays
                 if !*im_first && relays.len() < 1 {
@@ -280,7 +188,7 @@ async fn handle_new_swarm_events(
                                 my_addresses,
                                 leader,
                                 fullnodes,
-                                db.clone()
+                                db.clone(),
                             )
                             .await;
                         } else {
@@ -306,7 +214,7 @@ async fn handle_new_swarm_events(
                                     None,
                                     "pending".to_string(),
                                     "".to_string(),
-                                    db.clone()
+                                    db.clone(),
                                 )
                                 .await;
                                 write_log("reciept inserted while syncing");
@@ -380,7 +288,11 @@ async fn handle_new_swarm_events(
                                     clients,
                                     relay_topic.clone(),
                                     local_peer_id,
-                                    db.clone()
+                                    db.clone(),
+                                    relay_topic_subscribers,
+                                    client_topic_subscriber,
+                                    im_first,
+                                    dialed_addr
                                 )
                                 .await;
                             }
@@ -401,7 +313,7 @@ async fn handle_new_swarm_events(
                                             str_msg,
                                             leader,
                                             &mut fullnode_subs.clone(),
-                                            db.clone()
+                                            db.clone(),
                                         )
                                         .await
                                         {
