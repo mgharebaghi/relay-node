@@ -41,22 +41,16 @@ pub fn handle_outnode(
     }
 
     //remove fullnode if closed connection pid is in the fullnodes
-    // if let Some(index) = fullnodes
-    //     .iter()
-    //     .position(|fullnode| fullnode.peer_id == &peerid)
-    // {
-
-    // }
-    for mut index in 0..fullnodes.len() {
-        if fullnodes[index].peer_id == peerid {
-            fullnodes.remove(index); //remove validator if left the network
-            write_log("fullnode removed");
-            //remove next leader if there is no validator in the network
-            if fullnodes.len() < 1 {
-                leader.clear();
-                write_log("fullnode is 0 and leader is cleared");
-            }
-            // index -= 1;
+    if let Some(index) = fullnodes
+        .iter()
+        .position(|fullnode| fullnode.peer_id == peerid)
+    {
+        fullnodes.remove(index); //remove validator if left the network
+        write_log("fullnode removed");
+        //remove next leader if there is no validator in the network
+        if fullnodes.len() < 1 {
+            leader.clear();
+            write_log("fullnode is 0 and leader is cleared");
         }
     }
 
