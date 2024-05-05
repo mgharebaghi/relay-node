@@ -43,7 +43,7 @@ pub fn handle_outnode(
     //remove fullnode if closed connection pid is in the fullnodes
     if let Some(index) = fullnodes
         .iter()
-        .position(|fullnode| fullnode.peer_id == peerid)
+        .position(|fullnode| fullnode.peer_id == &peerid)
     {
         fullnodes.remove(index); //remove validator if left the network
         write_log("fullnode removed");
@@ -57,7 +57,7 @@ pub fn handle_outnode(
     //remove fullnode if closed connection pid is in the fullnode relay pid
     if let Some(index) = fullnodes
         .iter()
-        .position(|fullnode| fullnode.relay == peerid)
+        .position(|fullnode| fullnode.relay == &peerid)
     {
         fullnodes.remove(index); //remove validator if left the network
         write_log("fullnode removed");
