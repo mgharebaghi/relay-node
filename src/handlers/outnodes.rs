@@ -40,16 +40,31 @@ pub fn handle_outnode(
         relays.remove(index);
     }
 
+    //remove fullnode if closed connection pid is in the fullnodes
     if let Some(index) = fullnodes
         .iter()
-        .position(|fullnode| fullnode.peer_id == peerid || fullnode.relay == peerid)
+        .position(|fullnode| fullnode.peer_id == peerid)
     {
         fullnodes.remove(index); //remove validator if left the network
         write_log("fullnode removed");
         //remove next leader if there is no validator in the network
         if fullnodes.len() < 1 {
             leader.clear();
-            write_log("fulnode is 0 and leader is cleared");
+            write_log("fullnode is 0 and leader is cleared");
+        }
+    }
+
+    //remove fullnode if closed connection pid is in the fullnode relay pid
+    if let Some(index) = fullnodes
+        .iter()
+        .position(|fullnode| fullnode.relay == peerid)
+    {
+        fullnodes.remove(index); //remove validator if left the network
+        write_log("fullnode removed");
+        //remove next leader if there is no validator in the network
+        if fullnodes.len() < 1 {
+            leader.clear();
+            write_log("fullnode is 0 and leader is cleared");
         }
     }
 
