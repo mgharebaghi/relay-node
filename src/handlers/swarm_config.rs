@@ -3,6 +3,7 @@ use std::time::Duration;
 use libp2p::{
     gossipsub::IdentTopic, identity::Keypair, request_response::{cbor, ProtocolSupport}, swarm::NetworkBehaviour, Multiaddr, PeerId, StreamProtocol, Swarm, SwarmBuilder
 };
+use rust_decimal::prelude::Zero;
 
 use super::structures::{Req, Res};
 
@@ -28,6 +29,8 @@ impl SwarmConf for CustomBehav {
         //gossip protocol config
         let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
         let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
+        gossip_cfg.history_gossip().set_zero();
+        gossip_cfg.history_length().set_zero();
         let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
         //request and response protocol config
         let req_res = cbor::Behaviour::<Req, Res>::new(
