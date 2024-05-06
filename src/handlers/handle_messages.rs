@@ -26,7 +26,7 @@ pub async fn msg_check(
 ) {
     let str_msg = String::from_utf8(message.data.clone()).unwrap();
 
-    handle_sync_message(fullnodes, &str_msg);
+    handle_sync_message(fullnodes, &str_msg, db.clone()).await;
 
     handle_transactions(String::from_utf8(message.data).unwrap(), db.clone()).await;
 

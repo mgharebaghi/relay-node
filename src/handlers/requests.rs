@@ -91,7 +91,7 @@ pub async fn handle_requests(
             .send_response(channel, response);
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
-        match verifying_block(&request.req, leader, fullnodes, db).await {
+        match verifying_block(&request.req, leader, fullnodes, db.clone()).await {
             Ok(_) => {
                 match swarm
                     .behaviour_mut()
@@ -146,8 +146,9 @@ pub async fn handle_requests(
                         relay_topic_subscribers,
                         client_topic_subscriber,
                         im_first,
-                        dialed_addr
-                    );
+                        dialed_addr,
+                        db
+                    ).await;
                     swarm.disconnect_peer_id(propagation_source).unwrap();
                 }
             }

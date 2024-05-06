@@ -1,4 +1,5 @@
 use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
+use mongodb::{bson::{doc, Document}, Collection, Database};
 
 use super::{
     create_log::write_log,
@@ -6,7 +7,7 @@ use super::{
     CustomBehav,
 };
 
-pub fn handle_outnode(
+pub async fn handle_outnode(
     peerid: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     clients_topic: IdentTopic,
@@ -19,6 +20,7 @@ pub fn handle_outnode(
     client_topic_subscriber: &mut Vec<PeerId>,
     im_first: &mut bool,
     dialed_addr: &mut Vec<String>,
+    db: Database
 ) {
     //remove from clients topic if peerid is in the client topic subs
     if let Some(index) = client_topic_subscriber.iter().position(|c| c == &peerid) {
@@ -109,6 +111,16 @@ pub fn handle_outnode(
                     e
                 ));
             }
+        }
+    }
+
+    //insert outnode into outnodes collection
+    let outnode_coll:Collection<Document> = db.collection("outnodes");
+    let doc= doc! {"peerid": peerid.to_string()};
+    let cursor = outnode_coll.find_one(doc.clone(), None).await;
+    if let Ok(opt) = cursor {
+        if let None = opt {
+            outnode_coll.insert_one(doc, None).await.unwrap();
         }
     }
 }

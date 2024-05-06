@@ -154,6 +154,82 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                     }
 
                     //---------------------------------------------------------
+                    //open and read outnodes.bson file and insert it to database
+                    let outnodes_bson = File::open("/home/etc/dump/Blockchain/outnodes.bson").unwrap();
+                    let mut outnode_reader = BufReader::new(outnodes_bson);
+
+                    let outnodes_coll: Collection<Document> = db.collection("outnodes");
+
+                    match outnodes_coll.find_one(None, option.clone()).await {
+                        Ok(doc) => {
+                            if doc.is_some() {
+                                match outnodes_coll.delete_many(doc! {}, None).await {
+                                    Ok(_) => {
+                                        write_log("delete old outnodes collection");
+                                        while let Ok(document) =
+                                            Document::from_reader(&mut outnode_reader)
+                                        {
+                                            outnodes_coll.insert_one(document, None).await.unwrap();
+                                        }
+                                        write_log("insert new outnodes collection");
+                                    }
+                                    Err(_) => {
+                                        write_log("delete outnodes collection error");
+                                        return Err(());
+                                    }
+                                }
+                            } else {
+                                while let Ok(document) = Document::from_reader(&mut outnode_reader) {
+                                    outnodes_coll.insert_one(document, None).await.unwrap();
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            while let Ok(document) = Document::from_reader(&mut outnode_reader) {
+                                outnodes_coll.insert_one(document, None).await.unwrap();
+                            }
+                        }
+                    }
+
+                    //---------------------------------------------------------
+                    //open and read Transactions.bson file and insert it to database
+                    let trx_bson = File::open("/home/etc/dump/Blockchain/Transactions.bson").unwrap();
+                    let mut trx_reader = BufReader::new(trx_bson);
+
+                    let trx_coll: Collection<Document> = db.collection("Transactions");
+
+                    match trx_coll.find_one(None, option.clone()).await {
+                        Ok(doc) => {
+                            if doc.is_some() {
+                                match trx_coll.delete_many(doc! {}, None).await {
+                                    Ok(_) => {
+                                        write_log("delete old Transactions collection");
+                                        while let Ok(document) =
+                                            Document::from_reader(&mut trx_reader)
+                                        {
+                                            trx_coll.insert_one(document, None).await.unwrap();
+                                        }
+                                        write_log("insert new Transactions collection");
+                                    }
+                                    Err(_) => {
+                                        write_log("delete Transactions collection error");
+                                        return Err(());
+                                    }
+                                }
+                            } else {
+                                while let Ok(document) = Document::from_reader(&mut trx_reader) {
+                                    trx_coll.insert_one(document, None).await.unwrap();
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            while let Ok(document) = Document::from_reader(&mut trx_reader) {
+                                trx_coll.insert_one(document, None).await.unwrap();
+                            }
+                        }
+                    }
+
+                    //---------------------------------------------------------
                     //open and read Blocks.bson file and insert it to database
                     let blocks_bson = File::open("/home/etc/dump/Blockchain/Blocks.bson").unwrap();
                     let blocks_reader = BufReader::new(blocks_bson);

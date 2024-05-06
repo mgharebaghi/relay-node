@@ -3,7 +3,7 @@ use std::{fs::OpenOptions, io::{BufWriter, Write}};
 use libp2p::{
     gossipsub::{IdentTopic, Message}, Multiaddr, PeerId, Swarm
 };
-use mongodb::Database;
+use mongodb::{bson::{doc, Document}, Collection, Database};
 
 use crate::handlers::structures::{ImSync, OutNode};
 
@@ -24,7 +24,7 @@ pub async fn handle_gossip_message(
     fullnodes: &mut Vec<FullNodes>,
     db: Database
 ) {
-    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id, db).await;
+    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id, db.clone()).await;
 
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
@@ -56,20 +56,27 @@ pub async fn handle_gossip_message(
 
             //Relay announcement
             if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&msg) {
-                if !relay_topic_subscribers.contains(&propagation_source) {
-                    if connections.contains(&new_sync_node.peerid) && !clients.contains(&new_sync_node.peerid) {
-                        clients.push(new_sync_node.peerid);
-                    }
-                    if relay_topic_subscribers.len() > 0 && clients.len() == 1 {
-                        match swarm
-                            .behaviour_mut()
-                            .gossipsub
-                            .publish(relay_topic, "i have a client".as_bytes()) {
-                                Ok(_) => {
-                          
-                                }
-                                Err(_) => write_log("gossipsub publish problem in gossip_messasges(relay announcement - line 71)!")
+                let outnode_coll:Collection<Document> = db.collection("outnodes");
+                let filter = doc! {"peerid": new_sync_node.peerid.to_string()};
+                let cursor = outnode_coll.find_one(filter, None).await;
+                if let Ok(opt) = cursor {
+                    if let None = opt {
+                        if !relay_topic_subscribers.contains(&propagation_source) {
+                            if connections.contains(&new_sync_node.peerid) && !clients.contains(&new_sync_node.peerid) {
+                                clients.push(new_sync_node.peerid);
                             }
+                            if relay_topic_subscribers.len() > 0 && clients.len() == 1 {
+                                match swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .publish(relay_topic, "i have a client".as_bytes()) {
+                                        Ok(_) => {
+                                  
+                                        }
+                                        Err(_) => write_log("gossipsub publish problem in gossip_messasges(relay announcement - line 71)!")
+                                    }
+                            }
+                        }
                     }
                 }
             }
@@ -107,21 +114,17 @@ pub async fn handle_gossip_message(
             if let Ok(outnode) = serde_json::from_str::<OutNode>(&msg) {
                 if let Some(index) = fullnodes
                 .iter()
-                .position(|x| x.peer_id == outnode.peer_id)
+                .position(|fullnode| fullnode.peer_id == outnode.peer_id || fullnode.relay == outnode.peer_id)
                     {
-                        fullnodes.remove(index);
-                    } else {
-                        for fullnode in fullnodes.clone() {
-                            if outnode.peer_id == fullnode.relay {
-                                let index = fullnodes.iter().position(|x| x.relay == outnode.peer_id);
-                                match index {
-                                    Some(i) => {
-                                        fullnodes.remove(i);
-                                    }
-                                    None => {}
-                                }
+                        let outnode_coll:Collection<Document> = db.collection("outnodes");
+                        let doc  = doc! {"peerid": fullnodes[index].peer_id.to_string()};
+                        let cursor = outnode_coll.find_one(doc.clone(), None).await;
+                        if let Ok(opt) = cursor {
+                            if let None = opt {
+                                outnode_coll.insert_one(doc, None).await.unwrap();
                             }
                         }
+                        fullnodes.remove(index);
                     }
             }
 

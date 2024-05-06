@@ -138,8 +138,10 @@ pub async fn events(
                     relay_topic_subscribers,
                     client_topic_subscriber,
                     im_first,
-                    dialed_addr
-                );
+                    dialed_addr,
+                    db.clone(),
+                )
+                .await;
 
                 //break for dial with other relays if there is not connection with any relays
                 if !*im_first && relays.len() < 1 {
@@ -292,7 +294,7 @@ pub async fn events(
                                     relay_topic_subscribers,
                                     client_topic_subscriber,
                                     im_first,
-                                    dialed_addr
+                                    dialed_addr,
                                 )
                                 .await;
                             }
