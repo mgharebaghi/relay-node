@@ -8,10 +8,7 @@ use std::{
 use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
 use mongodb::Database;
 
-use super::{
-    create_log::write_log, listening_dialing::start, structures::FullNodes,
-    swarm_config::CustomBehav,
-};
+use super::{create_log::write_log, listening_dialing::start, swarm_config::CustomBehav};
 
 pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId, db: Database) {
     let mut wallet = String::new();
@@ -44,7 +41,6 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId, d
     let mut clients: Vec<PeerId> = Vec::new();
     let mut relays: Vec<PeerId> = Vec::new();
     let mut leader = String::new();
-    let mut fullnode_subs: Vec<FullNodes> = Vec::new();
     let mut my_addresses = Vec::new();
     let mut sync = false;
     let mut syncing_blocks = Vec::new();
@@ -64,10 +60,9 @@ pub async fn run(swarm: Arc<Mutex<Swarm<CustomBehav>>>, local_peer_id: PeerId, d
         &mut client_topic_subscribers,
         &mut wallet,
         &mut leader,
-        &mut fullnode_subs,
         &mut sync,
         &mut syncing_blocks,
-        db
+        db,
     )
     .await;
 }

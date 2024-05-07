@@ -1,5 +1,6 @@
 use std::process::Command;
 
+use futures::StreamExt;
 use libp2p::{identity::PublicKey, PeerId};
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
@@ -21,7 +22,6 @@ use mongodb::{
 pub async fn verifying_block<'a>(
     str_msg: &String,
     leader: &mut String,
-    fullnode_subs: &mut Vec<FullNodes>,
     db: Database,
 ) -> Result<(), &'a str> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
@@ -68,14 +68,7 @@ pub async fn verifying_block<'a>(
 
                                     if check_pid_with_public_key {
                                         if verify_block_sign {
-                                            match submit_block(
-                                                gossip_message,
-                                                leader,
-                                                fullnode_subs,
-                                                db,
-                                            )
-                                            .await
-                                            {
+                                            match submit_block(gossip_message, leader, db).await {
                                                 Ok(_) => {
                                                     match Command::new("mongodump")
                                                         .arg("--db")
@@ -152,13 +145,14 @@ pub async fn verifying_block<'a>(
 async fn submit_block<'a>(
     gossip_message: GossipMessage,
     leader: &mut String,
-    fullnode_subs: &mut Vec<FullNodes>,
     db: Database,
 ) -> Result<(), &'a str> {
     let blocks_coll: Collection<Document> = db.collection("Blocks");
     let utxos_coll: Collection<Document> = db.collection("UTXOs");
     let reciept_coll: Collection<Document> = db.collection("reciept");
     let trxs_coll: Collection<Document> = db.collection("Transactions");
+    let validators_coll: Collection<Document> = db.collection("validators");
+    let validators_count = validators_coll.count_documents(None, None).await.unwrap();
     let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
     let same_block = blocks_coll.find_one(filter, None).await.unwrap();
 
@@ -197,23 +191,46 @@ async fn submit_block<'a>(
                                     )
                                     .await;
 
-                                    //set block generator waiting for next round
-                                    for i in 0..fullnode_subs.len() {
-                                        if fullnode_subs[i].peer_id.to_string()
-                                            == gossip_message.block.header.validator
-                                            && gossip_message.next_leader
-                                                != gossip_message.block.header.validator
-                                        {
-                                            fullnode_subs[i].waiting = fullnode_subs.len() as i64;
-                                        } else if fullnode_subs[i].waiting > 0
-                                            && fullnode_subs[i].peer_id.to_string()
+                                    //set block generator waiting for next round and anothers' waiting minus 1
+                                    let validators_cursor = validators_coll.find(None, None).await;
+                                    if let Ok(mut curs) = validators_cursor {
+                                        while let Some(Ok(doc)) = curs.next().await {
+                                            let mut validator: FullNodes =
+                                                from_document(doc.clone()).unwrap();
+                                            if validator.peer_id.to_string()
+                                                == gossip_message.block.header.validator
+                                                && gossip_message.next_leader
+                                                    != validator.peer_id.to_string()
+                                            {
+                                                validator.waiting = validators_count as i64;
+                                                let validator_doc =
+                                                    to_document(&validator).unwrap();
+                                                validators_coll
+                                                    .replace_one(doc, validator_doc, None)
+                                                    .await
+                                                    .unwrap();
+                                            } else if validator.peer_id.to_string()
                                                 != gossip_message.next_leader
-                                        {
-                                            fullnode_subs[i].waiting = fullnode_subs[i].waiting - 1;
-                                        } else if fullnode_subs[i].peer_id.to_string()
-                                            == gossip_message.next_leader
-                                        {
-                                            fullnode_subs[i].waiting = 0;
+                                                && validator.waiting > 0
+                                            {
+                                                validator.waiting -= 1;
+                                                let validator_doc =
+                                                    to_document(&validator).unwrap();
+                                                validators_coll
+                                                    .replace_one(doc, validator_doc, None)
+                                                    .await
+                                                    .unwrap();
+                                            } else if validator.peer_id.to_string()
+                                                == gossip_message.next_leader
+                                            {
+                                                validator.waiting = 0;
+                                                let validator_doc =
+                                                    to_document(&validator).unwrap();
+                                                validators_coll
+                                                    .replace_one(doc, validator_doc, None)
+                                                    .await
+                                                    .unwrap();
+                                            }
                                         }
                                     }
 
@@ -242,7 +259,7 @@ async fn submit_block<'a>(
                 }
                 None => {
                     if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
-                        && fullnode_subs.len() < 2
+                        && validators_count < 2
                     {
                         match blocks_coll.delete_many(doc! {}, None).await {
                             Ok(_) => {
@@ -306,7 +323,7 @@ async fn submit_block<'a>(
         }
         Err(_) => {
             if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
-                && fullnode_subs.len() < 2
+                && validators_count < 2
             {
                 match blocks_coll.delete_many(doc! {}, None).await {
                     Ok(_) => {

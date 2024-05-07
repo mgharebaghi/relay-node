@@ -4,7 +4,7 @@ use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use mongodb::Database;
 use rand::seq::SliceRandom;
 
-use super::{create_log::write_log, handle_events::events, handle_listeners::send_addr_to_server, structures::{FullNodes, GetGossipMsg}, swarm_config::CustomBehav, Addresses};
+use super::{create_log::write_log, handle_events::events, handle_listeners::send_addr_to_server, structures::GetGossipMsg, swarm_config::CustomBehav, Addresses};
 
 pub async fn start(
     local_peer_id: PeerId,
@@ -19,7 +19,6 @@ pub async fn start(
     client_topic_subscriber: &mut Vec<PeerId>,
     wallet: &mut String,
     leader: &mut String,
-    fullnodes: &mut Vec<FullNodes>,
     sync: &mut bool,
     syncing_blocks: &mut Vec<GetGossipMsg>,
     db: Database
@@ -67,7 +66,6 @@ pub async fn start(
             client_topic_subscriber,
             wallet,
             leader,
-            fullnodes,
             sync,
             &mut dialed_addr,
             syncing_blocks,

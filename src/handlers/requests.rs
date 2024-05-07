@@ -1,5 +1,10 @@
 use super::{
-    check_trx::handle_transactions, create_log::write_log, outnodes::handle_outnode, recieved_block::verifying_block, structures::{FullNodes, GossipMessage, Req, Res, Transaction}, CustomBehav 
+    check_trx::handle_transactions,
+    create_log::write_log,
+    outnodes::handle_outnode,
+    recieved_block::verifying_block,
+    structures::{GossipMessage, Req, Res, Transaction},
+    CustomBehav,
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use mongodb::{bson::Document, Collection, Database};
@@ -16,7 +21,6 @@ pub async fn handle_requests(
     swarm: &mut Swarm<CustomBehav>,
     channel: ResponseChannel<Res>,
     wallet: &mut String,
-    fullnodes: &mut Vec<FullNodes>,
     leader: &mut String,
     clients_topic: IdentTopic,
     relays: &mut Vec<PeerId>,
@@ -30,14 +34,17 @@ pub async fn handle_requests(
     dialed_addr: &mut Vec<String>,
 ) {
     if request.req == "handshake".to_string() {
-        let blocks_coll:Collection<Document> = db.collection("Blocks");
+        let blocks_coll: Collection<Document> = db.collection("Blocks");
         let count_docs = blocks_coll.count_documents(None, None).await.unwrap();
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
         };
 
-        if fullnodes.len() > 0 || count_docs > 0{
+        let validators: Collection<Document> = db.collection("validators");
+        let validators_count = validators.count_documents(None, None).await.unwrap();
+
+        if validators_count > 0 || count_docs > 0 {
             handshake_res.first_node.push_str(&"no".to_string());
         } else {
             handshake_res.first_node.push_str(&"yes".to_string());
@@ -62,7 +69,7 @@ pub async fn handle_requests(
             .publish(clients_topic, request.req.clone());
         match send_transaction {
             Ok(_) => {
-                handle_transactions(request.req, db).await;//insert transaction to db
+                handle_transactions(request.req, db).await; //insert transaction to db
                 let response = Res {
                     res: "Your transaction sent.".to_string(),
                 };
@@ -82,16 +89,9 @@ pub async fn handle_requests(
                 write_log("Sending Trx to Client Error!");
             }
         }
-    } else if request.req.clone() == "fullnodes".to_string() {
-        let str_fullnodes = serde_json::to_string(&fullnodes).unwrap();
-        let response = Res { res: str_fullnodes };
-        let _ = swarm
-            .behaviour_mut()
-            .req_res
-            .send_response(channel, response);
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
-        match verifying_block(&request.req, leader, fullnodes, db.clone()).await {
+        match verifying_block(&request.req, leader, db.clone()).await {
             Ok(_) => {
                 match swarm
                     .behaviour_mut()
@@ -141,14 +141,14 @@ pub async fn handle_requests(
                         relays,
                         clients,
                         relay_topic,
-                        fullnodes,
                         leader,
                         relay_topic_subscribers,
                         client_topic_subscriber,
                         im_first,
                         dialed_addr,
-                        db
-                    ).await;
+                        db,
+                    )
+                    .await;
                     swarm.disconnect_peer_id(propagation_source).unwrap();
                 }
             }

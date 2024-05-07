@@ -1,11 +1,10 @@
 use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
-use mongodb::{bson::{doc, Document}, Collection, Database};
-
-use super::{
-    create_log::write_log,
-    structures::{FullNodes, OutNode},
-    CustomBehav,
+use mongodb::{
+    bson::{doc, Document},
+    Collection, Database,
 };
+
+use super::{create_log::write_log, structures::OutNode, CustomBehav};
 
 pub async fn handle_outnode(
     peerid: PeerId,
@@ -14,13 +13,12 @@ pub async fn handle_outnode(
     relays: &mut Vec<PeerId>,
     clients: &mut Vec<PeerId>,
     relay_topic: IdentTopic,
-    fullnodes: &mut Vec<FullNodes>,
     leader: &mut String,
     relay_topic_subscribers: &mut Vec<PeerId>,
     client_topic_subscriber: &mut Vec<PeerId>,
     im_first: &mut bool,
     dialed_addr: &mut Vec<String>,
-    db: Database
+    db: Database,
 ) {
     //remove from clients topic if peerid is in the client topic subs
     if let Some(index) = client_topic_subscriber.iter().position(|c| c == &peerid) {
@@ -42,32 +40,29 @@ pub async fn handle_outnode(
         relays.remove(index);
     }
 
-    //remove fullnode if closed connection pid is in the fullnodes
-    if let Some(index) = fullnodes
-        .iter()
-        .position(|fullnode| fullnode.peer_id == peerid)
-    {
-        fullnodes.remove(index); //remove validator if left the network
-        write_log("fullnode removed");
-        //remove next leader if there is no validator in the network
-        if fullnodes.len() < 1 {
-            leader.clear();
-            write_log("fullnode is 0 and leader is cleared");
+    //delete validator if closed connection pid is in the validator pid or relay in validators collection
+    let validators_coll: Collection<Document> = db.collection("validators");
+
+    let pid_filter = doc! {"peer_id": peerid.to_string()};
+    let relay_filter = doc! {"relay": peerid.to_string()};
+    let match_pid = validators_coll.find_one(pid_filter, None).await;
+    let match_relay = validators_coll.find_one(relay_filter, None).await;
+
+    if let Ok(opt) = match_pid {
+        if let Some(document) = opt {
+            validators_coll.delete_one(document, None).await.unwrap();
+        }
+    }
+    if let Ok(opt) = match_relay {
+        if let Some(document) = opt {
+            validators_coll.delete_one(document, None).await.unwrap();
         }
     }
 
-    //remove fullnode if closed connection pid is in the fullnode relay pid
-    if let Some(index) = fullnodes
-        .iter()
-        .position(|fullnode| fullnode.relay == peerid)
-    {
-        fullnodes.remove(index); //remove validator if left the network
-        write_log("fullnode removed");
-        //remove next leader if there is no validator in the network
-        if fullnodes.len() < 1 {
-            leader.clear();
-            write_log("fullnode is 0 and leader is cleared");
-        }
+    //clear leader if there is no any validators in the validators collection
+    let validators_coutn = validators_coll.count_documents(None, None).await.unwrap();
+    if validators_coutn == 0 {
+        leader.clear();
     }
 
     //remove left node from clients that have connection with current leader and synced
@@ -115,8 +110,8 @@ pub async fn handle_outnode(
     }
 
     //insert outnode into outnodes collection
-    let outnode_coll:Collection<Document> = db.collection("outnodes");
-    let doc= doc! {"peerid": peerid.to_string()};
+    let outnode_coll: Collection<Document> = db.collection("outnodes");
+    let doc = doc! {"peerid": peerid.to_string()};
     let cursor = outnode_coll.find_one(doc.clone(), None).await;
     if let Ok(opt) = cursor {
         if let None = opt {

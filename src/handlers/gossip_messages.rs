@@ -7,7 +7,7 @@ use mongodb::{bson::{doc, Document}, Collection, Database};
 
 use crate::handlers::structures::{ImSync, OutNode};
 
-use super::{create_log::write_log, get_addresses::get_addresses, handle_messages::msg_check, structures::{FullNodes, NextLeader}, CustomBehav};
+use super::{create_log::write_log, get_addresses::get_addresses, handle_messages::msg_check, structures::NextLeader, CustomBehav};
 
 pub async fn handle_gossip_message(
     propagation_source: PeerId,
@@ -20,32 +20,34 @@ pub async fn handle_gossip_message(
     connections: &mut Vec<PeerId>,
     relay_topic_subscribers: &mut Vec<PeerId>,
     my_addresses: &mut Vec<String>,
-    leader: &mut String, 
-    fullnodes: &mut Vec<FullNodes>,
+    leader: &mut String,
     db: Database
 ) {
-    msg_check(message.clone(), leader, fullnodes, relays, propagation_source, swarm, connections, local_peer_id, db.clone()).await;
+    msg_check(message.clone(), leader, relays, propagation_source, swarm, connections, local_peer_id, db.clone()).await;
 
     match String::from_utf8(message.data.clone()) {
         Ok(msg) => {
-
+            let validators_coll:Collection<Document> = db.collection("validators");
             //handle next leader msg
             if let Ok(identifier) = serde_json::from_str::<NextLeader>(&msg) {
-                let mut fpids = Vec::new();
-                for fullnode in fullnodes.clone() {
-                    fpids.push(fullnode.peer_id);
-                }
-                if fpids.contains(&identifier.identifier_peer_id) && fpids.contains(&identifier.next_leader) {
-                    //remove fullnodes from left leader
-                    let loser_leader:PeerId = leader.parse().unwrap();
-                    if let Some(index) = fullnodes.iter().position(|f| f.peer_id == loser_leader) {
-                        fullnodes.remove(index);
+                let filter1 = doc! {"peer_id": identifier.identifier_peer_id.to_string()};
+                let filter2 = doc! {"peer_id": identifier.next_leader.to_string()};
+                let find1 = validators_coll.find_one(filter1, None).await;
+                if let Ok(opt) = find1 {
+                    if let Some(_) = opt {
+                        let find2 = validators_coll.find_one(filter2, None).await;
+                        if let Ok(option) = find2 {
+                            if let Some(_) = option  {
+                                //remove validators from left leader
+                                let leader_query = doc! {"peer_id": leader.clone()};
+                                validators_coll.delete_one(leader_query, None).await.unwrap();
+
+                                //set new leader that recieved from tru identifier
+                                leader.clear();
+                                leader.push_str(&identifier.next_leader.to_string());
+                            }
+                        }
                     }
-                    //set new leader that recieved from tru identifier
-                    leader.clear();
-                    leader.push_str(&identifier.next_leader.to_string());
-                } else {
-                    write_log("identifier is not true! gossip_messages (line 41)")
                 }
             }
 
@@ -112,20 +114,8 @@ pub async fn handle_gossip_message(
 
             //handle left nodes
             if let Ok(outnode) = serde_json::from_str::<OutNode>(&msg) {
-                if let Some(index) = fullnodes
-                .iter()
-                .position(|fullnode| fullnode.peer_id == outnode.peer_id || fullnode.relay == outnode.peer_id)
-                    {
-                        let outnode_coll:Collection<Document> = db.collection("outnodes");
-                        let doc  = doc! {"peerid": fullnodes[index].peer_id.to_string()};
-                        let cursor = outnode_coll.find_one(doc.clone(), None).await;
-                        if let Ok(opt) = cursor {
-                            if let None = opt {
-                                outnode_coll.insert_one(doc, None).await.unwrap();
-                            }
-                        }
-                        fullnodes.remove(index);
-                    }
+                let query = doc! {"peer_id": outnode.peer_id.to_string()};
+                validators_coll.delete_one(query, None).await.unwrap();
             }
 
         }

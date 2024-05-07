@@ -10,10 +10,7 @@ use std::{
     process::Command,
 };
 
-use super::{
-    create_log::write_log, recieved_block::create_hash,
-    structures::Block,
-};
+use super::{create_log::write_log, recieved_block::create_hash, structures::Block};
 
 pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
     let trim_addr = dialed_addr.trim_start_matches("/ip4/");
@@ -155,76 +152,133 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
 
                     //---------------------------------------------------------
                     //open and read outnodes.bson file and insert it to database
-                    let outnodes_bson = File::open("/home/etc/dump/Blockchain/outnodes.bson").unwrap();
-                    let mut outnode_reader = BufReader::new(outnodes_bson);
+                    if let Ok(outnodes_bson) = File::open("/home/etc/dump/Blockchain/outnodes.bson")
+                    {
+                        let mut outnode_reader = BufReader::new(outnodes_bson);
 
-                    let outnodes_coll: Collection<Document> = db.collection("outnodes");
+                        let outnodes_coll: Collection<Document> = db.collection("outnodes");
 
-                    match outnodes_coll.find_one(None, option.clone()).await {
-                        Ok(doc) => {
-                            if doc.is_some() {
-                                match outnodes_coll.delete_many(doc! {}, None).await {
-                                    Ok(_) => {
-                                        write_log("delete old outnodes collection");
-                                        while let Ok(document) =
-                                            Document::from_reader(&mut outnode_reader)
-                                        {
-                                            outnodes_coll.insert_one(document, None).await.unwrap();
+                        match outnodes_coll.find_one(None, option.clone()).await {
+                            Ok(doc) => {
+                                if doc.is_some() {
+                                    match outnodes_coll.delete_many(doc! {}, None).await {
+                                        Ok(_) => {
+                                            write_log("delete old outnodes collection");
+                                            while let Ok(document) =
+                                                Document::from_reader(&mut outnode_reader)
+                                            {
+                                                outnodes_coll
+                                                    .insert_one(document, None)
+                                                    .await
+                                                    .unwrap();
+                                            }
+                                            write_log("insert new outnodes collection");
                                         }
-                                        write_log("insert new outnodes collection");
+                                        Err(_) => {
+                                            write_log("delete outnodes collection error");
+                                            return Err(());
+                                        }
                                     }
-                                    Err(_) => {
-                                        write_log("delete outnodes collection error");
-                                        return Err(());
+                                } else {
+                                    while let Ok(document) =
+                                        Document::from_reader(&mut outnode_reader)
+                                    {
+                                        outnodes_coll.insert_one(document, None).await.unwrap();
                                     }
                                 }
-                            } else {
-                                while let Ok(document) = Document::from_reader(&mut outnode_reader) {
+                            }
+                            Err(_) => {
+                                while let Ok(document) = Document::from_reader(&mut outnode_reader)
+                                {
                                     outnodes_coll.insert_one(document, None).await.unwrap();
                                 }
                             }
                         }
-                        Err(_) => {
-                            while let Ok(document) = Document::from_reader(&mut outnode_reader) {
-                                outnodes_coll.insert_one(document, None).await.unwrap();
+                    }
+
+                    //---------------------------------------------------------
+                    //open and read validators.bson file and insert it to database
+                    if let Ok(validators_bson) = File::open("/home/etc/dump/Blockchain/validators.bson")
+                    {
+                        let mut validators_reader = BufReader::new(validators_bson);
+
+                        let validators_coll: Collection<Document> = db.collection("validators");
+
+                        match validators_coll.find_one(None, option.clone()).await {
+                            Ok(doc) => {
+                                if doc.is_some() {
+                                    match validators_coll.delete_many(doc! {}, None).await {
+                                        Ok(_) => {
+                                            write_log("delete old validators collection");
+                                            while let Ok(document) =
+                                                Document::from_reader(&mut validators_reader)
+                                            {
+                                                validators_coll
+                                                    .insert_one(document, None)
+                                                    .await
+                                                    .unwrap();
+                                            }
+                                            write_log("insert new validators collection");
+                                        }
+                                        Err(_) => {
+                                            write_log("delete validators collection error");
+                                            return Err(());
+                                        }
+                                    }
+                                } else {
+                                    while let Ok(document) =
+                                        Document::from_reader(&mut validators_reader)
+                                    {
+                                        validators_coll.insert_one(document, None).await.unwrap();
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                while let Ok(document) = Document::from_reader(&mut validators_reader)
+                                {
+                                    validators_coll.insert_one(document, None).await.unwrap();
+                                }
                             }
                         }
                     }
 
                     //---------------------------------------------------------
                     //open and read Transactions.bson file and insert it to database
-                    let trx_bson = File::open("/home/etc/dump/Blockchain/Transactions.bson").unwrap();
-                    let mut trx_reader = BufReader::new(trx_bson);
+                    if let Ok(trx_bson) = File::open("/home/etc/dump/Blockchain/Transactions.bson")
+                    {
+                        let mut trx_reader = BufReader::new(trx_bson);
 
-                    let trx_coll: Collection<Document> = db.collection("Transactions");
+                        let trx_coll: Collection<Document> = db.collection("Transactions");
 
-                    match trx_coll.find_one(None, option.clone()).await {
-                        Ok(doc) => {
-                            if doc.is_some() {
-                                match trx_coll.delete_many(doc! {}, None).await {
-                                    Ok(_) => {
-                                        write_log("delete old Transactions collection");
-                                        while let Ok(document) =
-                                            Document::from_reader(&mut trx_reader)
-                                        {
-                                            trx_coll.insert_one(document, None).await.unwrap();
+                        match trx_coll.find_one(None, option.clone()).await {
+                            Ok(doc) => {
+                                if doc.is_some() {
+                                    match trx_coll.delete_many(doc! {}, None).await {
+                                        Ok(_) => {
+                                            write_log("delete old Transactions collection");
+                                            while let Ok(document) =
+                                                Document::from_reader(&mut trx_reader)
+                                            {
+                                                trx_coll.insert_one(document, None).await.unwrap();
+                                            }
+                                            write_log("insert new Transactions collection");
                                         }
-                                        write_log("insert new Transactions collection");
+                                        Err(_) => {
+                                            write_log("delete Transactions collection error");
+                                            return Err(());
+                                        }
                                     }
-                                    Err(_) => {
-                                        write_log("delete Transactions collection error");
-                                        return Err(());
+                                } else {
+                                    while let Ok(document) = Document::from_reader(&mut trx_reader)
+                                    {
+                                        trx_coll.insert_one(document, None).await.unwrap();
                                     }
                                 }
-                            } else {
+                            }
+                            Err(_) => {
                                 while let Ok(document) = Document::from_reader(&mut trx_reader) {
                                     trx_coll.insert_one(document, None).await.unwrap();
                                 }
-                            }
-                        }
-                        Err(_) => {
-                            while let Ok(document) = Document::from_reader(&mut trx_reader) {
-                                trx_coll.insert_one(document, None).await.unwrap();
                             }
                         }
                     }
