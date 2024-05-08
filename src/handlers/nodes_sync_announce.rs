@@ -18,10 +18,11 @@ pub async fn handle_sync_message(str_msg: &String, db: Database) {
                 if let Ok(option) = vcursor {
                     if let None = option {
                         let validators_count = validators_coll.count_documents(None, None).await.unwrap();
+                        let waiting = if validators_count > 0 {(validators_count * 2) as i64} else {0};
                         let new_fullnode = FullNodes {
                             relay: new_sync_node.relay,
                             peer_id: new_sync_node.peerid,
-                            waiting: (validators_count + 1) as i64 * 2,
+                            waiting,
                             public_key: new_sync_node.public_key,
                         };
                         let validator_doc = to_document(&new_fullnode).unwrap();
