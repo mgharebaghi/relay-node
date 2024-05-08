@@ -97,7 +97,6 @@ pub async fn events(
                 }
                 connections.push(peer_id);
                 swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
-                println!("connection stablished with: {}", peer_id);
             }
             SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
                 write_log(&format!("dialing failed with: {}", peer_id.unwrap()));
