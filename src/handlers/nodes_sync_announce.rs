@@ -7,6 +7,7 @@ use super::{structures::FullNodes, structures::ImSync};
 
 pub async fn handle_sync_message(str_msg: &String, db: Database) {
     if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&str_msg) {
+        println!("get sync msg");
         let outnode_coll: Collection<Document> = db.collection("outnodes");
         let validators_coll: Collection<Document> = db.collection("validators");
         let filter = doc! {"peerid": new_sync_node.peerid.to_string()};

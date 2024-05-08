@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use libp2p::{
-    gossipsub::IdentTopic, identity::Keypair, request_response::{cbor, ProtocolSupport}, swarm::NetworkBehaviour, Multiaddr, PeerId, StreamProtocol, Swarm, SwarmBuilder
+    gossipsub::IdentTopic,
+    identity::Keypair,
+    request_response::{cbor, ProtocolSupport},
+    swarm::NetworkBehaviour,
+    Multiaddr, PeerId, StreamProtocol, Swarm, SwarmBuilder,
 };
 
 use super::structures::{Req, Res};
@@ -28,6 +32,7 @@ impl SwarmConf for CustomBehav {
         //gossip protocol config
         let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
         let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
+        gossip_cfg.duplicate_cache_time();
         let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
         //request and response protocol config
         let req_res = cbor::Behaviour::<Req, Res>::new(
@@ -39,10 +44,9 @@ impl SwarmConf for CustomBehav {
         let mut behaviour = CustomBehav { gossipsub, req_res };
 
         behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
-        behaviour
-            .gossipsub
-            .subscribe(&clients_topic.clone())
-            .unwrap();
+        if let Ok(topic) = behaviour.gossipsub.subscribe(&clients_topic.clone()) {
+            println!("subscribed to client topic: {}", topic);
+        }
 
         //config swarm
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
