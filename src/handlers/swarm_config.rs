@@ -44,7 +44,7 @@ impl SwarmConf for CustomBehav {
         let mut behaviour = CustomBehav { gossipsub, req_res };
 
         behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
-        behaviour.gossipsub.subscribe(&clients_topic.clone()).unwrap()
+        behaviour.gossipsub.subscribe(&clients_topic.clone()).unwrap();
 
         //config swarm
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
