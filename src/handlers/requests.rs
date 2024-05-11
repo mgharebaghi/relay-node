@@ -66,7 +66,7 @@ pub async fn handle_requests(
         let send_transaction = swarm
             .behaviour_mut()
             .gossipsub
-            .publish(clients_topic, request.req.clone());
+            .publish(clients_topic, request.req.clone().as_bytes());
         match send_transaction {
             Ok(_) => {
                 handle_transactions(request.req, db).await; //insert transaction to db
