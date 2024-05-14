@@ -40,7 +40,7 @@ pub async fn handle_transaction(
             tx_res.status = "error".to_string();
             tx_res.description =
                 "server has problem! please try with another provider.".to_string();
-        }
+        } 
     }
 
     return Json(tx_res);
