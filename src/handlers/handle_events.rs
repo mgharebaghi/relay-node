@@ -170,7 +170,6 @@ pub async fn events(
                         message,
                         ..
                     } => {
-                        write_log("get gossip msg in handle events");
                         let str_msg = String::from_utf8(message.data.clone()).unwrap();
                         if *sync {
                             handle_gossip_message(
