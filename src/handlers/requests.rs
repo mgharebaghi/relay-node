@@ -1,8 +1,9 @@
 use super::{
+    check_trx::handle_transactions,
     create_log::write_log,
     outnodes::handle_outnode,
     recieved_block::verifying_block,
-    structures::{GossipMessage, Req, Res},
+    structures::{GossipMessage, Req, Res, Transaction},
     CustomBehav,
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
@@ -61,36 +62,34 @@ pub async fn handle_requests(
             Ok(_) => {}
             Err(e) => write_log(&format!("{:?}", e)),
         }
-    }
-    // else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
-    //     let send_transaction = swarm
-    //         .behaviour_mut()
-    //         .gossipsub
-    //         .publish(clients_topic, request.req.clone().as_bytes());
-    //     match send_transaction {
-    //         Ok(_) => {
-    //             handle_transactions(request.req, db).await; //insert transaction to db
-    //             let response = Res {
-    //                 res: "Your transaction sent.".to_string(),
-    //             };
-    //             let _ = swarm
-    //                 .behaviour_mut()
-    //                 .req_res
-    //                 .send_response(channel, response);
-    //         }
-    //         Err(_) => {
-    //             let response = Res {
-    //                 res: "sending error!".to_string(),
-    //             };
-    //             let _ = swarm
-    //                 .behaviour_mut()
-    //                 .req_res
-    //                 .send_response(channel, response);
-    //             write_log("Sending Trx to Client Error!");
-    //         }
-    //     }
-    // }
-    else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
+    } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
+        let send_transaction = swarm
+            .behaviour_mut()
+            .gossipsub
+            .publish(clients_topic, request.req.clone().as_bytes());
+        match send_transaction {
+            Ok(_) => {
+                handle_transactions(request.req, db).await; //insert transaction to db
+                let response = Res {
+                    res: "Your transaction sent.".to_string(),
+                };
+                let _ = swarm
+                    .behaviour_mut()
+                    .req_res
+                    .send_response(channel, response);
+            }
+            Err(_) => {
+                let response = Res {
+                    res: "sending error!".to_string(),
+                };
+                let _ = swarm
+                    .behaviour_mut()
+                    .req_res
+                    .send_response(channel, response);
+                write_log("Sending Trx to Client Error!");
+            }
+        }
+    } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
         let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
         match verifying_block(&request.req, leader, db.clone()).await {
             Ok(_) => {
