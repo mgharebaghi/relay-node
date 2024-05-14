@@ -60,6 +60,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                     loop {
                                         write_log("in loop of changest in subscribed of gossip in check mongo");
                                         if let Some(change) = watchin.next().await {
+                                            write_log("get changes of transactions coll");
                                             match change {
                                                 Ok(data) => {
                                                     if let Some(doc) = data.full_document {
