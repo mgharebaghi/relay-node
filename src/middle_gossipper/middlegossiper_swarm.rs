@@ -22,7 +22,7 @@ impl MiddleSwarmConf for MyBehaviour {
     async fn new() -> Pin<Box<Swarm<Self>>> {
         //generate peer keys and peer id for network
         let keypair = Keypair::generate_ecdsa();
-        let relay_topic = IdentTopic::new("relay");
+        // let relay_topic = IdentTopic::new("relay");
         let clients_topic = IdentTopic::new("client");
 
         //gossip protocol config
@@ -30,7 +30,7 @@ impl MiddleSwarmConf for MyBehaviour {
         let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
         gossip_cfg.duplicate_cache_time();
         let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-        gossipsub.subscribe(&relay_topic).unwrap();
+        // gossipsub.subscribe(&relay_topic).unwrap();
         gossipsub.subscribe(&clients_topic).unwrap();
 
         //request and response protocol config
