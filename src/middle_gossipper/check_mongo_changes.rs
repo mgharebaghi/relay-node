@@ -43,7 +43,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
             SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                 MyBehaviourEvent::Gossipsub(event) => match event {
                     libp2p::gossipsub::Event::Subscribed { topic, .. } => {
-                        write_log(&format!("subscribed a node in: {}", topic.to_string()));
+                        println!("subscribed a node in: {}", topic.to_string());
                         if topic.to_string() == "client" {
                             match blockchain_db().await {
                                 Ok(db) => {
@@ -58,9 +58,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                         transactions_coll.watch(pipeline, None).await.unwrap();
 
                                     loop {
-                                        write_log("in loop of changest in subscribed of gossip in check mongo");
+                                        println!("in loop of changest in subscribed of gossip in check mongo");
                                         if let Some(change) = watchin.next().await {
-                                            write_log("get changes of transactions coll");
+                                            println!("get changes of transactions coll");
                                             match change {
                                                 Ok(data) => {
                                                     if let Some(doc) = data.full_document {
@@ -78,6 +78,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                             );
                                                         match send_transaction {
                                                             Ok(_) => {
+                                                                println!("transactions sent");
                                                                 //insert transaction to db
                                                                 handle_transactions(
                                                                     str_trx,
@@ -86,6 +87,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                                 .await;
                                                             }
                                                             Err(_) => {
+                                                                println!("tranaction sending error");
                                                                 write_log("Sending Trx to Client Error! check-mongo-changes(line 86)");
                                                             }
                                                         }
