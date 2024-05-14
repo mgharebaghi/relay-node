@@ -1,9 +1,15 @@
 use std::{
-    fs::File, io::{BufRead, BufReader}, pin::Pin, time::Duration
+    fs::File,
+    io::{BufRead, BufReader},
+    pin::Pin,
+    time::Duration,
 };
 
 use libp2p::{
-    gossipsub::IdentTopic, identity::Keypair, request_response::{cbor, ProtocolSupport}, swarm::NetworkBehaviour, Multiaddr, StreamProtocol, Swarm, SwarmBuilder
+    identity::Keypair,
+    request_response::{cbor, ProtocolSupport},
+    swarm::NetworkBehaviour,
+    Multiaddr, StreamProtocol, Swarm, SwarmBuilder,
 };
 
 use crate::handlers::structures::{Req, Res};
@@ -22,16 +28,14 @@ impl MiddleSwarmConf for MyBehaviour {
     async fn new() -> Pin<Box<Swarm<Self>>> {
         //generate peer keys and peer id for network
         let keypair = Keypair::generate_ecdsa();
-        let relay_topic = IdentTopic::new("relay");
-        let clients_topic = IdentTopic::new("client");
 
         //gossip protocol config
         let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
         let gossip_cfg = libp2p::gossipsub::ConfigBuilder::default().build().unwrap();
         gossip_cfg.duplicate_cache_time();
-        let mut gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
-        gossipsub.subscribe(&relay_topic).unwrap();
-        gossipsub.subscribe(&clients_topic).unwrap();
+        let gossipsub = libp2p::gossipsub::Behaviour::new(privacy, gossip_cfg).unwrap();
+        // gossipsub.subscribe(&relay_topic).unwrap();
+        // gossipsub.subscribe(&clients_topic).unwrap();
 
         //request and response protocol config
         let req_res = cbor::Behaviour::<Req, Res>::new(
