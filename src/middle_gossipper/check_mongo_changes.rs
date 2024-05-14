@@ -19,7 +19,7 @@ use super::middlegossiper_swarm::{MyBehaviour, MyBehaviourEvent};
 
 pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
     let mut connected_id = String::new();
-    let clients_topic = IdentTopic::new("client");
+    let clients_topic = IdentTopic::new("relay");
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {

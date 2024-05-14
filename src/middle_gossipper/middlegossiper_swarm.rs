@@ -1,9 +1,15 @@
 use std::{
-    fs::File, io::{BufRead, BufReader}, pin::Pin, time::Duration
+    fs::File,
+    io::{BufRead, BufReader},
+    pin::Pin,
+    time::Duration,
 };
 
 use libp2p::{
-    gossipsub::IdentTopic, identity::Keypair, request_response::{cbor, ProtocolSupport}, swarm::NetworkBehaviour, Multiaddr, StreamProtocol, Swarm, SwarmBuilder
+    identity::Keypair,
+    request_response::{cbor, ProtocolSupport},
+    swarm::NetworkBehaviour,
+    Multiaddr, StreamProtocol, Swarm, SwarmBuilder,
 };
 
 use crate::handlers::structures::{Req, Res};
@@ -22,7 +28,6 @@ impl MiddleSwarmConf for MyBehaviour {
     async fn new() -> Pin<Box<Swarm<Self>>> {
         //generate peer keys and peer id for network
         let keypair = Keypair::generate_ecdsa();
-        let clients_topic = IdentTopic::new("client");
 
         //gossip protocol config
         let privacy = libp2p::gossipsub::MessageAuthenticity::Signed(keypair.clone());
@@ -37,8 +42,7 @@ impl MiddleSwarmConf for MyBehaviour {
         );
 
         //Definition of behavior
-        let mut behaviour = MyBehaviour { gossipsub, req_res };
-        behaviour.gossipsub.subscribe(&clients_topic).unwrap();
+        let behaviour = MyBehaviour { gossipsub, req_res };
 
         //config swarm
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
