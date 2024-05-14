@@ -1,14 +1,22 @@
-use std::{env::consts::OS, fs::{self, File, OpenOptions}, io::{BufRead, BufReader, BufWriter, Write}, net::TcpStream, sync::{Arc, Mutex}};
+use std::{
+    env::consts::OS,
+    fs::{self, File, OpenOptions},
+    io::{BufRead, BufReader, BufWriter, Write},
+    net::TcpStream,
+};
 
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use mongodb::Database;
 use rand::seq::SliceRandom;
 
-use super::{create_log::write_log, handle_events::events, handle_listeners::send_addr_to_server, structures::GetGossipMsg, swarm_config::CustomBehav, Addresses};
+use super::{
+    create_log::write_log, handle_events::events, handle_listeners::send_addr_to_server,
+    structures::GetGossipMsg, swarm_config::CustomBehav, Addresses,
+};
 
 pub async fn start(
     local_peer_id: PeerId,
-    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
+    swarm: &mut Swarm<CustomBehav>,
     clients_topic: IdentTopic,
     my_addresses: &mut Vec<String>,
     relays: &mut Vec<PeerId>,
@@ -21,7 +29,7 @@ pub async fn start(
     leader: &mut String,
     sync: &mut bool,
     syncing_blocks: &mut Vec<GetGossipMsg>,
-    db: Database
+    db: Database,
 ) {
     loop {
         let server_address = "www.centichain.org:80";
@@ -40,21 +48,14 @@ pub async fn start(
                 "Relay could not connect to centichain.org for get latest relays addresses! mod.rs(line 73)",
             ),
         }
-        let mut dialed_addr = dialing(
-            relays_path,
-            local_peer_id,
-            Arc::clone(&swarm),
-            sync,
-            my_addresses,
-        )
-        .await;
+        let mut dialed_addr = dialing(relays_path, local_peer_id, swarm, sync, my_addresses).await;
         let mut im_first = false;
         if dialed_addr.len() == 0 {
             im_first = true;
         }
         write_log(&format!("im first: {}", im_first));
         events(
-            Arc::clone(&swarm),
+            swarm,
             local_peer_id,
             my_addresses,
             clients,
@@ -70,16 +71,14 @@ pub async fn start(
             &mut dialed_addr,
             syncing_blocks,
             &mut im_first,
-            db.clone()
+            db.clone(),
         )
         .await;
     }
 }
 
 async fn get_addresses(relays_path: &str) {
-    match reqwest::get("https://centichain.org/api/relays")
-        .await
-    {
+    match reqwest::get("https://centichain.org/api/relays").await {
         Ok(response) => {
             let addresses: Addresses = response.json().await.unwrap();
             write_log(&format!("addresses:\n{:?}", addresses));
@@ -118,11 +117,10 @@ async fn get_addresses(relays_path: &str) {
 pub async fn dialing(
     relays_path: &str,
     local_peer_id: PeerId,
-    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
+    swarm: &mut Swarm<CustomBehav>,
     sync: &mut bool,
     my_addresses: &mut Vec<String>,
 ) -> Vec<String> {
-    let mut swarm = swarm.lock().unwrap();
     let relays_file_exist = fs::metadata(relays_path).is_ok();
     let mut dialed_addr: Vec<String> = Vec::new();
     if relays_file_exist {

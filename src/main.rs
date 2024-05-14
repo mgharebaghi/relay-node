@@ -1,5 +1,3 @@
-use std::sync::Arc;
-use std::sync::Mutex;
 mod handlers;
 use handlers::create_log::write_log;
 use handlers::db_connection::blockchain_db;
@@ -18,11 +16,11 @@ async fn main() {
     let swarm_config = CustomBehav::new().await;
     let local_peer_id = swarm_config.1;
     let mut gossipper_swarm = MyBehaviour::new().await;
-    let swarm = Arc::new(Mutex::new(swarm_config.0));
+    let mut swarm = swarm_config.0;
     match blockchain_db().await {
         Ok(db) => {
             let (_, _, _) = tokio::join!(
-                run(Arc::clone(&swarm), local_peer_id, db),
+                run(&mut swarm, local_peer_id, db),
                 handle_requests(),
                 checker(&mut gossipper_swarm)
             );

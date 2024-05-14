@@ -1,7 +1,5 @@
 use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    time::Duration,
+    fs::File, io::{BufRead, BufReader}, pin::Pin, time::Duration
 };
 
 use libp2p::{
@@ -11,7 +9,7 @@ use libp2p::{
 use crate::handlers::structures::{Req, Res};
 
 pub trait MiddleSwarmConf {
-    async fn new() -> Swarm<MyBehaviour>;
+    async fn new() -> Pin<Box<Swarm<MyBehaviour>>>;
 }
 
 #[derive(NetworkBehaviour)]
@@ -21,7 +19,7 @@ pub struct MyBehaviour {
 }
 
 impl MiddleSwarmConf for MyBehaviour {
-    async fn new() -> Swarm<Self> {
+    async fn new() -> Pin<Box<Swarm<Self>>> {
         //generate peer keys and peer id for network
         let keypair = Keypair::generate_ecdsa();
         let relay_topic = IdentTopic::new("relay");
@@ -87,6 +85,6 @@ impl MiddleSwarmConf for MyBehaviour {
             }
         }
 
-        swarm
+        Box::pin(swarm)
     }
 }

@@ -1,6 +1,5 @@
 use std::net::Ipv4Addr;
 use std::process::Command;
-use std::sync::{Arc, Mutex};
 
 use libp2p::core::transport::ListenerId;
 use libp2p::futures::StreamExt;
@@ -30,7 +29,7 @@ pub struct Listeners {
 }
 
 pub async fn events(
-    swarm: Arc<Mutex<Swarm<CustomBehav>>>,
+    mut swarm: &mut Swarm<CustomBehav>,
     local_peer_id: PeerId,
     my_addresses: &mut Vec<String>,
     clients: &mut Vec<PeerId>,
@@ -50,7 +49,6 @@ pub async fn events(
 ) {
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
-    let mut swarm = swarm.lock().unwrap();
     //check swarm events that come from libp2p
     loop {
         match swarm.select_next_some().await {

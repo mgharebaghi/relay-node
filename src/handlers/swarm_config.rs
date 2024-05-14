@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{pin::Pin, time::Duration};
 
 use libp2p::{
     gossipsub::IdentTopic,
@@ -11,7 +11,7 @@ use libp2p::{
 use super::structures::{Req, Res};
 
 pub trait SwarmConf {
-    async fn new() -> (Swarm<CustomBehav>, PeerId);
+    async fn new() -> (Pin<Box<Swarm<CustomBehav>>>, PeerId);
 }
 
 #[derive(NetworkBehaviour)]
@@ -21,7 +21,7 @@ pub struct CustomBehav {
 }
 
 impl SwarmConf for CustomBehav {
-    async fn new() -> (Swarm<Self>, PeerId) {
+    async fn new() -> (Pin<Box<Swarm<Self>>>, PeerId) {
         let relay_topic = IdentTopic::new("relay");
         let clients_topic = IdentTopic::new("client");
 
@@ -74,6 +74,6 @@ impl SwarmConf for CustomBehav {
 
         let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
         swarm.listen_on(listener).unwrap();
-        (swarm, local_peer_id)
+        (Box::pin(swarm), local_peer_id)
     }
 }
