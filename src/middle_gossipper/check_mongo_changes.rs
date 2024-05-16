@@ -40,6 +40,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                         let mut watchin = transactions_coll.watch(pipeline, None).await.unwrap();
 
                         if let Some(change) = watchin.next().await {
+                            println!("new change in transactions collection");
                             match change {
                                 Ok(data) => {
                                     if let Some(doc) = data.full_document {
@@ -50,6 +51,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                             .behaviour_mut()
                                             .req_res
                                             .send_request(&peer_id, request);
+                                        println!("change sent");
                                     }
                                 }
                                 Err(_) => {}
@@ -98,6 +100,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                             transactions_coll.watch(pipeline, None).await.unwrap();
 
                                         if let Some(change) = watchin.next().await {
+                                            println!("new change in transactions collection");
                                             match change {
                                                 Ok(data) => {
                                                     if let Some(doc) = data.full_document {
@@ -111,6 +114,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                             .behaviour_mut()
                                                             .req_res
                                                             .send_request(&peer_id, request);
+                                                        println!("change sent");
                                                     }
                                                 }
                                                 Err(_) => {}
