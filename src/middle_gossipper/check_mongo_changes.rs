@@ -14,9 +14,8 @@ use mongodb::{
     Collection,
 };
 
-
-
 use crate::handlers::{
+    create_log::write_log,
     db_connection::blockchain_db,
     structures::{Req, Transaction},
 };
@@ -52,12 +51,16 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                             .send_request(&peer_id, request);
                                     }
                                 }
-                                Err(_) => {}
+                                Err(e) => {
+                                    write_log(&format!(
+                                        "Error in watching of mongodb {e}-line(53)"
+                                    ));
+                                }
                             }
                         }
                     }
                     Err(_) => {
-                        break;
+                        write_log("database connection error in check mongo changes-line(59)");
                     }
                 }
             }
@@ -113,12 +116,14 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                                             .send_request(&peer_id, request);
                                                     }
                                                 }
-                                                Err(_) => {}
+                                                Err(e) => {
+                                                    write_log(&format!("Error in watching of mongodb {e}-line(116)"));
+                                                }
                                             }
                                         }
                                     }
                                     Err(_) => {
-                                        break;
+                                        write_log("database connection error in check mongo changes-line(122)");
                                     }
                                 }
                             }
