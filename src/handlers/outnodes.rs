@@ -1,8 +1,14 @@
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
+
 use libp2p::{gossipsub::IdentTopic, PeerId, Swarm};
 use mongodb::{
     bson::{doc, Document},
     Collection, Database,
 };
+use reqwest::Client;
 
 use super::{create_log::write_log, structures::OutNode, CustomBehav};
 
@@ -35,8 +41,38 @@ pub async fn handle_outnode(
         }
     }
 
-    //remove peer from relays if it is in the relays
+    //remove peer from relays if it is in the relays and post address to server for remove
     if let Some(index) = relays.iter().position(|id| id == &peerid) {
+        let client = Client::new();
+        let result = client
+            .post("https://centichain.org/api/rmaddr")
+            .body(peerid.to_string())
+            .send()
+            .await;
+        if let Ok(response) = result {
+            if response.text().await.unwrap() == "removed".to_string() {
+                write_log("relay removed from server's relays.dat");
+            }
+        }
+        let relays_file = File::open("/etc/relays.dat");
+        if let Ok(file) = relays_file {
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                let addr = line.unwrap();
+                if addr.contains(&peerid.to_string()) {
+                    let connection = client
+                        .post("https://centichain.org/api/rmrpc")
+                        .body(addr)
+                        .send()
+                        .await;
+                    if let Ok(response) = connection {
+                        if response.text().await.unwrap() == "removed".to_string() {
+                            write_log("relay removed from server's rpsees.dat");
+                        }
+                    }
+                }
+            }
+        }
         relays.remove(index);
     }
 
