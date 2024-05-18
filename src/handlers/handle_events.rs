@@ -307,8 +307,8 @@ pub async fn events(
                                                     .publish(clients_topic.clone(), str_my_multiaddr.as_bytes())
                                                 {
                                                     Ok(_) => write_log("my address propagate to the network"),
-                                                    Err(_) => write_log(
-                                                        "my address propagation error! handle_events(line 380)",
+                                                    Err(e) => write_log(
+                                                        "my address propagation error! {e}",
                                                     ),
                                                 }
                                             } else {
