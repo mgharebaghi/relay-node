@@ -301,15 +301,16 @@ pub async fn events(
                                                 let str_my_multiaddr =
                                                     serde_json::to_string(&my_multiaddress)
                                                         .unwrap();
-                                                match swarm
-                                                    .behaviour_mut()
-                                                    .gossipsub
-                                                    .publish(clients_topic.clone(), str_my_multiaddr.as_bytes())
-                                                {
-                                                    Ok(_) => write_log("my address propagate to the network"),
-                                                    Err(e) => write_log(
-                                                        "my address propagation error! {e}",
+                                                match swarm.behaviour_mut().gossipsub.publish(
+                                                    clients_topic.clone(),
+                                                    str_my_multiaddr.as_bytes(),
+                                                ) {
+                                                    Ok(_) => write_log(
+                                                        "my address propagate to the network",
                                                     ),
+                                                    Err(e) => write_log(&format!(
+                                                        "my address propagation error! {e}"
+                                                    )),
                                                 }
                                             } else {
                                                 for connected in connections.clone() {
