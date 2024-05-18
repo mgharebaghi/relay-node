@@ -49,6 +49,7 @@ pub async fn events(
 ) {
     let mut listeners = Listeners { id: Vec::new() };
     let mut in_syncing = false;
+    let mut have_client = false;
     //check swarm events that come from libp2p
     loop {
         match swarm.select_next_some().await {
@@ -221,134 +222,126 @@ pub async fn events(
                             if let Ok(addresses) = serde_json::from_str::<Vec<String>>(&str_msg) {
                                 get_addresses(addresses, local_peer_id, my_addresses);
                             }
-                            //start syncing after get first i have client message
+
                             if str_msg == "i have a client".to_string() {
+                                have_client = true;
                                 if connections.contains(&propagation_source)
                                     && !relays.contains(&propagation_source)
                                 {
                                     relays.push(propagation_source);
                                     write_log("new relay add");
                                 }
-                                if !*sync && !in_syncing {
-                                    in_syncing = true;
-                                    let mut addr = String::new();
-                                    for add in dialed_addr.clone() {
-                                        if add.contains(&propagation_source.to_string()) {
-                                            addr = add.clone();
-                                            break;
-                                        }
-                                    }
+                            }
+                        }
+                    }
+                    libp2p::gossipsub::Event::Subscribed { peer_id, topic } => {
+                        send_address(
+                            &topic,
+                            peer_id,
+                            &mut swarm,
+                            relay_topic_subscribers,
+                            connections,
+                            clients,
+                            client_topic_subscriber,
+                        );
 
-                                    match syncing(addr.clone(), db.clone()).await {
-                                        Ok(_) => {
-                                            write_log("syncing completed");
-                                            let mut set_sync = true;
-                                            if syncing_blocks.len() > 0 {
-                                                for gossipmsg in syncing_blocks.clone() {
-                                                    let str_msg =
-                                                        &serde_json::to_string(&gossipmsg.gossip)
-                                                            .unwrap();
-                                                    match verifying_block(
-                                                        str_msg,
-                                                        leader,
-                                                        db.clone(),
-                                                    )
-                                                    .await
-                                                    {
-                                                        Ok(_) => {
-                                                            write_log(
-                                                                "verifying block before syncing",
-                                                            );
-                                                        }
-                                                        Err(e) => {
-                                                            if e != "reject" {
-                                                                set_sync = false;
-                                                                write_log("verifying block error in syncing blocks of handle events(line 351)");
-                                                                write_log(&format!(
-                                                                    "block insert error: {}",
-                                                                    e
-                                                                ));
-                                                                //remove node from fullnodes list because its block is wrong!
-                                                                let validators_coll: Collection<
-                                                                    Document,
-                                                                > = db.collection("validators");
-                                                                let gossipmsg: GossipMessage =
-                                                                    serde_json::from_str(&str_msg)
-                                                                        .unwrap();
-                                                                let filter = doc! {"peer_id": gossipmsg.block.header.validator};
-                                                                let cursor = validators_coll
-                                                                    .find_one(filter, None)
-                                                                    .await;
-                                                                if let Ok(opt) = cursor {
-                                                                    if let Some(doc) = opt {
-                                                                        validators_coll
-                                                                            .delete_one(doc, None)
-                                                                            .await
-                                                                            .unwrap();
-                                                                    }
-                                                                }
+                        //start syncing after get first i have client message and client topic has node
+                        if have_client && topic.to_string() == "client" && !*sync && !in_syncing {
+                            in_syncing = true;
+                            let mut addr = String::new();
+                            for add in dialed_addr.clone() {
+                                if add.contains(&peer_id.to_string()) {
+                                    addr = add.clone();
+                                    break;
+                                }
+                            }
+
+                            match syncing(addr.clone(), db.clone()).await {
+                                Ok(_) => {
+                                    write_log("syncing completed");
+                                    let mut set_sync = true;
+                                    if syncing_blocks.len() > 0 {
+                                        for gossipmsg in syncing_blocks.clone() {
+                                            let str_msg =
+                                                &serde_json::to_string(&gossipmsg.gossip).unwrap();
+                                            match verifying_block(str_msg, leader, db.clone()).await
+                                            {
+                                                Ok(_) => {
+                                                    write_log("verifying block before syncing");
+                                                }
+                                                Err(e) => {
+                                                    if e != "reject" {
+                                                        set_sync = false;
+                                                        write_log("verifying block error in syncing blocks of handle events(line 351)");
+                                                        write_log(&format!(
+                                                            "block insert error: {}",
+                                                            e
+                                                        ));
+                                                        //remove node from fullnodes list because its block is wrong!
+                                                        let validators_coll: Collection<Document> =
+                                                            db.collection("validators");
+                                                        let gossipmsg: GossipMessage =
+                                                            serde_json::from_str(&str_msg).unwrap();
+                                                        let filter = doc! {"peer_id": gossipmsg.block.header.validator};
+                                                        let cursor = validators_coll
+                                                            .find_one(filter, None)
+                                                            .await;
+                                                        if let Ok(opt) = cursor {
+                                                            if let Some(doc) = opt {
+                                                                validators_coll
+                                                                    .delete_one(doc, None)
+                                                                    .await
+                                                                    .unwrap();
                                                             }
                                                         }
                                                     }
                                                 }
                                             }
-
-                                            if set_sync {
-                                                *sync = true;
-                                                send_addr_to_server(my_addresses[0].clone()).await;
-                                                let my_multiaddress: Multiaddr =
-                                                    my_addresses[0].parse().unwrap();
-                                                let str_my_multiaddr =
-                                                    serde_json::to_string(&my_multiaddress)
-                                                        .unwrap();
-                                                match swarm.behaviour_mut().gossipsub.publish(
-                                                    clients_topic.clone(),
-                                                    str_my_multiaddr.as_bytes(),
-                                                ) {
-                                                    Ok(_) => write_log(
-                                                        "my address propagate to the network",
-                                                    ),
-                                                    Err(e) => write_log(&format!(
-                                                        "my address propagation error! {e}"
-                                                    )),
-                                                }
-                                            } else {
-                                                for connected in connections.clone() {
-                                                    swarm
-                                                        .disconnect_peer_id(connected.clone())
-                                                        .unwrap();
-                                                }
-                                                leader.clear();
-                                                connections.clear();
-                                                client_topic_subscriber.clear();
-                                                relay_topic_subscribers.clear();
-                                                clients.clear();
-                                                relays.clear();
-                                                dialed_addr.clear();
-                                                syncing_blocks.clear();
-                                                my_addresses.clear();
-                                                *sync = false;
-                                                break;
-                                            }
-                                        }
-                                        Err(_) => {
-                                            write_log("syncing error in get gossip(line 283)");
-                                            in_syncing = false;
                                         }
                                     }
+
+                                    if set_sync {
+                                        *sync = true;
+                                        send_addr_to_server(my_addresses[0].clone()).await;
+                                        let my_multiaddress: Multiaddr =
+                                            my_addresses[0].parse().unwrap();
+                                        let str_my_multiaddr =
+                                            serde_json::to_string(&my_multiaddress).unwrap();
+                                        match swarm.behaviour_mut().gossipsub.publish(
+                                            clients_topic.clone(),
+                                            str_my_multiaddr.as_bytes(),
+                                        ) {
+                                            Ok(_) => {
+                                                write_log("my address propagate to the network")
+                                            }
+                                            Err(e) => write_log(&format!(
+                                                "my address propagation error! {e}"
+                                            )),
+                                        }
+                                    } else {
+                                        for connected in connections.clone() {
+                                            swarm.disconnect_peer_id(connected.clone()).unwrap();
+                                        }
+                                        leader.clear();
+                                        connections.clear();
+                                        client_topic_subscriber.clear();
+                                        relay_topic_subscribers.clear();
+                                        clients.clear();
+                                        relays.clear();
+                                        dialed_addr.clear();
+                                        syncing_blocks.clear();
+                                        my_addresses.clear();
+                                        *sync = false;
+                                        break;
+                                    }
+                                }
+                                Err(_) => {
+                                    write_log("syncing error in get gossip(line 283)");
+                                    in_syncing = false;
                                 }
                             }
                         }
                     }
-                    libp2p::gossipsub::Event::Subscribed { peer_id, topic } => send_address(
-                        topic,
-                        peer_id,
-                        &mut swarm,
-                        relay_topic_subscribers,
-                        connections,
-                        clients,
-                        client_topic_subscriber,
-                    ),
                     _ => (),
                 },
                 CustomBehavEvent::ReqRes(req_res) => match req_res {

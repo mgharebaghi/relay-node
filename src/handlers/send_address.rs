@@ -4,7 +4,7 @@ use super::{create_log::write_log, CustomBehav};
 
 //send listener addresses to another relays and clients
 pub fn send_address(
-    topic: TopicHash,
+    topic: &TopicHash,
     peer_id: PeerId,
     swarm: &mut Swarm<CustomBehav>,
     relay_topic_subscribers: &mut Vec<PeerId>,
