@@ -160,6 +160,8 @@ async fn submit_block<'a>(
     let last_block_find_opt = FindOneOptions::builder().sort(last_block_filter).build();
     let last_block_doc = blocks_coll.find_one(None, last_block_find_opt).await;
 
+    let mut outputs: Vec<UTXO> = Vec::new();
+
     match last_block_doc {
         Ok(doc) => {
             match doc {
@@ -178,8 +180,8 @@ async fn submit_block<'a>(
 
                                     handle_block_reward(
                                         gossip_message.clone(),
-                                        utxos_coll.clone(),
                                         db.clone(),
+                                        &mut outputs,
                                     )
                                     .await; //insert or update node utxos for rewards and fees
 
@@ -188,6 +190,7 @@ async fn submit_block<'a>(
                                         utxos_coll.clone(),
                                         db.clone(),
                                         trxs_coll,
+                                        &mut outputs,
                                     )
                                     .await;
 
@@ -272,8 +275,8 @@ async fn submit_block<'a>(
 
                                                 handle_block_reward(
                                                     gossip_message.clone(),
-                                                    utxos_coll.clone(),
                                                     db.clone(),
+                                                    &mut outputs,
                                                 )
                                                 .await;
                                                 //update utxos in database for transactions
@@ -282,6 +285,7 @@ async fn submit_block<'a>(
                                                     utxos_coll.clone(),
                                                     db.clone(),
                                                     trxs_coll,
+                                                    &mut outputs,
                                                 )
                                                 .await;
 
@@ -336,8 +340,8 @@ async fn submit_block<'a>(
 
                                         handle_block_reward(
                                             gossip_message.clone(),
-                                            utxos_coll.clone(),
                                             db.clone(),
+                                            &mut outputs,
                                         )
                                         .await;
                                         //update utxos in database for transactions
@@ -346,6 +350,7 @@ async fn submit_block<'a>(
                                             utxos_coll.clone(),
                                             db,
                                             trxs_coll,
+                                            &mut outputs,
                                         )
                                         .await;
 
@@ -449,8 +454,8 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
 
 async fn handle_block_reward(
     gossip_message: GossipMessage,
-    utxos_coll: Collection<Document>,
     db: Database,
+    outputs: &mut Vec<UTXO>,
 ) {
     coinbase_reciept(
         gossip_message.block.body.coinbase.clone(),
@@ -461,47 +466,24 @@ async fn handle_block_reward(
         db,
     )
     .await;
-    for i in gossip_message.block.body.coinbase.output.utxos.clone() {
-        let cb_utxo_filter = doc! {"public_key": i.output_unspent.public_key.clone()};
-        let utxo_doc = utxos_coll
-            .find_one(cb_utxo_filter.clone(), None)
-            .await
-            .unwrap();
-        let utxo = UtxoData {
+
+    for trx in gossip_message.block.body.coinbase.output.utxos.clone() {
+        let pub_key = trx.output_unspent.public_key;
+        let unspent_data = UtxoData {
             transaction_hash: gossip_message.block.body.coinbase.tx_hash.clone(),
-            unspent: i.output_unspent.unspent.round_dp(12),
-            output_hash: i.hash.clone(),
+            unspent: trx.output_unspent.unspent.round_dp(12),
+            output_hash: trx.hash,
             block_number: gossip_message.block.header.number,
         };
-        if let Some(doc) = utxo_doc {
-            let mut node_utxo: UTXO = from_document(doc).unwrap();
-            let mut output_hash = Vec::new();
-            for i in node_utxo.utxos.clone() {
-                output_hash.push(i.output_hash);
-            }
-            let mut exist_hash = 0;
-            for hash in output_hash {
-                if hash == i.hash.clone() {
-                    exist_hash += 1;
-                    break;
-                }
-            }
-            if exist_hash == 0 {
-                node_utxo.utxos.push(utxo);
-            }
-            let node_utxo_to_doc = to_document(&node_utxo).unwrap();
-            utxos_coll
-                .replace_one(cb_utxo_filter.clone(), node_utxo_to_doc, None)
-                .await
-                .unwrap();
+        let index = outputs.iter().position(|utxo| utxo.public_key == pub_key);
+        if outputs.len() > 0 && index.is_some() {
+            outputs[index.unwrap()].utxos.push(unspent_data);
         } else {
-            let node_pub_key = i.output_unspent.public_key.clone();
-            let utxo = UTXO {
-                public_key: node_pub_key,
-                utxos: vec![utxo],
+            let new_utxo = UTXO {
+                public_key: pub_key,
+                utxos: vec![unspent_data],
             };
-            let utxo_to_doc = to_document(&utxo).unwrap();
-            utxos_coll.insert_one(utxo_to_doc, None).await.unwrap();
+            outputs.push(new_utxo);
         }
     }
 }
@@ -511,8 +493,30 @@ async fn handle_tx_utxos(
     utxos_coll: Collection<Document>,
     db: Database,
     trxs_coll: Collection<Document>,
+    outputs: &mut Vec<UTXO>,
 ) {
     for tx in gossip_message.block.body.transactions.clone() {
+        for otpt in tx.output.output_data.utxos.clone() {
+            let pub_key = otpt.output_unspent.public_key;
+
+            let unspent_data = UtxoData {
+                transaction_hash: tx.tx_hash.clone(),
+                unspent: otpt.output_unspent.unspent.clone().round_dp(12),
+                output_hash: otpt.hash,
+                block_number: gossip_message.block.header.number,
+            };
+
+            let index = outputs.iter().position(|utxo| utxo.public_key == pub_key);
+            if outputs.len() > 0 && index.is_some() {
+                outputs[index.unwrap()].utxos.push(unspent_data);
+            } else {
+                let new_utxo = UTXO {
+                    public_key: pub_key,
+                    utxos: vec![unspent_data],
+                };
+                outputs.push(new_utxo.clone());
+            }
+        }
         insert_reciept(
             tx.clone(),
             Some(gossip_message.block.header.number),
@@ -521,57 +525,29 @@ async fn handle_tx_utxos(
             db.clone(),
         )
         .await;
-
-        //remove true transaction from Transactions collection
-        let trx_filter = doc! {"tx_hash": tx.tx_hash.clone()};
-        match trxs_coll.delete_one(trx_filter, None).await {
+        match trxs_coll.delete_one(doc! {"tx_hash": tx.tx_hash.clone()}, None).await {
             Ok(_) => {}
             Err(_) => {}
         }
-        //---
+    }
 
-        for utxo in tx.output.output_data.utxos {
-            let tx_utxo_filter = doc! {"public_key": &utxo.output_unspent.public_key};
-
-            if let Ok(utxo_doc) = utxos_coll.find_one(tx_utxo_filter.clone(), None).await {
-                let new_utxo = UtxoData {
-                    transaction_hash: tx.tx_hash.clone(),
-                    unspent: utxo.output_unspent.unspent.round_dp(12),
-                    output_hash: utxo.hash.clone(),
-                    block_number: gossip_message.block.header.number,
-                };
-                if let Some(doc) = utxo_doc {
-                    let mut user_utxo: UTXO = from_document(doc).unwrap();
-                    let mut user_utxos_outout_hashs = Vec::new();
-                    for i in user_utxo.utxos.clone() {
-                        user_utxos_outout_hashs.push(i.output_hash);
-                    }
-                    let mut exist_hash = 0;
-                    for hash in user_utxos_outout_hashs {
-                        if hash == utxo.hash.clone() {
-                            exist_hash += 1;
-                            break;
-                        }
-                    }
-                    if exist_hash == 0 {
-                        user_utxo.utxos.push(new_utxo);
-                    }
-                    let user_utxo_doc = to_document(&user_utxo).unwrap();
-                    utxos_coll
-                        .replace_one(tx_utxo_filter.clone(), user_utxo_doc, None)
-                        .await
-                        .unwrap();
-                } else {
-                    let public_key = utxo.output_unspent.public_key.clone();
-                    let mut utxos = Vec::new();
-                    utxos.push(new_utxo);
-                    let new_utxo = UTXO { public_key, utxos };
-                    let user_utxo_doc = to_document(&new_utxo).unwrap();
-                    utxos_coll.insert_one(user_utxo_doc, None).await.unwrap();
-                }
-            } else {
-                write_log("Error utxo doc in recieved block - line 563");
+    //update utxo collection with utxos in outputs
+    for utxo in outputs {
+        let filter = doc! {"public_key": utxo.public_key.clone()};
+        let find_doc = utxos_coll.find_one(filter.clone(), None).await;
+        if let Ok(Some(doc)) = find_doc {
+            let mut user_utxo: UTXO = from_document(doc).unwrap();
+            for data in &utxo.utxos {
+                user_utxo.utxos.push(data.clone());
             }
+            let new_doc = to_document(&user_utxo).unwrap();
+            utxos_coll
+                .replace_one(filter, new_doc, None)
+                .await
+                .unwrap();
+        } else {
+            let doc = to_document(&utxo).unwrap();
+            utxos_coll.insert_one(doc, None).await.unwrap();
         }
     }
 }
