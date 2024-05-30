@@ -87,7 +87,6 @@ pub async fn handle_requests(
                     .behaviour_mut()
                     .req_res
                     .send_response(channel, response);
-                write_log("Sending Trx to Client Error!");
             }
         }
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
