@@ -79,15 +79,15 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                     }
                 }
             }
-            SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
-                MyBehaviourEvent::Gossipsub(event) => match event {
-                    _ => {}
-                },
-                MyBehaviourEvent::ReqRes(event) => match event {
-                    Event::Message { message, .. } => match message {
-                        Message::Response { response, .. } => {
-                            let peer_id: PeerId = connected_id.parse().unwrap();
-                            if response.res == "Your transaction sent.".to_string() {
+            SwarmEvent::Behaviour(mybehaviour) => {
+                match mybehaviour {
+                    MyBehaviourEvent::Gossipsub(event) => match event {
+                        _ => {}
+                    },
+                    MyBehaviourEvent::ReqRes(event) => match event {
+                        Event::Message { message, .. } => match message {
+                            Message::Response { .. } => {
+                                let peer_id: PeerId = connected_id.parse().unwrap();
                                 match blockchain_db().await {
                                     Ok(db) => {
                                         let transactions_coll: Collection<Document> =
@@ -127,12 +127,12 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                     }
                                 }
                             }
-                        }
+                            _ => {}
+                        },
                         _ => {}
                     },
-                    _ => {}
-                },
-            },
+                }
+            }
             _ => {}
         }
     }

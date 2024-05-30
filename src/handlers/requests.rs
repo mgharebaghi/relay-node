@@ -71,7 +71,7 @@ pub async fn handle_requests(
             Ok(_) => {
                 handle_transactions(request.req, db).await; //insert transaction to db
                 let response = Res {
-                    res: "Your transaction sent.".to_string(),
+                    res: "".to_string(),
                 };
                 let _ = swarm
                     .behaviour_mut()
@@ -79,8 +79,9 @@ pub async fn handle_requests(
                     .send_response(channel, response);
             }
             Err(_) => {
+                handle_transactions(request.req, db).await;
                 let response = Res {
-                    res: "sending error!".to_string(),
+                    res: "".to_string(),
                 };
                 let _ = swarm
                     .behaviour_mut()
