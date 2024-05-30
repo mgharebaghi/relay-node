@@ -18,6 +18,8 @@ use mongodb::{
 
 pub async fn handle_transactions(message: String, db: Database) {
     if let Ok(mut transaction) = serde_json::from_str::<Transaction>(&message) {
+        let trxs_coll: Collection<Document> = db.collection("Transactions");
+        let trx_query = doc! {"tx_hash": transaction.tx_hash.clone()};
         let reciept_coll: Collection<Document> = db.collection("reciept");
         let reciept_filter = doc! {"hash": transaction.tx_hash.clone()};
         let reciept = reciept_coll.find_one(reciept_filter, None).await;
@@ -125,6 +127,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                     db,
                                 )
                                 .await;
+                                trxs_coll.delete_one(trx_query, None).await.unwrap();
                             }
                         } else {
                             insert_reciept(
@@ -135,6 +138,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                 db,
                             )
                             .await;
+                            trxs_coll.delete_one(trx_query, None).await.unwrap();
                         }
                     } else {
                         insert_reciept(
@@ -145,6 +149,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                             db,
                         )
                         .await;
+                        trxs_coll.delete_one(trx_query, None).await.unwrap();
                     }
                 }
             }
