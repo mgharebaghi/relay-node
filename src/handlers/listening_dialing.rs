@@ -17,7 +17,6 @@ use super::{
 
 #[derive(Debug, Deserialize)]
 struct RelaysRes {
-    _status: String,
     data: Vec<String>
 }
 
