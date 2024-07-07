@@ -21,8 +21,6 @@ struct MyAdrress {
 
 #[derive(Debug, Deserialize)]
 struct ServRes {
-    _status: String,
-    _detail: String,
     anothers: Vec<String>,
 }
 
@@ -67,7 +65,7 @@ pub async fn send_addr_to_server(full_addr: String) {
                     }
                 }
                 Err(_) => {
-                    write_log("centichain server response error! handle_listener(line 48)");
+                    write_log("centichain server response error! handle_listener(line 70)");
                 }
             }
 
