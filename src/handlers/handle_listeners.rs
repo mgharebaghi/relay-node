@@ -14,6 +14,18 @@ struct Addresses {
     addr: Vec<String>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct MyAdrress {
+    addr: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ServRes {
+    _status: String,
+    _detail: String,
+    anothers: Vec<String>,
+}
+
 pub async fn handle(address: Multiaddr, local_peer_id: PeerId, my_addresses: &mut Vec<String>) {
     let my_full_addr = format!("{}/p2p/{}", address, local_peer_id);
     fs::write("/etc/myaddress.dat", my_full_addr.clone()).unwrap();
@@ -29,10 +41,14 @@ pub async fn send_addr_to_server(full_addr: String) {
         path = "relays.dat"
     }
 
+    let myfulladdr = MyAdrress {
+        addr: full_addr.clone(),
+    };
+
     let client = reqwest::Client::new();
     let res = client
         .post("https://centichain.org/api/relays")
-        .body(full_addr.clone())
+        .json(&myfulladdr)
         .send()
         .await;
 
@@ -40,9 +56,13 @@ pub async fn send_addr_to_server(full_addr: String) {
         Ok(response) => {
             write_log("my addresses posted to server");
             let mut addresses = String::new();
-            match response.text().await {
-                Ok(all_addr) => {
-                    addresses.push_str(&all_addr);
+            match response.json::<ServRes>().await {
+                Ok(data) => {
+                    if data.anothers.len() > 0 {
+                        for addr in data.anothers {
+                            addresses.push_str(&addr);
+                        }
+                    }
                 }
                 Err(_) => {
                     write_log("centichain server response error! handle_listener(line 48)");
@@ -98,10 +118,13 @@ pub async fn send_addr_to_server(full_addr: String) {
     //send ip address as RPC server
     let trim_my_addr = full_addr.trim_start_matches("/ip4/");
     let my_ip = trim_my_addr.split("/").next().unwrap();
+    let rpcaddr = MyAdrress {
+        addr: my_ip.to_string(),
+    };
     let client = Client::new();
     let res = client
         .post("https://centichain.org/api/rpc")
-        .body(my_ip.to_string())
+        .json(&rpcaddr)
         .send()
         .await;
     match res {
