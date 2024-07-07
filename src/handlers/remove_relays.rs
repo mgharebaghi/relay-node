@@ -28,8 +28,10 @@ pub async fn remove_peer(peerid: PeerId) {
                 } else {
                     let client = Client::new();
                     let post_rm_addr = client
-                        .post("https://centichain.org/api/rmaddr")
-                        .body(line.clone())
+                        .delete(format!(
+                            "https://centichain.org/api/relays?addr={}",
+                            line.clone()
+                        ))
                         .send()
                         .await
                         .is_ok();
@@ -48,8 +50,7 @@ pub async fn remove_peer(peerid: PeerId) {
                             let ip = line.trim_start_matches("/ip4/");
                             let ip = ip.split("/").next().unwrap();
                             match client
-                                .post("https://centichain.org/api/rmrpc")
-                                .body(ip.to_string())
+                                .delete(format!("https://centichain.org/api/rpc?addr={}", ip))
                                 .send()
                                 .await
                             {

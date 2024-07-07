@@ -8,11 +8,18 @@ use std::{
 use libp2p::{gossipsub::IdentTopic, Multiaddr, PeerId, Swarm};
 use mongodb::Database;
 use rand::seq::SliceRandom;
+use serde::Deserialize;
 
 use super::{
     create_log::write_log, handle_events::events, handle_listeners::send_addr_to_server,
-    structures::GetGossipMsg, swarm_config::CustomBehav, Addresses,
+    structures::GetGossipMsg, swarm_config::CustomBehav,
 };
+
+#[derive(Debug, Deserialize)]
+struct RelaysRes {
+    _status: String,
+    data: Vec<String>
+}
 
 pub async fn start(
     local_peer_id: PeerId,
@@ -80,8 +87,8 @@ pub async fn start(
 async fn get_addresses(relays_path: &str) {
     match reqwest::get("https://centichain.org/api/relays").await {
         Ok(response) => {
-            let addresses: Addresses = response.json().await.unwrap();
-            write_log(&format!("addresses:\n{:?}", addresses));
+            let relays_res: RelaysRes = response.json().await.unwrap();
+            write_log(&format!("addresses:\n{:?}", relays_res.data));
             let path_exist = fs::metadata(relays_path).is_ok();
             if path_exist {
                 fs::write(relays_path, "").unwrap();
@@ -91,7 +98,7 @@ async fn get_addresses(relays_path: &str) {
                     .open(relays_path)
                     .unwrap();
                 let mut writer = BufWriter::new(write_file);
-                for addr in addresses.addr {
+                for addr in relays_res.data {
                     writeln!(writer, "{}", addr).unwrap();
                 }
             } else {
@@ -103,7 +110,7 @@ async fn get_addresses(relays_path: &str) {
                     .unwrap();
                 let mut writer = BufWriter::new(relays_file);
 
-                for addr in addresses.addr {
+                for addr in relays_res.data {
                     writeln!(writer, "{}", addr).unwrap();
                 }
             }
