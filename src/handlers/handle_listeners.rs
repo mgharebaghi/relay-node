@@ -55,12 +55,12 @@ pub async fn send_addr_to_server(full_addr: String) {
     match res {
         Ok(response) => {
             write_log("my addresses posted to server");
-            let mut addresses = String::new();
+            let mut addresses = Vec::new();
             match response.json::<ServRes>().await {
                 Ok(data) => {
                     if data.anothers.len() > 0 {
                         for addr in data.anothers {
-                            addresses.push_str(&addr);
+                            addresses.push(addr);
                         }
                     }
                 }
@@ -68,47 +68,38 @@ pub async fn send_addr_to_server(full_addr: String) {
                     write_log("centichain server response error! handle_listener(line 70)");
                 }
             }
+            
+            for addr in addresses {
+                let exists = fs::metadata(path).is_ok();
 
-            match serde_json::from_str::<Addresses>(&addresses) {
-                Ok(deserialize_res) => {
-                    for addr in deserialize_res.addr {
-                        let exists = fs::metadata(path).is_ok();
+                if exists {
+                    let mut prev_addresses = Vec::new();
+                    let read = File::open(path).unwrap();
+                    let reader = BufReader::new(read);
+                    for i in reader.lines() {
+                        let addr = i.unwrap();
+                        prev_addresses.push(addr);
+                    } //save addresses to prev_addresses for check new addresses
 
-                        if exists {
-                            let mut prev_addresses = Vec::new();
-                            let read = File::open(path).unwrap();
-                            let reader = BufReader::new(read);
-                            for i in reader.lines() {
-                                let addr = i.unwrap();
-                                prev_addresses.push(addr);
-                            } //save addresses to prev_addresses for check new addresses
-
-                            let file = OpenOptions::new()
-                                .write(true)
-                                .append(true)
-                                .open(path)
-                                .unwrap();
-                            let mut buf_writer = BufWriter::new(&file);
-                            if !prev_addresses.contains(&addr) {
-                                writeln!(buf_writer, "{}", addr).unwrap();
-                            }
-                        } else {
-                            File::create(path).unwrap();
-                            let file = OpenOptions::new().write(true).append(true).open(path);
-                            match file {
-                                Ok(relays_file) => {
-                                    let mut buf_writer = BufWriter::new(&relays_file);
-                                    writeln!(buf_writer, "{}", addr).unwrap();
-                                }
-                                Err(e) => write_log(&format!("{}", e)),
-                            }
-                        }
+                    let file = OpenOptions::new()
+                        .write(true)
+                        .append(true)
+                        .open(path)
+                        .unwrap();
+                    let mut buf_writer = BufWriter::new(&file);
+                    if !prev_addresses.contains(&addr) {
+                        writeln!(buf_writer, "{}", addr).unwrap();
                     }
-                }
-                Err(_) => {
-                    write_log(
-                        "deserializing addresses from server problem! handle_listener(line 90)",
-                    );
+                } else {
+                    File::create(path).unwrap();
+                    let file = OpenOptions::new().write(true).append(true).open(path);
+                    match file {
+                        Ok(relays_file) => {
+                            let mut buf_writer = BufWriter::new(&relays_file);
+                            writeln!(buf_writer, "{}", addr).unwrap();
+                        }
+                        Err(e) => write_log(&format!("{}", e)),
+                    }
                 }
             }
         }
