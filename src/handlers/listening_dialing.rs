@@ -16,8 +16,13 @@ use super::{
 };
 
 #[derive(Debug, Deserialize)]
+struct Addresses {
+    addr: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct RelaysRes {
-    data: Vec<String>
+    data: Vec<Addresses>,
 }
 
 pub async fn start(
@@ -97,8 +102,8 @@ async fn get_addresses(relays_path: &str) {
                     .open(relays_path)
                     .unwrap();
                 let mut writer = BufWriter::new(write_file);
-                for addr in relays_res.data {
-                    writeln!(writer, "{}", addr).unwrap();
+                for item in relays_res.data {
+                    writeln!(writer, "{}", item.addr).unwrap();
                 }
             } else {
                 let relays_file = OpenOptions::new()
@@ -109,8 +114,8 @@ async fn get_addresses(relays_path: &str) {
                     .unwrap();
                 let mut writer = BufWriter::new(relays_file);
 
-                for addr in relays_res.data {
-                    writeln!(writer, "{}", addr).unwrap();
+                for item in relays_res.data {
+                    writeln!(writer, "{}", item.addr).unwrap();
                 }
             }
         }
