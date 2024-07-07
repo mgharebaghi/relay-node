@@ -52,6 +52,8 @@ pub async fn send_addr_to_server(full_addr: String) {
         .send()
         .await;
 
+    write_log(&format!("sent addr: {:?}", myfulladdr));
+
     match res {
         Ok(response) => {
             write_log("my addresses posted to server");
@@ -127,6 +129,8 @@ pub async fn send_addr_to_server(full_addr: String) {
         .json(&rpcaddr)
         .send()
         .await;
+
+    write_log(&format!("sent RPC: {:?}", rpcaddr));
     match res {
         Ok(_) => {}
         Err(_) => write_log(
