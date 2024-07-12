@@ -290,12 +290,12 @@ pub async fn events(
                                                                     .unwrap();
                                                             let filter = doc! {"peer_id": gossipmsg.block.header.validator};
                                                             let cursor = validators_coll
-                                                                .find_one(filter, None)
+                                                                .find_one(filter)
                                                                 .await;
                                                             if let Ok(opt) = cursor {
                                                                 if let Some(doc) = opt {
                                                                     validators_coll
-                                                                        .delete_one(doc, None)
+                                                                        .delete_one(doc)
                                                                         .await
                                                                         .unwrap();
                                                                 }

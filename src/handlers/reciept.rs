@@ -38,17 +38,17 @@ pub async fn insert_reciept(
 
     let reciept_document = to_document(&reciept.clone()).unwrap();
     let filter = doc! {"hash": reciept.hash.clone()};
-    let find_rec = reciept_coll.find_one(filter.clone(), None).await.unwrap();
+    let find_rec = reciept_coll.find_one(filter.clone()).await.unwrap();
     match find_rec {
         Some(_) => {
             reciept_coll
-                .replace_one(filter, reciept_document, None)
+                .replace_one(filter, reciept_document)
                 .await
                 .unwrap();
         }
         None => {
             reciept_coll
-                .insert_one(reciept_document, None)
+                .insert_one(reciept_document)
                 .await
                 .unwrap();
         }
@@ -83,7 +83,7 @@ pub async fn coinbase_reciept(
         let reciept_document = to_document(&reciept.clone()).unwrap();
 
         reciept_coll
-            .insert_one(reciept_document, None)
+            .insert_one(reciept_document)
             .await
             .unwrap();
     }

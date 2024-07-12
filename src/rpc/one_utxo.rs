@@ -33,7 +33,7 @@ pub async fn a_utxo(extract::Json(request): extract::Json<ReqBody>) -> Json<ResB
         Ok(db) => {
             let utxos_coll: Collection<Document> = db.collection("UTXOs");
             let filter = doc! {"public_key": request.public_key.clone()};
-            match utxos_coll.find_one(filter, None).await {
+            match utxos_coll.find_one(filter).await {
                 Ok(doc) => match doc {
                     Some(document) => set_response_utxos(document, request),
                     None => {

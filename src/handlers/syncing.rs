@@ -81,16 +81,20 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                     let reciept_coll: Collection<Document> = db.collection("reciept");
                     let sort = doc! {"_id": -1};
                     let option = FindOneOptions::builder().sort(sort).build();
-                    match reciept_coll.find_one(None, option.clone()).await {
+                    match reciept_coll
+                        .find_one(doc! {})
+                        .with_options(option.clone())
+                        .await
+                    {
                         Ok(doc) => {
                             if doc.is_some() {
-                                match reciept_coll.delete_many(doc! {}, None).await {
+                                match reciept_coll.delete_many(doc! {}).await {
                                     Ok(_) => {
                                         write_log("delete old reciept collection");
                                         while let Ok(document) =
                                             Document::from_reader(&mut reciept_reader)
                                         {
-                                            reciept_coll.insert_one(document, None).await.unwrap();
+                                            reciept_coll.insert_one(document).await.unwrap();
                                         }
                                         write_log("insert new reciept collection");
                                     }
@@ -101,13 +105,13 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                                 }
                             } else {
                                 while let Ok(doc) = Document::from_reader(&mut reciept_reader) {
-                                    reciept_coll.insert_one(doc, None).await.unwrap();
+                                    reciept_coll.insert_one(doc).await.unwrap();
                                 }
                             }
                         }
                         Err(_) => {
                             while let Ok(doc) = Document::from_reader(&mut reciept_reader) {
-                                reciept_coll.insert_one(doc, None).await.unwrap();
+                                reciept_coll.insert_one(doc).await.unwrap();
                             }
                         }
                     }
@@ -119,16 +123,20 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
 
                     let utxo_coll: Collection<Document> = db.collection("UTXOs");
 
-                    match utxo_coll.find_one(None, option.clone()).await {
+                    match utxo_coll
+                        .find_one(doc! {})
+                        .with_options(option.clone())
+                        .await
+                    {
                         Ok(doc) => {
                             if doc.is_some() {
-                                match utxo_coll.delete_many(doc! {}, None).await {
+                                match utxo_coll.delete_many(doc! {}).await {
                                     Ok(_) => {
                                         write_log("delete old utxo collection");
                                         while let Ok(document) =
                                             Document::from_reader(&mut utxo_reader)
                                         {
-                                            utxo_coll.insert_one(document, None).await.unwrap();
+                                            utxo_coll.insert_one(document).await.unwrap();
                                         }
                                         write_log("insert new utxo collection");
                                     }
@@ -139,13 +147,13 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                                 }
                             } else {
                                 while let Ok(document) = Document::from_reader(&mut utxo_reader) {
-                                    utxo_coll.insert_one(document, None).await.unwrap();
+                                    utxo_coll.insert_one(document).await.unwrap();
                                 }
                             }
                         }
                         Err(_) => {
                             while let Ok(document) = Document::from_reader(&mut utxo_reader) {
-                                utxo_coll.insert_one(document, None).await.unwrap();
+                                utxo_coll.insert_one(document).await.unwrap();
                             }
                         }
                     }
@@ -158,19 +166,20 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
 
                         let outnodes_coll: Collection<Document> = db.collection("outnodes");
 
-                        match outnodes_coll.find_one(None, option.clone()).await {
+                        match outnodes_coll
+                            .find_one(doc! {})
+                            .with_options(option.clone())
+                            .await
+                        {
                             Ok(doc) => {
                                 if doc.is_some() {
-                                    match outnodes_coll.delete_many(doc! {}, None).await {
+                                    match outnodes_coll.delete_many(doc! {}).await {
                                         Ok(_) => {
                                             write_log("delete old outnodes collection");
                                             while let Ok(document) =
                                                 Document::from_reader(&mut outnode_reader)
                                             {
-                                                outnodes_coll
-                                                    .insert_one(document, None)
-                                                    .await
-                                                    .unwrap();
+                                                outnodes_coll.insert_one(document).await.unwrap();
                                             }
                                             write_log("insert new outnodes collection");
                                         }
@@ -183,14 +192,14 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                                     while let Ok(document) =
                                         Document::from_reader(&mut outnode_reader)
                                     {
-                                        outnodes_coll.insert_one(document, None).await.unwrap();
+                                        outnodes_coll.insert_one(document).await.unwrap();
                                     }
                                 }
                             }
                             Err(_) => {
                                 while let Ok(document) = Document::from_reader(&mut outnode_reader)
                                 {
-                                    outnodes_coll.insert_one(document, None).await.unwrap();
+                                    outnodes_coll.insert_one(document).await.unwrap();
                                 }
                             }
                         }
@@ -198,25 +207,27 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
 
                     //---------------------------------------------------------
                     //open and read validators.bson file and insert it to database
-                    if let Ok(validators_bson) = File::open("/home/etc/dump/Blockchain/validators.bson")
+                    if let Ok(validators_bson) =
+                        File::open("/home/etc/dump/Blockchain/validators.bson")
                     {
                         let mut validators_reader = BufReader::new(validators_bson);
 
                         let validators_coll: Collection<Document> = db.collection("validators");
 
-                        match validators_coll.find_one(None, option.clone()).await {
+                        match validators_coll
+                            .find_one(doc! {})
+                            .with_options(option.clone())
+                            .await
+                        {
                             Ok(doc) => {
                                 if doc.is_some() {
-                                    match validators_coll.delete_many(doc! {}, None).await {
+                                    match validators_coll.delete_many(doc! {}).await {
                                         Ok(_) => {
                                             write_log("delete old validators collection");
                                             while let Ok(document) =
                                                 Document::from_reader(&mut validators_reader)
                                             {
-                                                validators_coll
-                                                    .insert_one(document, None)
-                                                    .await
-                                                    .unwrap();
+                                                validators_coll.insert_one(document).await.unwrap();
                                             }
                                             write_log("insert new validators collection");
                                         }
@@ -229,14 +240,15 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                                     while let Ok(document) =
                                         Document::from_reader(&mut validators_reader)
                                     {
-                                        validators_coll.insert_one(document, None).await.unwrap();
+                                        validators_coll.insert_one(document).await.unwrap();
                                     }
                                 }
                             }
                             Err(_) => {
-                                while let Ok(document) = Document::from_reader(&mut validators_reader)
+                                while let Ok(document) =
+                                    Document::from_reader(&mut validators_reader)
                                 {
-                                    validators_coll.insert_one(document, None).await.unwrap();
+                                    validators_coll.insert_one(document).await.unwrap();
                                 }
                             }
                         }
@@ -250,16 +262,20 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
 
                         let trx_coll: Collection<Document> = db.collection("Transactions");
 
-                        match trx_coll.find_one(None, option.clone()).await {
+                        match trx_coll
+                            .find_one(doc! {})
+                            .with_options(option.clone())
+                            .await
+                        {
                             Ok(doc) => {
                                 if doc.is_some() {
-                                    match trx_coll.delete_many(doc! {}, None).await {
+                                    match trx_coll.delete_many(doc! {}).await {
                                         Ok(_) => {
                                             write_log("delete old Transactions collection");
                                             while let Ok(document) =
                                                 Document::from_reader(&mut trx_reader)
                                             {
-                                                trx_coll.insert_one(document, None).await.unwrap();
+                                                trx_coll.insert_one(document).await.unwrap();
                                             }
                                             write_log("insert new Transactions collection");
                                         }
@@ -271,13 +287,13 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                                 } else {
                                     while let Ok(document) = Document::from_reader(&mut trx_reader)
                                     {
-                                        trx_coll.insert_one(document, None).await.unwrap();
+                                        trx_coll.insert_one(document).await.unwrap();
                                     }
                                 }
                             }
                             Err(_) => {
                                 while let Ok(document) = Document::from_reader(&mut trx_reader) {
-                                    trx_coll.insert_one(document, None).await.unwrap();
+                                    trx_coll.insert_one(document).await.unwrap();
                                 }
                             }
                         }
@@ -289,10 +305,14 @@ pub async fn syncing(dialed_addr: String, db: Database) -> Result<(), ()> {
                     let blocks_reader = BufReader::new(blocks_bson);
 
                     let block_coll: Collection<Document> = db.collection("Blocks");
-                    match block_coll.find_one(None, option.clone()).await {
+                    match block_coll
+                        .find_one(doc! {})
+                        .with_options(option.clone())
+                        .await
+                    {
                         Ok(doc) => {
                             if doc.is_some() {
-                                match block_coll.delete_many(doc! {}, None).await {
+                                match block_coll.delete_many(doc! {}).await {
                                     Ok(_) => {
                                         write_log("delete old block collection");
                                         match insert_blocks(blocks_reader, block_coll).await {
@@ -362,12 +382,12 @@ async fn insert_blocks(
             prev_hash.clear();
             let str_block_body = serde_json::to_string(&block.body).unwrap();
             prev_hash.push_str(&create_hash(str_block_body));
-            block_coll.insert_one(doc, None).await.unwrap();
+            block_coll.insert_one(doc).await.unwrap();
         } else if block.header.prevhash == "This block is Genesis".to_string() {
             prev_hash.clear();
             let str_block_body = serde_json::to_string(&block.body).unwrap();
             prev_hash.push_str(&create_hash(str_block_body));
-            block_coll.insert_one(doc, None).await.unwrap();
+            block_coll.insert_one(doc).await.unwrap();
         } else {
             return Err(());
         }

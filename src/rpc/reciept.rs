@@ -17,7 +17,7 @@ pub async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json
         Ok(db) => {
             let reciept_coll: Collection<Document> = db.collection("reciept");
             let filter = doc! {"hash": tx_req.tx_hash.clone()};
-            let documnet = reciept_coll.find_one(filter, None).await.unwrap();
+            let documnet = reciept_coll.find_one(filter).await.unwrap();
             match documnet {
                 Some(doc) => {
                     let reciept: Reciept = from_document(doc).unwrap();
@@ -64,8 +64,8 @@ pub async fn handle_user_reciepts(
             let reciept_coll: Collection<Document> = db.collection("reciept");
             let filter1 = doc! {"to": rcpt_req.public_key.clone()};
             let filter2 = doc! {"from": rcpt_req.public_key.clone()};
-            let mut documents1 = reciept_coll.find(filter1, None).await.unwrap();
-            let mut documents2 = reciept_coll.find(filter2, None).await.unwrap();
+            let mut documents1 = reciept_coll.find(filter1).await.unwrap();
+            let mut documents2 = reciept_coll.find(filter2).await.unwrap();
             let mut all_rcpts = Vec::new();
             while let Some(doc) = documents1.next().await {
                 match doc {

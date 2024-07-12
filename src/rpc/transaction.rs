@@ -33,7 +33,7 @@ pub async fn handle_transaction(
                 .date
                 .push_str(&Utc::now().round_subsecs(0).to_string());
             let trx_doc = to_document(&transaction).unwrap();
-            trx_coll.insert_one(trx_doc, None).await.unwrap();
+            trx_coll.insert_one(trx_doc).await.unwrap();
             tx_res.status = "success".to_string();
         }
         Err(_) => {

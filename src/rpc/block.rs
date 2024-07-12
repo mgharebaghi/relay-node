@@ -13,7 +13,7 @@ pub async fn handle_block(extract::Json(block_req): extract::Json<BlockReq>) -> 
         Ok(db) => {
             let block_coll: Collection<Document> = db.collection("Blocks");
             let filter = doc! {"header.number": block_req.block_number.clone()};
-            let documnet = block_coll.find_one(filter, None).await.unwrap();
+            let documnet = block_coll.find_one(filter).await.unwrap();
             match documnet {
                 Some(doc) => {
                     let block: Block = from_document(doc).unwrap();

@@ -55,10 +55,10 @@ pub async fn msg_check(
                 let validators_coll:Collection<Document> = db.collection("validators");
                 let gossipmsg: GossipMessage = serde_json::from_str(&str_msg).unwrap();
                 let filter = doc! {"peer_id": gossipmsg.block.header.validator};
-                let cursor = validators_coll.find_one(filter, None).await;
+                let cursor = validators_coll.find_one(filter).await;
                 if let Ok(opt) = cursor {
                     if let Some(doc) = opt {
-                        validators_coll.delete_one(doc, None).await.unwrap();
+                        validators_coll.delete_one(doc).await.unwrap();
                     }
                 }
 

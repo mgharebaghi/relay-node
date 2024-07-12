@@ -22,7 +22,7 @@ pub async fn handle_transactions(message: String, db: Database) {
         let trx_query = doc! {"tx_hash": transaction.tx_hash.clone()};
         let reciept_coll: Collection<Document> = db.collection("reciept");
         let reciept_filter = doc! {"hash": transaction.tx_hash.clone()};
-        let reciept = reciept_coll.find_one(reciept_filter, None).await;
+        let reciept = reciept_coll.find_one(reciept_filter).await;
         match reciept {
             Ok(is) => {
                 if is.is_none() {
@@ -79,7 +79,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                     {
                         let filter = doc! {"public_key": &transaction.output.output_data.sigenr_public_keys[0].to_string()};
                         let utxos_coll = db.collection("UTXOs");
-                        let utxo_doc = utxos_coll.find_one(filter.clone(), None).await.unwrap();
+                        let utxo_doc = utxos_coll.find_one(filter.clone()).await.unwrap();
                         if let Some(doc) = utxo_doc {
                             let mut user_utxos: UTXO = from_document(doc).unwrap();
                             let mut correct_tx = true;
@@ -102,7 +102,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                             if correct_tx {
                                 let user_utxo_updated = to_document(&user_utxos).unwrap();
                                 utxos_coll
-                                    .replace_one(filter.clone(), user_utxo_updated, None)
+                                    .replace_one(filter.clone(), user_utxo_updated)
                                     .await
                                     .unwrap();
                                 //set fee
@@ -127,7 +127,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                     db,
                                 )
                                 .await;
-                                trxs_coll.delete_one(trx_query, None).await.unwrap();
+                                trxs_coll.delete_one(trx_query).await.unwrap();
                             }
                         } else {
                             insert_reciept(
@@ -138,7 +138,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                                 db,
                             )
                             .await;
-                            trxs_coll.delete_one(trx_query, None).await.unwrap();
+                            trxs_coll.delete_one(trx_query).await.unwrap();
                         }
                     } else {
                         insert_reciept(
@@ -149,7 +149,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                             db,
                         )
                         .await;
-                        trxs_coll.delete_one(trx_query, None).await.unwrap();
+                        trxs_coll.delete_one(trx_query).await.unwrap();
                     }
                 }
             }

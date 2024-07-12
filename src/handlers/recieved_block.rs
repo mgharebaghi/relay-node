@@ -28,7 +28,7 @@ pub async fn verifying_block<'a>(
         Ok(gossip_message) => {
             let block_coll: Collection<Document> = db.collection("Blocks");
             let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
-            let block = block_coll.find_one(filter, None).await;
+            let block = block_coll.find_one(filter).await;
             match block {
                 Ok(is) => {
                     if is.is_none() {
@@ -152,13 +152,16 @@ async fn submit_block<'a>(
     let reciept_coll: Collection<Document> = db.collection("reciept");
     let trxs_coll: Collection<Document> = db.collection("Transactions");
     let validators_coll: Collection<Document> = db.collection("validators");
-    let validators_count = validators_coll.count_documents(None, None).await.unwrap();
+    let validators_count = validators_coll.count_documents(doc! {}).await.unwrap();
     let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
-    let same_block = blocks_coll.find_one(filter, None).await.unwrap();
+    let same_block = blocks_coll.find_one(filter).await.unwrap();
 
     let last_block_filter = doc! {"header.number": -1};
     let last_block_find_opt = FindOneOptions::builder().sort(last_block_filter).build();
-    let last_block_doc = blocks_coll.find_one(None, last_block_find_opt).await;
+    let last_block_doc = blocks_coll
+        .find_one(doc! {})
+        .with_options(last_block_find_opt)
+        .await;
 
     let mut outputs: Vec<UTXO> = Vec::new();
 
@@ -195,7 +198,7 @@ async fn submit_block<'a>(
                                     .await;
 
                                     //set block generator waiting for next round and anothers' waiting minus 1
-                                    let validators_cursor = validators_coll.find(None, None).await;
+                                    let validators_cursor = validators_coll.find(doc! {}).await;
                                     if let Ok(mut curs) = validators_cursor {
                                         while let Some(Ok(doc)) = curs.next().await {
                                             let mut validator: FullNodes =
@@ -209,7 +212,7 @@ async fn submit_block<'a>(
                                                 let validator_doc =
                                                     to_document(&validator).unwrap();
                                                 validators_coll
-                                                    .replace_one(doc, validator_doc, None)
+                                                    .replace_one(doc, validator_doc)
                                                     .await
                                                     .unwrap();
                                             } else if validator.peer_id.to_string()
@@ -220,7 +223,7 @@ async fn submit_block<'a>(
                                                 let validator_doc =
                                                     to_document(&validator).unwrap();
                                                 validators_coll
-                                                    .replace_one(doc, validator_doc, None)
+                                                    .replace_one(doc, validator_doc)
                                                     .await
                                                     .unwrap();
                                             } else if validator.peer_id.to_string()
@@ -230,7 +233,7 @@ async fn submit_block<'a>(
                                                 let validator_doc =
                                                     to_document(&validator).unwrap();
                                                 validators_coll
-                                                    .replace_one(doc, validator_doc, None)
+                                                    .replace_one(doc, validator_doc)
                                                     .await
                                                     .unwrap();
                                             }
@@ -242,7 +245,7 @@ async fn submit_block<'a>(
                                     leader.clear();
                                     leader.push_str(&gossip_message.next_leader);
 
-                                    blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+                                    blocks_coll.insert_one(new_block_doc).await.unwrap(); //insert block to DB
 
                                     Ok(())
                                 } else {
@@ -264,11 +267,11 @@ async fn submit_block<'a>(
                     if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
                         && validators_count < 2
                     {
-                        match blocks_coll.delete_many(doc! {}, None).await {
+                        match blocks_coll.delete_many(doc! {}).await {
                             Ok(_) => {
-                                match utxos_coll.delete_many(doc! {}, None).await {
+                                match utxos_coll.delete_many(doc! {}).await {
                                     Ok(_) => {
-                                        match reciept_coll.delete_many(doc! {}, None).await {
+                                        match reciept_coll.delete_many(doc! {}).await {
                                             Ok(_) => {
                                                 let new_block_doc =
                                                     to_document(&gossip_message.block).unwrap();
@@ -294,7 +297,7 @@ async fn submit_block<'a>(
                                                 leader.push_str(&gossip_message.next_leader);
 
                                                 blocks_coll
-                                                    .insert_one(new_block_doc, None)
+                                                    .insert_one(new_block_doc)
                                                     .await
                                                     .unwrap(); //insert block to DB
 
@@ -329,11 +332,11 @@ async fn submit_block<'a>(
             if gossip_message.block.header.prevhash == "This block is Genesis".to_string()
                 && validators_count < 2
             {
-                match blocks_coll.delete_many(doc! {}, None).await {
+                match blocks_coll.delete_many(doc! {}).await {
                     Ok(_) => {
-                        match utxos_coll.delete_many(doc! {}, None).await {
+                        match utxos_coll.delete_many(doc! {}).await {
                             Ok(_) => {
-                                match reciept_coll.delete_many(doc! {}, None).await {
+                                match reciept_coll.delete_many(doc! {}).await {
                                     Ok(_) => {
                                         let new_block_doc =
                                             to_document(&gossip_message.block).unwrap();
@@ -357,7 +360,7 @@ async fn submit_block<'a>(
                                         //check next leader
                                         leader.clear();
                                         leader.push_str(&gossip_message.next_leader);
-                                        blocks_coll.insert_one(new_block_doc, None).await.unwrap(); //insert block to DB
+                                        blocks_coll.insert_one(new_block_doc).await.unwrap(); //insert block to DB
 
                                         Ok(())
                                     }
@@ -421,7 +424,7 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
 
         if sign_verify && input_checker && output_checker && txhash_checker {
             let user_utxo_filter = doc! {"public_key": tx.output.output_data.sigenr_public_keys[0].clone().to_string()};
-            if let Ok(find_utxo_doc) = utxos_coll.find_one(user_utxo_filter.clone(), None).await {
+            if let Ok(find_utxo_doc) = utxos_coll.find_one(user_utxo_filter.clone()).await {
                 if let Some(doc) = find_utxo_doc {
                     let mut user_utxo: UTXO = from_document(doc).unwrap();
                     for utxo in tx.input.input_data.utxos {
@@ -434,7 +437,7 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
                                 user_utxo.utxos.remove(i);
                                 let user_utxo_todoc = to_document(&user_utxo).unwrap();
                                 utxos_coll
-                                    .replace_one(user_utxo_filter.clone(), user_utxo_todoc, None)
+                                    .replace_one(user_utxo_filter.clone(), user_utxo_todoc)
                                     .await
                                     .unwrap();
                             }
@@ -452,11 +455,7 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
     block_verify
 }
 
-async fn handle_block_reward(
-    gossip_message: GossipMessage,
-    db: Database,
-    outputs: &mut Vec<UTXO>,
-) {
+async fn handle_block_reward(gossip_message: GossipMessage, db: Database, outputs: &mut Vec<UTXO>) {
     coinbase_reciept(
         gossip_message.block.body.coinbase.clone(),
         Some(gossip_message.block.header.number.clone()),
@@ -525,7 +524,10 @@ async fn handle_tx_utxos(
             db.clone(),
         )
         .await;
-        match trxs_coll.delete_one(doc! {"tx_hash": tx.tx_hash.clone()}, None).await {
+        match trxs_coll
+            .delete_one(doc! {"tx_hash": tx.tx_hash.clone()})
+            .await
+        {
             Ok(_) => {}
             Err(_) => {}
         }
@@ -534,20 +536,17 @@ async fn handle_tx_utxos(
     //update utxo collection with utxos in outputs
     for utxo in outputs {
         let filter = doc! {"public_key": utxo.public_key.clone()};
-        let find_doc = utxos_coll.find_one(filter.clone(), None).await;
+        let find_doc = utxos_coll.find_one(filter.clone()).await;
         if let Ok(Some(doc)) = find_doc {
             let mut user_utxo: UTXO = from_document(doc).unwrap();
             for data in &utxo.utxos {
                 user_utxo.utxos.push(data.clone());
             }
             let new_doc = to_document(&user_utxo).unwrap();
-            utxos_coll
-                .replace_one(filter, new_doc, None)
-                .await
-                .unwrap();
+            utxos_coll.replace_one(filter, new_doc).await.unwrap();
         } else {
             let doc = to_document(&utxo).unwrap();
-            utxos_coll.insert_one(doc, None).await.unwrap();
+            utxos_coll.insert_one(doc).await.unwrap();
         }
     }
 }

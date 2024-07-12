@@ -32,15 +32,15 @@ pub async fn handle_gossip_message(
             if let Ok(identifier) = serde_json::from_str::<NextLeader>(&msg) {
                 let filter1 = doc! {"peer_id": identifier.identifier_peer_id.to_string()};
                 let filter2 = doc! {"peer_id": identifier.next_leader.to_string()};
-                let find1 = validators_coll.find_one(filter1, None).await;
+                let find1 = validators_coll.find_one(filter1).await;
                 if let Ok(opt) = find1 {
                     if let Some(_) = opt {
-                        let find2 = validators_coll.find_one(filter2, None).await;
+                        let find2 = validators_coll.find_one(filter2).await;
                         if let Ok(option) = find2 {
                             if let Some(_) = option  {
                                 //remove validators from left leader
                                 let leader_query = doc! {"peer_id": leader.clone()};
-                                validators_coll.delete_one(leader_query, None).await.unwrap();
+                                validators_coll.delete_one(leader_query).await.unwrap();
 
                                 //set new leader that recieved from tru identifier
                                 leader.clear();
@@ -60,7 +60,7 @@ pub async fn handle_gossip_message(
             if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&msg) {
                 let outnode_coll:Collection<Document> = db.collection("outnodes");
                 let filter = doc! {"peerid": new_sync_node.peerid.to_string()};
-                let cursor = outnode_coll.find_one(filter, None).await;
+                let cursor = outnode_coll.find_one(filter).await;
                 if let Ok(opt) = cursor {
                     if let None = opt {
                         if !relay_topic_subscribers.contains(&propagation_source) {
@@ -115,7 +115,7 @@ pub async fn handle_gossip_message(
             //handle left nodes
             if let Ok(outnode) = serde_json::from_str::<OutNode>(&msg) {
                 let query = doc! {"peer_id": outnode.peer_id.to_string()};
-                validators_coll.delete_one(query, None).await.unwrap();
+                validators_coll.delete_one(query).await.unwrap();
             }
 
         }

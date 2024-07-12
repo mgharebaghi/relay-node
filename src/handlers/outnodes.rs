@@ -81,22 +81,22 @@ pub async fn handle_outnode(
 
     let pid_filter = doc! {"peer_id": peerid.to_string()};
     let relay_filter = doc! {"relay": peerid.to_string()};
-    let match_pid = validators_coll.find_one(pid_filter, None).await;
-    let match_relay = validators_coll.find_one(relay_filter, None).await;
+    let match_pid = validators_coll.find_one(pid_filter).await;
+    let match_relay = validators_coll.find_one(relay_filter).await;
 
     if let Ok(opt) = match_pid {
         if let Some(document) = opt {
-            validators_coll.delete_one(document, None).await.unwrap();
+            validators_coll.delete_one(document).await.unwrap();
         }
     }
     if let Ok(opt) = match_relay {
         if let Some(document) = opt {
-            validators_coll.delete_one(document, None).await.unwrap();
+            validators_coll.delete_one(document).await.unwrap();
         }
     }
 
     //clear leader if there is no any validators in the validators collection
-    let validators_coutn = validators_coll.count_documents(None, None).await.unwrap();
+    let validators_coutn = validators_coll.count_documents(doc! {}).await.unwrap();
     if validators_coutn == 0 {
         leader.clear();
     }
@@ -148,10 +148,10 @@ pub async fn handle_outnode(
     //insert outnode into outnodes collection
     let outnode_coll: Collection<Document> = db.collection("outnodes");
     let doc = doc! {"peerid": peerid.to_string()};
-    let cursor = outnode_coll.find_one(doc.clone(), None).await;
+    let cursor = outnode_coll.find_one(doc.clone()).await;
     if let Ok(opt) = cursor {
         if let None = opt {
-            outnode_coll.insert_one(doc, None).await.unwrap();
+            outnode_coll.insert_one(doc).await.unwrap();
         }
     }
 }

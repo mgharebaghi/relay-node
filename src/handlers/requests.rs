@@ -7,7 +7,7 @@ use super::{
     CustomBehav,
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
-use mongodb::{bson::Document, Collection, Database};
+use mongodb::{bson::{doc, Document}, Collection, Database};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,14 +35,14 @@ pub async fn handle_requests(
 ) {
     if request.req == "handshake".to_string() {
         let blocks_coll: Collection<Document> = db.collection("Blocks");
-        let count_docs = blocks_coll.count_documents(None, None).await.unwrap();
+        let count_docs = blocks_coll.count_documents(doc! {}).await.unwrap();
         let mut handshake_res = Handshake {
             wallet: wallet.clone(),
             first_node: String::new(),
         };
 
         let validators: Collection<Document> = db.collection("validators");
-        let validators_count = validators.count_documents(None, None).await.unwrap();
+        let validators_count = validators.count_documents(doc! {}).await.unwrap();
 
         if validators_count > 0 || count_docs > 0 {
             handshake_res.first_node.push_str(&"no".to_string());

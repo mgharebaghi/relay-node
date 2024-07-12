@@ -16,7 +16,7 @@ pub async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> 
         Ok(db) => {
             let utxo_coll: Collection<Document> = db.collection("UTXOs");
             let filter = doc! {"public_key": utxo_req.public_key.clone()};
-            let documnet = utxo_coll.find_one(filter, None).await.unwrap();
+            let documnet = utxo_coll.find_one(filter).await.unwrap();
             match documnet {
                 Some(doc) => {
                     let utxo: UTXO = from_document(doc).unwrap();
