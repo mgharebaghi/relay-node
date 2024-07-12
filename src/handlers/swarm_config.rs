@@ -26,7 +26,7 @@ impl SwarmConf for CustomBehav {
         let clients_topic = IdentTopic::new("client");
 
         //generate peer keys and peer id for network
-        let keypair = Keypair::generate_ecdsa();
+        let keypair = Keypair::generate_ed25519();
         let local_peer_id = PeerId::from(keypair.public());
 
         //gossip protocol config
@@ -57,9 +57,6 @@ impl SwarmConf for CustomBehav {
                 (libp2p::tls::Config::new, libp2p::noise::Config::new),
                 libp2p::yamux::Config::default,
             )
-            .unwrap()
-            .with_quic()
-            .with_dns()
             .unwrap()
             .with_websocket(
                 (libp2p::tls::Config::new, libp2p::noise::Config::new),
