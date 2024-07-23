@@ -49,10 +49,10 @@ pub async fn handle_transactions(message: String, db: Database) {
 
                     //check transaction signature
                     let signed_message = transaction.tx_hash.clone();
-                    let sign_verify = sp_core::ecdsa::Pair::verify(
+                    let sign_verify = sp_core::ed25519::Pair::verify(
                         &transaction.input.signatures[0],
                         signed_message,
-                        &transaction.output.output_data.sigenr_public_keys[0],
+                        &transaction.output.output_data.sigenr_public_keys,
                     );
 
                     //get bool as verify of hashs

@@ -288,7 +288,7 @@ pub async fn events(
                                                             let gossipmsg: GossipMessage =
                                                                 serde_json::from_str(&str_msg)
                                                                     .unwrap();
-                                                            let filter = doc! {"peer_id": gossipmsg.block.header.validator};
+                                                            let filter = doc! {"peer_id": gossipmsg.block.header.validator.to_string()};
                                                             let cursor = validators_coll
                                                                 .find_one(filter)
                                                                 .await;

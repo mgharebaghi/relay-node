@@ -2,7 +2,7 @@ use libp2p::PeerId;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
-use sp_core::ecdsa::{Public, Signature};
+use sp_core::ed25519::{Public, Signature};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Req {
@@ -31,7 +31,7 @@ pub struct ImSync {
     pub relay: PeerId,
     pub peerid: PeerId,
     pub msg: String,
-    pub public_key: sp_core::ecdsa::Public,
+    pub public_key: Public,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,8 +42,7 @@ pub struct OutNode {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct BlockSign {
     pub wallet_public: Public,
-    pub signature: Vec<Signature>,
-    pub peer_public: Vec<u8>,
+    pub signature: Signature,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -83,7 +82,7 @@ pub struct TxOutput {
 pub struct OutputData {
     pub number: u32,
     pub utxos: Vec<OutputUtxo>,
-    pub sigenr_public_keys: Vec<sp_core::ecdsa::Public>,
+    pub sigenr_public_keys: Public,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -105,8 +104,8 @@ pub struct OutputUnspent {
 pub struct BlockHeader {
     pub blockhash: String,
     pub prevhash: String,
-    pub number: i64,
-    pub validator: String,
+    pub number: u64,
+    pub validator: PeerId,
     pub validator_blocks_number: u64,
     pub merkel_root: String,
     pub block_signature: BlockSign,
@@ -121,7 +120,7 @@ pub struct UtxoData {
     #[serde_as(as = "DisplayFromStr")]
     pub unspent: Decimal,
     pub output_hash: String,
-    pub block_number: i64,
+    pub block_number: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -184,7 +183,7 @@ pub struct UTXO {
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Reciept {
-    pub block_number: Option<i64>,
+    pub block_number: Option<u64>,
     pub hash: String,
     pub from: String,
     pub to: String,

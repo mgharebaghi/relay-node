@@ -1,7 +1,7 @@
 use std::process::Command;
 
 use futures::StreamExt;
-use libp2p::{identity::PublicKey, PeerId};
+use libp2p::PeerId;
 use sha2::{Digest, Sha256};
 use sp_core::Pair;
 
@@ -33,7 +33,7 @@ pub async fn verifying_block<'a>(
                 Ok(is) => {
                     if is.is_none() {
                         let validator_peerid: PeerId =
-                            gossip_message.block.header.validator.parse().unwrap();
+                            gossip_message.block.header.validator;
                         //check leader that is equal with curren leader in our leader or not
                         let mut validate_leader = true;
                         if leader.len() > 0 {
@@ -46,85 +46,57 @@ pub async fn verifying_block<'a>(
                         }
 
                         if validate_leader {
-                            //get validator public key
-                            let validator_publickey = PublicKey::try_decode_protobuf(
-                                &gossip_message.block.header.block_signature.peer_public,
+                            //check block signature
+                            let str_block_body_for_verify =
+                                gossip_message.block.body.coinbase.tx_hash.clone();
+
+                            let verify_block_sign = sp_core::ed25519::Pair::verify(
+                                &gossip_message.block.header.block_signature.signature,
+                                str_block_body_for_verify,
+                                &gossip_message.block.header.block_signature.wallet_public,
                             );
-                            match validator_publickey {
-                                Ok(pubkey) => {
-                                    //check validator peerid
-                                    let check_pid_with_public_key =
-                                        PeerId::from_public_key(&pubkey) == validator_peerid;
 
-                                    //check block signature
-                                    let str_block_body_for_verify =
-                                        gossip_message.block.body.coinbase.tx_hash.clone();
-
-                                    let verify_block_sign = sp_core::ecdsa::Pair::verify(
-                                        &gossip_message.block.header.block_signature.signature[0],
-                                        str_block_body_for_verify,
-                                        &gossip_message.block.header.block_signature.wallet_public,
-                                    );
-
-                                    if check_pid_with_public_key {
-                                        if verify_block_sign {
-                                            match submit_block(gossip_message, leader, db).await {
-                                                Ok(_) => {
-                                                    match Command::new("mongodump")
-                                                        .arg("--db")
-                                                        .arg("Blockchain")
-                                                        .arg("--out")
-                                                        .arg("/etc/dump")
-                                                        .output()
-                                                    {
-                                                        Ok(_) => {
-                                                            match Command::new("zip")
-                                                                .arg("-r")
-                                                                .arg("/home/blockchain.zip")
-                                                                .arg("/etc/dump/Blockchain")
-                                                                .output()
-                                                            {
-                                                                Ok(_) => Ok(()),
-                                                                Err(e) => {
-                                                                    write_log(&format!("{:?}", e));
-                                                                    Ok(())
-                                                                }
-                                                            }
-                                                        }
-                                                        Err(e) => {
-                                                            write_log(&format!("{:?}", e));
-                                                            Ok(())
-                                                        }
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    if e != "reject" {
-                                                        Err("submit block problem")
-                                                    } else {
-                                                        Err("reject")
+                            if verify_block_sign {
+                                match submit_block(gossip_message, leader, db).await {
+                                    Ok(_) => {
+                                        match Command::new("mongodump")
+                                            .arg("--db")
+                                            .arg("Blockchain")
+                                            .arg("--out")
+                                            .arg("/etc/dump")
+                                            .output()
+                                        {
+                                            Ok(_) => {
+                                                match Command::new("zip")
+                                                    .arg("-r")
+                                                    .arg("/home/blockchain.zip")
+                                                    .arg("/etc/dump/Blockchain")
+                                                    .output()
+                                                {
+                                                    Ok(_) => Ok(()),
+                                                    Err(e) => {
+                                                        write_log(&format!("{:?}", e));
+                                                        Ok(())
                                                     }
                                                 }
                                             }
-                                        } else {
-                                            write_log(
-                                                                "verify block sign error! recieved block (line 131)",
-                                                            );
-                                            Err("block sign error")
+                                            Err(e) => {
+                                                write_log(&format!("{:?}", e));
+                                                Ok(())
+                                            }
                                         }
-                                    } else {
-                                        write_log(
-                                                            "check pid with public key error! recieved block (line 137)"
-                                                            ,
-                                                        );
-                                        Err("check pid error")
+                                    }
+                                    Err(e) => {
+                                        if e != "reject" {
+                                            Err("submit block problem")
+                                        } else {
+                                            Err("reject")
+                                        }
                                     }
                                 }
-                                Err(_) => {
-                                    write_log(
-                                        "validator public key error! recieved block (line 145)",
-                                    );
-                                    Err("validator pubkey error")
-                                }
+                            } else {
+                                write_log("verify block sign error! recieved block (line 131)");
+                                Err("block sign error")
                             }
                         } else {
                             write_log("validate leader error! recieved block (line 151)");
@@ -203,7 +175,7 @@ async fn submit_block<'a>(
                                         while let Some(Ok(doc)) = curs.next().await {
                                             let mut validator: FullNodes =
                                                 from_document(doc.clone()).unwrap();
-                                            if validator.peer_id.to_string()
+                                            if validator.peer_id
                                                 == gossip_message.block.header.validator
                                                 && gossip_message.next_leader
                                                     != validator.peer_id.to_string()
@@ -411,10 +383,10 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
         let output_hash = create_hash(tx_output_str);
 
         //check tx signature
-        let sign_verify = sp_core::ecdsa::Pair::verify(
+        let sign_verify = sp_core::ed25519::Pair::verify(
             &tx.input.signatures[0],
             signed_message,
-            &tx.output.output_data.sigenr_public_keys[0],
+            &tx.output.output_data.sigenr_public_keys,
         );
 
         //check hashs

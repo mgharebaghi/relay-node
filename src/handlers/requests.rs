@@ -90,7 +90,7 @@ pub async fn handle_requests(
             }
         }
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
-        let propagation_source: PeerId = gossipms.block.header.validator.parse().unwrap();
+        let propagation_source = gossipms.block.header.validator;
         match verifying_block(&request.req, leader, db.clone()).await {
             Ok(_) => {
                 match swarm

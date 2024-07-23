@@ -10,7 +10,7 @@ use rust_decimal::Decimal;
 
 pub async fn insert_reciept(
     transaction: Transaction,
-    block_number: Option<i64>,
+    block_number: Option<u64>,
     satatus: String,
     description: String,
     db: Database,
@@ -57,7 +57,7 @@ pub async fn insert_reciept(
 
 pub async fn coinbase_reciept(
     transaction: CoinbaseTransaction,
-    block_number: Option<i64>,
+    block_number: Option<u64>,
     satatus: String,
     description: String,
     block_header: BlockHeader,
