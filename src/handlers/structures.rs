@@ -94,10 +94,10 @@ pub struct OutputUtxo {
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct OutputUnspent {
-    pub public_key: String,
+    pub wallet: String,
+    pub salt: u32,
     #[serde_as(as = "DisplayFromStr")]
     pub unspent: Decimal,
-    pub rnum: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -106,7 +106,7 @@ pub struct BlockHeader {
     pub prevhash: String,
     pub number: u64,
     pub validator: PeerId,
-    pub validator_blocks_number: u64,
+    pub relay: PeerId,
     pub merkel_root: String,
     pub block_signature: BlockSign,
     pub date: String,
@@ -146,19 +146,19 @@ pub struct Transaction {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CoinbaseTransaction {
     pub tx_hash: String,
-    pub coinbase_data: CoinbaseData,
+    pub block_len: usize,
+    pub merkel_root: String,
+    #[serde_as(as = "DisplayFromStr")]
+    pub reward: Decimal,
     pub output: CoinbaseOutput,
     #[serde_as(as = "DisplayFromStr")]
-    pub value: Decimal,
+    pub fee: Decimal,
 }
 
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CoinbaseData {
-    pub block_len: usize,
-    pub merkel_root: String,
-    #[serde_as(as = "DisplayFromStr")]
-    pub reward: Decimal,
+    
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]

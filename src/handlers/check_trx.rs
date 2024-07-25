@@ -62,7 +62,7 @@ pub async fn handle_transactions(message: String, db: Database) {
 
                     let mut unvalidity_num = 0 as usize;
                     for i in transaction.output.output_data.utxos.clone() {
-                        if i.output_unspent.public_key
+                        if i.output_unspent.wallet
                             == transaction.output.output_data.sigenr_public_keys[0].to_string()
                         {
                             unvalidity_num += 1;

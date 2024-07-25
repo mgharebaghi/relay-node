@@ -18,10 +18,10 @@ pub async fn insert_reciept(
     let reciept_coll: Collection<Document> = db.collection("reciept");
     let mut to = String::new();
     for output in transaction.output.output_data.utxos.clone() {
-        if output.output_unspent.public_key
+        if output.output_unspent.wallet
             != transaction.output.output_data.sigenr_public_keys[0].to_string()
         {
-            to.push_str(&output.output_unspent.public_key);
+            to.push_str(&output.output_unspent.wallet);
         }
     }
     let reciept = Reciept {
@@ -67,7 +67,7 @@ pub async fn coinbase_reciept(
     let mut to = String::new();
     for output in transaction.output.utxos.clone() {
         to.clear();
-        to.push_str(&output.output_unspent.public_key);
+        to.push_str(&output.output_unspent.wallet);
         let reciept = Reciept {
             block_number,
             hash: transaction.tx_hash.clone(),

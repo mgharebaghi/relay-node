@@ -439,7 +439,7 @@ async fn handle_block_reward(gossip_message: GossipMessage, db: Database, output
     .await;
 
     for trx in gossip_message.block.body.coinbase.output.utxos.clone() {
-        let pub_key = trx.output_unspent.public_key;
+        let pub_key = trx.output_unspent.wallet;
         let unspent_data = UtxoData {
             transaction_hash: gossip_message.block.body.coinbase.tx_hash.clone(),
             unspent: trx.output_unspent.unspent.round_dp(12),
@@ -468,7 +468,7 @@ async fn handle_tx_utxos(
 ) {
     for tx in gossip_message.block.body.transactions.clone() {
         for otpt in tx.output.output_data.utxos.clone() {
-            let pub_key = otpt.output_unspent.public_key;
+            let pub_key = otpt.output_unspent.wallet;
 
             let unspent_data = UtxoData {
                 transaction_hash: tx.tx_hash.clone(),
