@@ -26,6 +26,7 @@ pub async fn verifying_block<'a>(
 ) -> Result<(), &'a str> {
     match serde_json::from_str::<GossipMessage>(&str_msg) {
         Ok(gossip_message) => {
+            println!("gossip message is a block and next leader");
             let block_coll: Collection<Document> = db.collection("Blocks");
             let filter = doc! {"header.blockhash": gossip_message.block.header.blockhash.clone()};
             let block = block_coll.find_one(filter).await;
