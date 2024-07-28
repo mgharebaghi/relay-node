@@ -90,6 +90,7 @@ pub async fn handle_requests(
             }
         }
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
+        println!("get Gossip messaage:\n{:#?}", gossipms);
         let propagation_source = gossipms.block.header.validator;
         match verifying_block(&request.req, leader, db.clone()).await {
             Ok(_) => {
