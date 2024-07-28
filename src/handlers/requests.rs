@@ -36,7 +36,7 @@ pub async fn handle_requests(
     im_first: &mut bool,
     dialed_addr: &mut Vec<String>,
 ) {
-    println!("{:?}", request.req);
+    println!("{:#?}", request.req);
     if request.req == "handshake".to_string() {
         let blocks_coll: Collection<Document> = db.collection("Blocks");
         let count_docs = blocks_coll.count_documents(doc! {}).await.unwrap();
