@@ -52,7 +52,7 @@ pub async fn handle_transactions(message: String, db: Database) {
                     let sign_verify = sp_core::ed25519::Pair::verify(
                         &transaction.input.signatures[0],
                         signed_message,
-                        &transaction.output.output_data.sigenr_public_keys,
+                        &transaction.output.output_data.sigenr_public_keys[0],
                     );
 
                     //get bool as verify of hashs

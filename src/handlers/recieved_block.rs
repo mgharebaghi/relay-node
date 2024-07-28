@@ -386,7 +386,7 @@ async fn check_txs(gossip_message: GossipMessage, utxos_coll: Collection<Documen
         let sign_verify = sp_core::ed25519::Pair::verify(
             &tx.input.signatures[0],
             signed_message,
-            &tx.output.output_data.sigenr_public_keys,
+            &tx.output.output_data.sigenr_public_keys[0],
         );
 
         //check hashs

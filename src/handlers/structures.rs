@@ -82,7 +82,7 @@ pub struct TxOutput {
 pub struct OutputData {
     pub number: u32,
     pub utxos: Vec<OutputUtxo>,
-    pub sigenr_public_keys: Public,
+    pub sigenr_public_keys: Vec<Public>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
