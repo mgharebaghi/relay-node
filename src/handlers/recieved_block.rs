@@ -52,7 +52,7 @@ pub async fn verifying_block<'a>(
                                 gossip_message.block.body.coinbase.tx_hash.clone();
 
                             let verify_block_sign = sp_core::ed25519::Pair::verify(
-                                &gossip_message.block.header.block_signature.signature,
+                                &gossip_message.block.header.block_signature.signature[0],
                                 str_block_body_for_verify,
                                 &gossip_message.block.header.block_signature.wallet_public,
                             );

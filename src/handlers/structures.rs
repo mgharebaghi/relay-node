@@ -42,7 +42,7 @@ pub struct OutNode {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct BlockSign {
     pub wallet_public: Public,
-    pub signature: Signature,
+    pub signature: Vec<Signature>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -157,9 +157,7 @@ pub struct CoinbaseTransaction {
 
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-pub struct CoinbaseData {
-    
-}
+pub struct CoinbaseData {}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CoinbaseOutput {
