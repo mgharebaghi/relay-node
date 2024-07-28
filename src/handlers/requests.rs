@@ -7,7 +7,10 @@ use super::{
     CustomBehav,
 };
 use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
-use mongodb::{bson::{doc, Document}, Collection, Database};
+use mongodb::{
+    bson::{doc, Document},
+    Collection, Database,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,6 +36,7 @@ pub async fn handle_requests(
     im_first: &mut bool,
     dialed_addr: &mut Vec<String>,
 ) {
+    println!("{:?}", request.req);
     if request.req == "handshake".to_string() {
         let blocks_coll: Collection<Document> = db.collection("Blocks");
         let count_docs = blocks_coll.count_documents(doc! {}).await.unwrap();
