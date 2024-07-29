@@ -83,7 +83,8 @@ pub async fn handle_requests(
                     .req_res
                     .send_response(channel, response);
             }
-            Err(_) => {
+            Err(e) => {
+                println!("propagate trx problem: {}", e);
                 handle_transactions(request.req, db).await;
                 let response = Res {
                     res: "".to_string(),
