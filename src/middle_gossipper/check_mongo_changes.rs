@@ -27,11 +27,15 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
     loop {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                println!("connection stablished from middle gossiper");
                 connected_id.push_str(&peer_id.to_string());
                 match blockchain_db().await {
                     Ok(db) => {
                         let transactions_coll: Collection<Document> = db.collection("Transactions");
-                        let mut watchin = transactions_coll.watch().await.unwrap();
+                        let mut watchin = transactions_coll
+                            .watch()
+                            .await
+                            .expect("error in mongodb watching");
 
                         if let Some(change) = watchin.next().await {
                             match change {
@@ -88,7 +92,10 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                     Ok(db) => {
                                         let transactions_coll: Collection<Document> =
                                             db.collection("Transactions");
-                                        let mut watchin = transactions_coll.watch().await.unwrap();
+                                        let mut watchin = transactions_coll
+                                            .watch()
+                                            .await
+                                            .expect("error in mongodb watching");
 
                                         if let Some(change) = watchin.next().await {
                                             match change {
