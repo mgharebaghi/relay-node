@@ -66,14 +66,12 @@ pub async fn handle_requests(
             Err(e) => write_log(&format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
-        println!("get transaction");
         let send_transaction = swarm
             .behaviour_mut()
             .gossipsub
             .publish(clients_topic, request.req.clone().as_bytes());
         match send_transaction {
             Ok(_) => {
-                println!("transaction published to the network");
                 handle_transactions(request.req, db).await; //insert transaction to db
                 let response = Res {
                     res: "".to_string(),
@@ -83,8 +81,7 @@ pub async fn handle_requests(
                     .req_res
                     .send_response(channel, response);
             }
-            Err(e) => {
-                println!("propagate trx problem: {}", e);
+            Err(_e) => {
                 handle_transactions(request.req, db).await;
                 let response = Res {
                     res: "".to_string(),
@@ -96,7 +93,6 @@ pub async fn handle_requests(
             }
         }
     } else if let Ok(gossipms) = serde_json::from_str::<GossipMessage>(&request.req) {
-        println!("get request:\n{:#?}", gossipms);
         let propagation_source = gossipms.block.header.validator;
         match verifying_block(&request.req, leader, db.clone()).await {
             Ok(_) => {
@@ -160,7 +156,5 @@ pub async fn handle_requests(
                 }
             }
         }
-    } else {
-        println!("request doesn't match");
-    }
+    } 
 }

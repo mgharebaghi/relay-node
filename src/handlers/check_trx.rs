@@ -18,7 +18,6 @@ use mongodb::{
 
 pub async fn handle_transactions(message: String, db: Database) {
     if let Ok(mut transaction) = serde_json::from_str::<Transaction>(&message) {
-        println!("handeling transaction");
         let trxs_coll: Collection<Document> = db.collection("Transactions");
         let trx_query = doc! {"tx_hash": transaction.tx_hash.clone()};
         let reciept_coll: Collection<Document> = db.collection("reciept");
