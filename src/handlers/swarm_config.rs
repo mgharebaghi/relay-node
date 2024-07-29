@@ -44,7 +44,10 @@ impl SwarmConf for CustomBehav {
         let mut behaviour = CustomBehav { gossipsub, req_res };
 
         behaviour.gossipsub.subscribe(&relay_topic.clone()).unwrap();
-        behaviour.gossipsub.subscribe(&clients_topic.clone()).unwrap();
+        behaviour
+            .gossipsub
+            .subscribe(&clients_topic.clone())
+            .unwrap();
 
         //config swarm
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
@@ -57,6 +60,9 @@ impl SwarmConf for CustomBehav {
                 (libp2p::tls::Config::new, libp2p::noise::Config::new),
                 libp2p::yamux::Config::default,
             )
+            .unwrap()
+            .with_quic()
+            .with_dns()
             .unwrap()
             .with_websocket(
                 (libp2p::tls::Config::new, libp2p::noise::Config::new),
