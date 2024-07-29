@@ -23,7 +23,6 @@ pub async fn handle_gossip_message(
     leader: &mut String,
     db: Database
 ) {
-    println!("get gossip message: {:#?}", message.clone());
     msg_check(message.clone(), leader, relays, propagation_source, swarm, connections, local_peer_id, db.clone()).await;
 
     match String::from_utf8(message.data.clone()) {

@@ -36,7 +36,6 @@ pub async fn handle_requests(
     im_first: &mut bool,
     dialed_addr: &mut Vec<String>,
 ) {
-    println!("{:#?}", request.req);
     if request.req == "handshake".to_string() {
         let blocks_coll: Collection<Document> = db.collection("Blocks");
         let count_docs = blocks_coll.count_documents(doc! {}).await.unwrap();
@@ -67,12 +66,14 @@ pub async fn handle_requests(
             Err(e) => write_log(&format!("{:?}", e)),
         }
     } else if let Ok(_transaction) = serde_json::from_str::<Transaction>(&request.req) {
+        println!("get transaction");
         let send_transaction = swarm
             .behaviour_mut()
             .gossipsub
             .publish(clients_topic, request.req.clone().as_bytes());
         match send_transaction {
             Ok(_) => {
+                println!("transaction published to the network");
                 handle_transactions(request.req, db).await; //insert transaction to db
                 let response = Res {
                     res: "".to_string(),
