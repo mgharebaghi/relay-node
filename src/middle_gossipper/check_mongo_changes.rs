@@ -37,6 +37,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                             match change {
                                 Ok(data) => {
                                     if let Some(doc) = data.full_document {
+                                        println!("get change in transaction database");
                                         let transaction: Transaction = from_document(doc).unwrap();
                                         let str_trx = serde_json::to_string(&transaction).unwrap();
                                         let request = Req { req: str_trx };
@@ -92,6 +93,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                         if let Some(change) = watchin.next().await {
                                             match change {
                                                 Ok(data) => {
+                                                    println!("get change in transaction database");
                                                     if let Some(doc) = data.full_document {
                                                         let transaction: Transaction =
                                                             from_document(doc).unwrap();

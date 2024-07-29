@@ -18,6 +18,7 @@ use super::server::TxRes;
 pub async fn handle_transaction(
     extract::Json(mut transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
+    println!("get trx in RPC");
     let mut tx_res = TxRes {
         hash: transaction.tx_hash.clone(),
         status: String::new(),
@@ -34,6 +35,7 @@ pub async fn handle_transaction(
                 .push_str(&Utc::now().round_subsecs(0).to_string());
             let trx_doc = to_document(&transaction).unwrap();
             trx_coll.insert_one(trx_doc).await.unwrap();
+            println!("trx insert to mongodb successfully");
             tx_res.status = "success".to_string();
         }
         Err(_) => {

@@ -56,9 +56,6 @@ impl MiddleSwarmConf for MyBehaviour {
                 libp2p::yamux::Config::default,
             )
             .unwrap()
-            .with_quic()
-            .with_dns()
-            .unwrap()
             .with_websocket(
                 (libp2p::tls::Config::new, libp2p::noise::Config::new),
                 libp2p::yamux::Config::default,
