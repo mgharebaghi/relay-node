@@ -32,7 +32,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                 match blockchain_db().await {
                     Ok(db) => {
                         let transactions_coll: Collection<Document> = db.collection("Transactions");
-                        let pipeline = vec![doc! { "operationType": "insert" }];
+                        let pipeline = vec![doc! { "$match": {
+                            "operationType": "insert"
+                        }}];
                         let mut watchin = transactions_coll
                             .watch()
                             .pipeline(pipeline)
@@ -94,7 +96,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                                     Ok(db) => {
                                         let transactions_coll: Collection<Document> =
                                             db.collection("Transactions");
-                                        let pipeline = vec![doc! { "operationType": "insert" }];
+                                        let pipeline = vec![doc! { "$match": {
+                                            "operationType": "insert"
+                                        }}];
                                         let mut watchin = transactions_coll
                                             .watch()
                                             .pipeline(pipeline)
