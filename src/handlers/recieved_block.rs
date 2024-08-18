@@ -9,7 +9,7 @@ use crate::handlers::create_log::write_log;
 
 use super::{
     reciept::{coinbase_reciept, insert_reciept},
-    structures::{Block, FullNodes, GossipMessage, UtxoData, UTXO},
+    structures::{Block, Validator, GossipMessage, UtxoData, UTXO},
 };
 
 use mongodb::{
@@ -173,21 +173,21 @@ async fn submit_block<'a>(
                                     let validators_cursor = validators_coll.find(doc! {}).await;
                                     if let Ok(mut curs) = validators_cursor {
                                         while let Some(Ok(doc)) = curs.next().await {
-                                            let mut validator: FullNodes =
+                                            let mut validator: Validator =
                                                 from_document(doc.clone()).unwrap();
-                                            if validator.peer_id
+                                            if validator.peerid
                                                 == gossip_message.block.header.validator
                                                 && gossip_message.next_leader
-                                                    != validator.peer_id.to_string()
+                                                    != validator.peerid.to_string()
                                             {
-                                                validator.waiting = validators_count as i64;
+                                                validator.waiting = validators_count as u64;
                                                 let validator_doc =
                                                     to_document(&validator).unwrap();
                                                 validators_coll
                                                     .replace_one(doc, validator_doc)
                                                     .await
                                                     .unwrap();
-                                            } else if validator.peer_id.to_string()
+                                            } else if validator.peerid.to_string()
                                                 != gossip_message.next_leader
                                                 && validator.waiting > 0
                                             {
@@ -198,7 +198,7 @@ async fn submit_block<'a>(
                                                     .replace_one(doc, validator_doc)
                                                     .await
                                                     .unwrap();
-                                            } else if validator.peer_id.to_string()
+                                            } else if validator.peerid.to_string()
                                                 == gossip_message.next_leader
                                             {
                                                 validator.waiting = 0;

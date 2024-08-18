@@ -27,7 +27,7 @@ pub struct ResForReq {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ImSync {
+pub struct VSync {
     pub relay: PeerId,
     pub peerid: PeerId,
     pub msg: String,
@@ -200,11 +200,11 @@ pub struct NextLeader {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq)]
-pub struct FullNodes {
+pub struct Validator {
+    pub peerid: PeerId,
     pub relay: PeerId,
-    pub peer_id: PeerId,
-    pub waiting: i64,
-    pub public_key: Public,
+    pub wallet: Public,
+    pub waiting: u64
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

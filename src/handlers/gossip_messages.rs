@@ -5,7 +5,7 @@ use libp2p::{
 };
 use mongodb::{bson::{doc, Document}, Collection, Database};
 
-use crate::handlers::structures::{ImSync, OutNode};
+use crate::handlers::structures::{VSync, OutNode};
 
 use super::{create_log::write_log, get_addresses::get_addresses, handle_messages::msg_check, structures::NextLeader, CustomBehav};
 
@@ -57,7 +57,7 @@ pub async fn handle_gossip_message(
             }
 
             //Relay announcement
-            if let Ok(new_sync_node) = serde_json::from_str::<ImSync>(&msg) {
+            if let Ok(new_sync_node) = serde_json::from_str::<VSync>(&msg) {
                 let outnode_coll:Collection<Document> = db.collection("outnodes");
                 let filter = doc! {"peerid": new_sync_node.peerid.to_string()};
                 let cursor = outnode_coll.find_one(filter).await;
