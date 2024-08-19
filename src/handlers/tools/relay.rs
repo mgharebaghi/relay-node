@@ -117,7 +117,7 @@ impl Relay {
     ) -> Result<(), &'a str> {
         let collection: Collection<Document> = db.collection("relay");
         match collection
-            .delete_one(doc! {"peerid": self.peerid.unwrap().to_string()})
+            .delete_one(doc! {"addr": &self.addr})
             .await
         {
             Ok(_) => {
