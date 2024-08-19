@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 //this structure is for knowing that relay is first in the network or not
 #[derive(Debug)]
 pub struct RelayNumber {
-    first: First,
-    relays: Vec<Relay>,
+    pub first: First,
+    pub relays: Vec<Relay>,
 }
 
 #[derive(Debug)]
@@ -94,19 +94,42 @@ impl Relay {
         }
     }
 
-    pub async fn find<'a>(db: &'a Database) -> Result<Self, &'a str> {
+    // pub async fn find<'a>(db: &'a Database) -> Result<Self, &'a str> {
+    //     let collection: Collection<Document> = db.collection("relay");
+    //     let query = collection.find_one(doc! {}).await;
+    //     match query {
+    //         Ok(opt) => {
+    //             if let Some(doc) = opt {
+    //                 let relay: Self = from_document(doc).unwrap();
+    //                 Ok(relay)
+    //             } else {
+    //                 Err("There is no any relays in relay collection of database!")
+    //             }
+    //         }
+    //         Err(_) => Err("Qurying relay problem! please check your mongodb."),
+    //     }
+    // }
+
+    pub async fn remove<'a>(
+        &self,
+        db: &'a Database,
+        relay_number: &mut RelayNumber,
+    ) -> Result<(), &'a str> {
         let collection: Collection<Document> = db.collection("relay");
-        let query = collection.find_one(doc! {}).await;
-        match query {
-            Ok(opt) => {
-                if let Some(doc) = opt {
-                    let relay: Self = from_document(doc).unwrap();
-                    Ok(relay)
-                } else {
-                    Err("There is no any relays in relay collection of database!")
-                }
+        match collection
+            .delete_one(doc! {"peerid": self.peerid.unwrap().to_string()})
+            .await
+        {
+            Ok(_) => {
+                let index = relay_number
+                    .relays
+                    .iter()
+                    .position(|relay| relay.peerid.unwrap() == self.peerid.unwrap())
+                    .unwrap();
+                relay_number.relays.remove(index);
+                Ok(())
             }
-            Err(_) => Err("Qurying relay problem! please check your mongodb."),
+            Err(_) => Err("Deleting relay problem-(tools/relay 132)"),
         }
     }
 }
