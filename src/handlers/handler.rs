@@ -41,7 +41,7 @@ impl State {
                         match relay.clone().remove(db, relay_number).await {
                             Ok(_) => {
                                 write_log(&format!("Dialing failed with: {}", peer_id.unwrap()));
-                                write_log(&format!("Removed: {}", peer_id.unwrap()));
+                                write_log(&format!("Relay Removed: {}", peer_id.unwrap()));
                                 if relay_number.relays.len() < 1 {
                                     break 'handle;
                                 }
