@@ -37,8 +37,8 @@ impl State {
                     }
                 }
                 SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
-                    if let Some(relay) = relay_number.relays.iter().find(|r| r.peerid.unwrap() == peer_id.unwrap()).cloned() {
-                        match relay.remove(db, relay_number).await {
+                    if let Some(relay) = relay_number.relays.iter().find(|r| r.peerid.unwrap() == peer_id.unwrap()) {
+                        match relay.clone().remove(db, relay_number).await {
                             Ok(_) => {
                                 write_log(&format!("Dialing failed with: {}", peer_id.unwrap()));
                                 write_log(&format!("Removed: {}", peer_id.unwrap()));
