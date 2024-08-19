@@ -5,7 +5,27 @@ use mongodb::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+//this structure is for knowing that relay is first in the network or not
+#[derive(Debug)]
+pub struct RelayNumber {
+    first: First,
+    relays: Vec<Relay>,
+}
+
+#[derive(Debug)]
+pub enum First {
+    Yes,
+    No,
+}
+
+impl RelayNumber {
+    pub fn new<'a>(first: First, relays: Vec<Relay>) -> Self {
+        Self { first, relays }
+    }
+}
+// =====================================================================
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Relay {
     pub peerid: Option<PeerId>,
     pub wallet: String,
@@ -75,18 +95,18 @@ impl Relay {
     }
 
     pub async fn find<'a>(db: &'a Database) -> Result<Self, &'a str> {
-        let collection:Collection<Document> = db.collection("relay");
+        let collection: Collection<Document> = db.collection("relay");
         let query = collection.find_one(doc! {}).await;
         match query {
             Ok(opt) => {
                 if let Some(doc) = opt {
-                    let relay:Self = from_document(doc).unwrap();
+                    let relay: Self = from_document(doc).unwrap();
                     Ok(relay)
                 } else {
                     Err("There is no any relays in relay collection of database!")
                 }
             }
-            Err(_) => Err("Qurying relay problem! please check your mongodb.")
+            Err(_) => Err("Qurying relay problem! please check your mongodb."),
         }
     }
 }

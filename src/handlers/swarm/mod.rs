@@ -10,6 +10,8 @@ use libp2p::{
 };
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
+
+use super::tools::relay::RelayNumber;
 mod addresses;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,9 +87,12 @@ impl CentichainBehaviour {
     }
 
     //dialing to realys as random
-    pub async fn dial<'a>(swarm: &mut Swarm<CentichainBehaviour>, db: &Database) -> Result<(), &'a str> {
+    pub async fn dial<'a>(
+        swarm: &mut Swarm<CentichainBehaviour>,
+        db: &Database,
+    ) -> Result<RelayNumber, &'a str> {
         match Addresses::contact(swarm, db).await {
-            Ok(_) => Ok(()),
+            Ok(relay_number) => Ok(relay_number),
             Err(e) => Err(e),
         }
     }

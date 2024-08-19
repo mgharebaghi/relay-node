@@ -10,7 +10,10 @@ use rand::seq::SliceRandom;
 
 use serde::Deserialize;
 
-use crate::handlers::tools::{create_log::write_log, relay::Relay};
+use crate::handlers::tools::{
+    create_log::write_log,
+    relay::{First, RelayNumber, Relay},
+};
 
 use super::CentichainBehaviour;
 
@@ -41,7 +44,7 @@ impl Addresses {
                             }
                             Ok(())
                         } else {
-                            Err("there is no any relay in the network! please try later.")
+                            Err("first")
                         }
                     }
                     Err(_e) => Err("Error while cast response to json - addresses(46)"),
@@ -54,7 +57,7 @@ impl Addresses {
     pub async fn contact<'a>(
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
-    ) -> Result<(), &'a str> {
+    ) -> Result<RelayNumber, &'a str> {
         //check internet connection and if it connection is stable then start dial with relays as random
         write_log("Check your internet...");
         let internet_connection = TcpStream::connect("8.8.8.8:53");
@@ -72,7 +75,15 @@ impl Addresses {
                     } else {
                         match Self::get(&db).await {
                             Ok(_) => Self::contacting(collection, swarm, db).await,
-                            Err(e) => Err(e),
+                            Err(e) => {
+                                if e == "first" {
+                                    write_log("You Are First Node In The Centichain Network, Welcome:)");
+                                    let first_relay = RelayNumber::new(First::Yes, Vec::new());
+                                    Ok(first_relay)
+                                } else {
+                                    Err(e)
+                                }
+                            }
                         }
                     }
                 }
@@ -87,7 +98,7 @@ impl Addresses {
         collection: Collection<Document>,
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
-    ) -> Result<(), &'a str> {
+    ) -> Result<RelayNumber, &'a str> {
         write_log("Relays found, Start dialing...");
         let mut relays: Vec<Relay> = Vec::new();
         let mut cursor = collection.find(doc! {}).await.unwrap();
@@ -98,17 +109,17 @@ impl Addresses {
         }
 
         //choos 6 relays as random for dialing
-        let mut random_relays: Vec<&Relay> = Vec::new();
+        let mut random_relays: Vec<Relay> = Vec::new();
         if relays.len() > 6 {
             while random_relays.len() <= 6 {
                 let random_relay = relays.choose(&mut rand::thread_rng()).unwrap();
                 if !random_relays.contains(&random_relay) {
-                    random_relays.push(random_relay);
+                    random_relays.push(random_relay.clone());
                 }
             }
         } else {
             for i in 0..relays.len() {
-                random_relays.push(&relays[i]);
+                random_relays.push(relays[i].clone());
             }
         }
 
@@ -117,7 +128,7 @@ impl Addresses {
         let relay_coll: Collection<Document> = db.collection("relay");
         match relay_coll.delete_many(doc! {}).await {
             Ok(_) => {
-                for relay in random_relays {
+                for relay in &random_relays {
                     let deleted = collection
                         .delete_one(doc! {"addr": relay.addr.to_string()})
                         .await;
@@ -154,7 +165,8 @@ impl Addresses {
         }
 
         if is_err.is_none() {
-            Ok(())
+            let first_relay = RelayNumber::new(First::No, random_relays);
+            Ok(first_relay)
         } else {
             Err(is_err.unwrap())
         }
