@@ -6,7 +6,7 @@ use super::{
     swarm::CentichainBehaviour,
     tools::{
         create_log::write_log,
-        relay::{Relay, DialedRelays},
+        relay::{DialedRelays, First, Relay},
     },
 };
 
@@ -21,7 +21,9 @@ impl State {
         'handle: loop {
             match swarm.select_next_some().await {
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    println!("lestener address: {}", address);
+                    if dialed_relays.first.is() {
+                        println!("lestener address: {}", address);
+                    }
                 }
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                     write_log(&format!("Connection stablished with: {}", peer_id));
