@@ -43,6 +43,7 @@ impl State {
                                 write_log(&format!("Dialing failed with: {}", peer_id.unwrap()));
                                 write_log(&format!("Relay Removed: {}", peer_id.unwrap()));
                                 if relay_number.relays.len() < 1 {
+                                    println!("breaking...");
                                     break 'handle;
                                 }
                             }
