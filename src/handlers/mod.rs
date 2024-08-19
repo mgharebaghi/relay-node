@@ -7,7 +7,7 @@ use handler::State;
 use mongodb::Database;
 use sp_core::ed25519::Public;
 use swarm::CentichainBehaviour;
-use tools::{create_log::write_log, db::Mongodb};
+use tools::create_log::write_log;
 
 pub mod handler;
 pub mod swarm;

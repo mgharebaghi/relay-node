@@ -11,7 +11,7 @@ use libp2p::{
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
 
-use super::tools::relay::RelayNumber;
+use super::tools::relay::DialedRelays;
 mod addresses;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,9 +90,9 @@ impl CentichainBehaviour {
     pub async fn dial<'a>(
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
-    ) -> Result<RelayNumber, &'a str> {
+    ) -> Result<DialedRelays, &'a str> {
         match Addresses::contact(swarm, db).await {
-            Ok(relay_number) => Ok(relay_number),
+            Ok(dialed_relays) => Ok(dialed_relays),
             Err(e) => Err(e),
         }
     }

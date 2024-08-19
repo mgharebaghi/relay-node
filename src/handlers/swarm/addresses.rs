@@ -12,7 +12,7 @@ use serde::Deserialize;
 
 use crate::handlers::tools::{
     create_log::write_log,
-    relay::{First, RelayNumber, Relay},
+    relay::{First, DialedRelays, Relay},
 };
 
 use super::CentichainBehaviour;
@@ -57,7 +57,7 @@ impl Addresses {
     pub async fn contact<'a>(
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
-    ) -> Result<RelayNumber, &'a str> {
+    ) -> Result<DialedRelays, &'a str> {
         //check internet connection and if it connection is stable then start dial with relays as random
         write_log("Check your internet...");
         let internet_connection = TcpStream::connect("8.8.8.8:53");
@@ -78,8 +78,8 @@ impl Addresses {
                             Err(e) => {
                                 if e == "first" {
                                     write_log("You Are First Node In The Centichain Network, Welcome:)");
-                                    let first_relay = RelayNumber::new(First::Yes, Vec::new());
-                                    Ok(first_relay)
+                                    let dialed_relays = DialedRelays::new(First::Yes, Vec::new());
+                                    Ok(dialed_relays)
                                 } else {
                                     Err(e)
                                 }
@@ -98,7 +98,7 @@ impl Addresses {
         collection: Collection<Document>,
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
-    ) -> Result<RelayNumber, &'a str> {
+    ) -> Result<DialedRelays, &'a str> {
         write_log("Relays found, Start dialing...");
         let mut relays: Vec<Relay> = Vec::new();
         let mut cursor = collection.find(doc! {}).await.unwrap();
@@ -165,8 +165,8 @@ impl Addresses {
         }
 
         if is_err.is_none() {
-            let first_relay = RelayNumber::new(First::No, random_relays);
-            Ok(first_relay)
+            let dialed_relays = DialedRelays::new(First::No, random_relays);
+            Ok(dialed_relays)
         } else {
             Err(is_err.unwrap())
         }

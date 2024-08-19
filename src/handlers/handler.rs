@@ -6,7 +6,7 @@ use super::{
     swarm::CentichainBehaviour,
     tools::{
         create_log::write_log,
-        relay::{Relay, RelayNumber},
+        relay::{Relay, DialedRelays},
     },
 };
 
@@ -16,7 +16,7 @@ impl State {
     pub async fn handle(
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
-        relay_number: &mut RelayNumber,
+        dialed_relays: &mut DialedRelays,
     ) {
         'handle: loop {
             match swarm.select_next_some().await {
@@ -25,7 +25,7 @@ impl State {
                 }
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                     write_log(&format!("Connection stablished with: {}", peer_id));
-                    if let Some(relay) = relay_number
+                    if let Some(relay) = dialed_relays
                         .relays
                         .iter()
                         .find(|relay| relay.addr.contains(&peer_id.to_string()))
@@ -37,12 +37,12 @@ impl State {
                     }
                 }
                 SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
-                    if let Some(relay) = relay_number.relays.iter().find(|r| r.addr.contains(&peer_id.unwrap().to_string())) {
-                        match relay.clone().remove(db, relay_number).await {
+                    if let Some(relay) = dialed_relays.relays.iter().find(|r| r.addr.contains(&peer_id.unwrap().to_string())) {
+                        match relay.clone().remove(db, dialed_relays).await {
                             Ok(_) => {
                                 write_log(&format!("Dialing failed with: {}", peer_id.unwrap()));
                                 write_log(&format!("Relay Removed: {}", peer_id.unwrap()));
-                                if relay_number.relays.len() < 1 {
+                                if dialed_relays.relays.len() < 1 {
                                     println!("breaking...");
                                     break 'handle;
                                 }

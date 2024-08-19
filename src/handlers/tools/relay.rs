@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 //this structure is for knowing that relay is first in the network or not
 #[derive(Debug)]
-pub struct RelayNumber {
+pub struct DialedRelays {
     pub first: First,
     pub relays: Vec<Relay>,
 }
@@ -19,7 +19,7 @@ pub enum First {
     No,
 }
 
-impl RelayNumber {
+impl DialedRelays {
     pub fn new<'a>(first: First, relays: Vec<Relay>) -> Self {
         Self { first, relays }
     }
@@ -114,19 +114,19 @@ impl Relay {
     pub async fn remove<'a>(
         &self,
         db: &'a Database,
-        relay_number: &mut RelayNumber,
+        dialed_relays: &mut DialedRelays,
     ) -> Result<(), &'a str> {
         //delete relay from database at first
         let collection: Collection<Document> = db.collection("relay");
         match collection.delete_one(doc! {"addr": &self.addr}).await {
             Ok(_) => {
                 //find relay in relay_number that are relays contacted with they then remove relay from that
-                let index = relay_number
+                let index = dialed_relays
                     .relays
                     .iter()
                     .position(|relay| relay == self)
                     .unwrap();
-                relay_number.relays.remove(index);
+                dialed_relays.relays.remove(index);
                 //post relay address and ip to Centichain server for remove these from server
                 let client = Client::new();
                 match client.delete(format!("https://centichain.org/api/relays?addr={}", self.addr)).send().await {
