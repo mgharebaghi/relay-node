@@ -21,7 +21,7 @@ impl State {
         'handle: loop {
             match swarm.select_next_some().await {
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    if dialed_relays.first.is() {
+                    if dialed_relays.is_first() {
                         println!("lestener address: {}", address);
                     }
                 }
