@@ -124,7 +124,7 @@ impl Relay {
                 let index = relay_number
                     .relays
                     .iter()
-                    .position(|relay| relay.peerid.unwrap() == self.peerid.unwrap())
+                    .position(|relay| relay == self)
                     .unwrap();
                 relay_number.relays.remove(index);
                 Ok(())
