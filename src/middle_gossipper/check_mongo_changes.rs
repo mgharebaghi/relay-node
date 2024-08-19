@@ -14,11 +14,7 @@ use mongodb::{
     Collection,
 };
 
-use crate::handlers::{
-    create_log::write_log,
-    db_connection::blockchain_db,
-    structures::{Req, Transaction},
-};
+use crate::handlers::{swarm::Req, tools::{create_log::write_log, db::Mongodb, transaction::Transaction}};
 
 use super::middlegossiper_swarm::{MyBehaviour, MyBehaviourEvent};
 
@@ -28,7 +24,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
         match swarm.select_next_some().await {
             SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                 connected_id.push_str(&peer_id.to_string());
-                match blockchain_db().await {
+                match Mongodb::connect().await {
                     Ok(db) => {
                         let transactions_coll: Collection<Document> = db.collection("Transactions");
                         let pipeline = vec![doc! { "$match": {
@@ -90,7 +86,7 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                         Event::Message { message, .. } => match message {
                             Message::Response { .. } => {
                                 let peer_id: PeerId = connected_id.parse().unwrap();
-                                match blockchain_db().await {
+                                match Mongodb::connect().await {
                                     Ok(db) => {
                                         let transactions_coll: Collection<Document> =
                                             db.collection("Transactions");

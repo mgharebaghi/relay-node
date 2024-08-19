@@ -1,10 +1,8 @@
 mod handlers;
-use handlers::create_log::write_log;
-use handlers::db_connection::blockchain_db;
-use handlers::run_relay::run;
-use handlers::swarm_config::CustomBehav;
 mod rpc;
-use handlers::swarm_config::SwarmConf;
+use handlers::start;
+use handlers::tools::create_log::write_log;
+use handlers::tools::db::Mongodb;
 use middle_gossipper::middlegossiper_swarm::MiddleSwarmConf;
 use rpc::handle_requests;
 mod middle_gossipper;
@@ -13,17 +11,11 @@ use middle_gossipper::middlegossiper_swarm::MyBehaviour;
 
 #[tokio::main]
 async fn main() {
-    let swarm_config = CustomBehav::new().await;
-    let local_peer_id = swarm_config.1;
     let mut gossipper_swarm = MyBehaviour::new().await;
-    let mut swarm = swarm_config.0;
-    match blockchain_db().await {
+    match Mongodb::connect().await {
         Ok(db) => {
-            let (_, _, _) = tokio::join!(
-                run(&mut swarm, local_peer_id, db),
-                handle_requests(),
-                checker(&mut gossipper_swarm)
-            );
+            let (_, _, _) =
+                tokio::join!(handle_requests(), checker(&mut gossipper_swarm), start(&db));
         }
         Err(e) => {
             write_log(&format!(

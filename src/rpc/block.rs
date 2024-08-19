@@ -4,12 +4,12 @@ use axum::{
 };
 
 use mongodb::{bson::{doc, from_document, Document}, Collection};
-use crate::handlers::{db_connection::blockchain_db, structures::Block};
+use crate::handlers::tools::{block::Block, db::Mongodb};
 
 use super::server::{BlockReq, BlockRes};
 
 pub async fn handle_block(extract::Json(block_req): extract::Json<BlockReq>) -> Json<BlockRes> {
-    match blockchain_db().await {
+    match Mongodb::connect().await {
         Ok(db) => {
             let block_coll: Collection<Document> = db.collection("Blocks");
             let filter = doc! {"header.number": block_req.block_number.clone()};

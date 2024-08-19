@@ -8,10 +8,7 @@ use mongodb::{
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::{
-    db_connection::blockchain_db,
-    structures::{UtxoData, UTXO},
-};
+use crate::handlers::tools::{db::Mongodb, utxo::{Person, UTXO}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReqBody {
@@ -23,16 +20,16 @@ pub struct ReqBody {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ResBody {
     public_key: String,
-    utxo_data: Vec<UtxoData>,
+    utxo_data: Vec<UTXO>,
     status: String,
     description: String,
 }
 
 pub async fn a_utxo(extract::Json(request): extract::Json<ReqBody>) -> Json<ResBody> {
-    match blockchain_db().await {
+    match Mongodb::connect().await {
         Ok(db) => {
             let utxos_coll: Collection<Document> = db.collection("UTXOs");
-            let filter = doc! {"public_key": request.public_key.clone()};
+            let filter = doc! {"wallet": request.public_key.clone()};
             match utxos_coll.find_one(filter).await {
                 Ok(doc) => match doc {
                     Some(document) => set_response_utxos(document, request),
@@ -70,13 +67,13 @@ pub async fn a_utxo(extract::Json(request): extract::Json<ReqBody>) -> Json<ResB
 }
 
 fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
-    let utxo: UTXO = from_document(document).unwrap();
+    let person: Person = from_document(document).unwrap();
     let value = Decimal::from_str(&request.value).unwrap(); //convert string of requst's value to Decimal
     let fee = value * Decimal::from_str("0.01").unwrap();
     let mut all_utxos_data = Vec::new();
     let mut utxo_data = Vec::new();
-    for data in utxo.utxos {
-        all_utxos_data.push(data);
+    for utxo in person.utxos {
+        all_utxos_data.push(utxo);
     }
     //sort utxo_data by unspent from smallest to largest
     all_utxos_data.sort_by(|a, b| a.unspent.cmp(&b.unspent));

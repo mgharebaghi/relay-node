@@ -14,7 +14,7 @@ use tower_http::{
     services::ServeDir,
 };
 
-use crate::{handlers::create_log::write_log, handlers::structures::Block};
+use crate::handlers::tools::{block::Block, create_log::write_log};
 
 use super::{
     block::handle_block, one_utxo::a_utxo, reciept::{handle_reciept, handle_user_reciepts}, transaction::handle_transaction, utxo::handle_utxo

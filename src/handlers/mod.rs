@@ -1,27 +1,51 @@
-mod gossip_messages;
-pub mod handle_events;
-mod handle_listeners;
-mod outnodes;
-mod remove_relays;
-mod requests;
-mod send_address;
-pub mod structures;
-pub mod check_trx;
-pub mod create_log;
-pub mod db_connection;
-mod get_addresses;
-mod handle_messages;
-mod nodes_sync_announce;
-mod reciept;
-mod recieved_block;
-mod syncing;
-pub mod swarm_config;
-use swarm_config::CustomBehav;
-pub mod run_relay;
-pub mod listening_dialing;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+};
 
-use serde::{Deserialize, Serialize};
-#[derive(Debug, Serialize, Deserialize)]
-struct Addresses {
-    addr: Vec<String>,
+use handler::State;
+use mongodb::Database;
+use sp_core::ed25519::Public;
+use swarm::CentichainBehaviour;
+use tools::{create_log::write_log, db::Mongodb};
+
+pub mod handler;
+pub mod swarm;
+pub mod tools;
+
+pub async fn start(db: &Database) {
+    //try to open wallet file to get wallet address of relay
+    //it's important for handshaking requests from validators
+    let wallet_file = File::open("/etc/wallet.dat");
+    let mut wallet_addr = String::new();
+
+    match wallet_file {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                let text = line.unwrap();
+                if text.trim().len() > 0 {
+                    wallet_addr.push_str(&text);
+                }
+            }
+            let wallet: Public = wallet_addr.parse().unwrap();
+            loop {
+                let (mut swarm, peerid) = CentichainBehaviour::new().await;
+                match CentichainBehaviour::dial(&mut swarm, &db).await {
+                    Ok(_) => {
+                        //handle state of events of network
+                        return State::handle(&mut swarm, &db).await;
+                    }
+                    Err(e) => {
+                        write_log(e);
+                        break;
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            write_log(&e.to_string());
+            std::process::exit(404)
+        }
+    }
 }

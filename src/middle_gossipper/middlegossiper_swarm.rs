@@ -12,7 +12,7 @@ use libp2p::{
     Multiaddr, StreamProtocol, Swarm, SwarmBuilder,
 };
 
-use crate::handlers::structures::{Req, Res};
+use crate::handlers::swarm::{Req, Res};
 
 pub trait MiddleSwarmConf {
     async fn new() -> Pin<Box<Swarm<MyBehaviour>>>;
@@ -64,7 +64,7 @@ impl MiddleSwarmConf for MyBehaviour {
             .unwrap()
             .with_behaviour(|_key| behaviour)
             .unwrap()
-            .with_swarm_config(|_conf| swarm_config)
+            .with_swarm_config(|_config| swarm_config)
             .build();
 
         let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();

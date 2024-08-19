@@ -8,12 +8,12 @@ use mongodb::{
 };
 use rust_decimal::Decimal;
 
-use crate::handlers::db_connection::blockchain_db;
+use crate::handlers::tools::db::Mongodb;
 
 use super::server::{RcptReq, RcptRes, Reciept, TxReq};
 
 pub async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json<Reciept> {
-    match blockchain_db().await {
+    match Mongodb::connect().await {
         Ok(db) => {
             let reciept_coll: Collection<Document> = db.collection("reciept");
             let filter = doc! {"hash": tx_req.tx_hash.clone()};
@@ -59,7 +59,7 @@ pub async fn handle_reciept(extract::Json(tx_req): extract::Json<TxReq>) -> Json
 pub async fn handle_user_reciepts(
     extract::Json(rcpt_req): extract::Json<RcptReq>,
 ) -> Json<RcptRes> {
-    match blockchain_db().await {
+    match Mongodb::connect().await {
         Ok(db) => {
             let reciept_coll: Collection<Document> = db.collection("reciept");
             let filter1 = doc! {"to": rcpt_req.public_key.clone()};

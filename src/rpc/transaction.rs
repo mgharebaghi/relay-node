@@ -11,7 +11,7 @@ use mongodb::{
 };
 use rust_decimal::Decimal;
 
-use crate::handlers::{db_connection::blockchain_db, structures::Transaction};
+use crate::handlers::tools::{db::Mongodb, transaction::Transaction};
 
 use super::server::TxRes;
 
@@ -19,12 +19,12 @@ pub async fn handle_transaction(
     extract::Json(mut transaction): extract::Json<Transaction>,
 ) -> Json<TxRes> {
     let mut tx_res = TxRes {
-        hash: transaction.tx_hash.clone(),
+        hash: transaction.hash.clone(),
         status: String::new(),
         description: String::new(),
     };
 
-    match blockchain_db().await {
+    match Mongodb::connect().await {
         Ok(db) => {
             let trx_coll: Collection<Document> = db.collection("Transactions");
             transaction.date.clear();
