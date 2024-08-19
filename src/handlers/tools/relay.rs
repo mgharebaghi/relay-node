@@ -3,6 +3,7 @@ use mongodb::{
     bson::{doc, from_document, Document},
     Collection, Database,
 };
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 //this structure is for knowing that relay is first in the network or not
@@ -115,21 +116,32 @@ impl Relay {
         db: &'a Database,
         relay_number: &mut RelayNumber,
     ) -> Result<(), &'a str> {
+        //delete relay from database at first
         let collection: Collection<Document> = db.collection("relay");
-        match collection
-            .delete_one(doc! {"addr": &self.addr})
-            .await
-        {
+        match collection.delete_one(doc! {"addr": &self.addr}).await {
             Ok(_) => {
+                //find relay in relay_number that are relays contacted with they then remove relay from that
                 let index = relay_number
                     .relays
                     .iter()
                     .position(|relay| relay == self)
                     .unwrap();
                 relay_number.relays.remove(index);
-                Ok(())
+                //post relay address and ip to Centichain server for remove these from server
+                let client = Client::new();
+                match client.delete(format!("https://centichain.org/api/relays?addr={}", self.addr)).send().await {
+                    Ok(_) => {
+                        let ip = self.addr.trim_start_matches("/ip4/");
+                        let ip = ip.split("/").next().unwrap();
+                        match client.delete(format!("https://centichain.org/api/relays?addr={}", ip)).send().await {
+                            Ok(_) => Ok(()),
+                            Err(_) => Err("Deleting relay's IP from server problem-(tools/relay 135)")
+                        }
+                    }
+                    Err(_) => Err("Deleting relay from server problem-(tools/relay 138)")
+                }
             }
-            Err(_) => Err("Deleting relay problem-(tools/relay 132)"),
+            Err(_) => Err("Deleting relay problem-(tools/relay 141)"),
         }
     }
 }
