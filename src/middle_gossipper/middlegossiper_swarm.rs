@@ -48,7 +48,7 @@ impl MiddleSwarmConf for MyBehaviour {
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
             .with_idle_connection_timeout(Duration::from_secs(u64::MAX));
 
-        let mut swarm = SwarmBuilder::with_existing_identity(keypair)
+            let mut swarm = SwarmBuilder::with_existing_identity(keypair)
             .with_tokio()
             .with_tcp(
                 Default::default(),

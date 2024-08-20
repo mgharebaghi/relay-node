@@ -1,21 +1,24 @@
 mod handlers;
 mod rpc;
-use handlers::start;
+use handlers::practical::db::Mongodb;
 use handlers::tools::create_log::write_log;
-use handlers::tools::db::Mongodb;
+use handlers::Handler;
+use middle_gossipper::check_mongo_changes::MiddleGossipper;
 use middle_gossipper::middlegossiper_swarm::MiddleSwarmConf;
-use rpc::handle_requests;
 mod middle_gossipper;
-use middle_gossipper::check_mongo_changes::checker;
 use middle_gossipper::middlegossiper_swarm::MyBehaviour;
+use rpc::Rpc;
 
 #[tokio::main]
 async fn main() {
-    let mut gossipper_swarm = MyBehaviour::new().await;
+    let mut swarm = MyBehaviour::new().await;
     match Mongodb::connect().await {
         Ok(db) => {
-            let (_, _, _) =
-                tokio::join!(handle_requests(), checker(&mut gossipper_swarm), start(&db));
+            let (_, _, _) = tokio::join!(
+                Rpc::handle_requests(),
+                MiddleGossipper::checker(&mut swarm),
+                Handler::start(&db)
+            );
         }
         Err(e) => {
             write_log(&format!(

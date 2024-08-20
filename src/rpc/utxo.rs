@@ -4,7 +4,7 @@ use mongodb::{
     Collection,
 };
 
-use crate::handlers::tools::{db::Mongodb, utxo::Person};
+use crate::handlers::{practical::db::Mongodb, tools::utxo::Person};
 
 use super::server::ReqForUtxo;
 

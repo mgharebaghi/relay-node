@@ -2,7 +2,9 @@ use mongodb::Database;
 use serde::{Deserialize, Serialize};
 use sp_core::Pair;
 
-use super::{coinbase::Coinbase, header::Header, transaction::Transaction, utxo::UTXO, waiting::Waiting};
+use crate::handlers::tools::{utxo::UTXO, waiting::Waiting};
+
+use super::{coinbase::Coinbase, header::Header, transaction::Transaction};
 
 // Define the structure of a block, including its header and body.
 #[derive(Debug, Serialize, Deserialize, PartialEq,Clone)]

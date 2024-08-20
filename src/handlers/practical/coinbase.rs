@@ -4,7 +4,9 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
-use super::{block::Block, reward::Reward, transaction::{Output, Transaction}, MerkelRoot};
+use crate::handlers::tools::MerkelRoot;
+
+use super::{block::Block, reward::Reward, transaction::{Output, Transaction}};
 
 //fees are sum of transactions fees
 //relay's fee is 10% of fees

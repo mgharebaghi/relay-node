@@ -1,16 +1,12 @@
 use sha2::{Digest, Sha256};
 
-pub mod block;
-mod coinbase;
-pub mod transaction;
-mod header;
 pub mod utxo;
-mod reward;
-mod waiting;
+pub mod waiting;
 pub mod create_log;
-pub mod validator;
-pub mod relay;
-pub mod db;
+pub mod syncer;
+pub mod downloader;
+pub mod zipp;
+pub mod bsons;
 
 pub struct MerkelRoot;
 

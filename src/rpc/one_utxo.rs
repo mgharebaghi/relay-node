@@ -8,7 +8,7 @@ use mongodb::{
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::tools::{db::Mongodb, utxo::{Person, UTXO}};
+use crate::handlers::{practical::db::Mongodb, tools::utxo::{Person, UTXO}};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReqBody {
@@ -96,8 +96,7 @@ fn set_response_utxos(document: Document, request: ReqBody) -> Json<ResBody> {
                     let sum_data_unspents_sum: Decimal =
                         sum_data.iter().map(|data| data.unspent).sum();
 
-                    if (sum_data_unspents_sum.round_dp(12)
-                        + all_utxos_data[i].unspent.round_dp(12))
+                    if (sum_data_unspents_sum.round_dp(12) + all_utxos_data[i].unspent.round_dp(12))
                         >= value + fee
                     {
                         for data in sum_data.clone() {

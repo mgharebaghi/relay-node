@@ -14,71 +14,80 @@ use mongodb::{
     Collection,
 };
 
-use crate::handlers::{swarm::Req, tools::{create_log::write_log, db::Mongodb, transaction::Transaction}};
+use crate::handlers::{
+    practical::{db::Mongodb, transaction::Transaction},
+    swarm::Req,
+    tools::create_log::write_log,
+};
 
 use super::middlegossiper_swarm::{MyBehaviour, MyBehaviourEvent};
 
-pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
-    let mut connected_id = String::new();
-    loop {
-        match swarm.select_next_some().await {
-            SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                connected_id.push_str(&peer_id.to_string());
-                match Mongodb::connect().await {
-                    Ok(db) => {
-                        let transactions_coll: Collection<Document> = db.collection("Transactions");
-                        let pipeline = vec![doc! { "$match": {
-                            "operationType": "insert"
-                        }}];
-                        let mut watchin = transactions_coll
-                            .watch()
-                            .pipeline(pipeline)
-                            .await
-                            .expect("error in mongodb watching");
+pub struct MiddleGossipper;
 
-                        if let Some(change) = watchin.next().await {
-                            match change {
-                                Ok(data) => {
-                                    if let Some(doc) = data.full_document {
-                                        let transaction: Transaction = from_document(doc).unwrap();
-                                        let str_trx = serde_json::to_string(&transaction).unwrap();
-                                        let request = Req { req: str_trx };
-                                        swarm
-                                            .behaviour_mut()
-                                            .req_res
-                                            .send_request(&peer_id, request);
+impl MiddleGossipper {
+    pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
+        let mut connected_id = String::new();
+        loop {
+            match swarm.select_next_some().await {
+                SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                    connected_id.push_str(&peer_id.to_string());
+                    match Mongodb::connect().await {
+                        Ok(db) => {
+                            let transactions_coll: Collection<Document> =
+                                db.collection("Transactions");
+                            let pipeline = vec![doc! { "$match": {
+                                "operationType": "insert"
+                            }}];
+                            let mut watchin = transactions_coll
+                                .watch()
+                                .pipeline(pipeline)
+                                .await
+                                .expect("error in mongodb watching");
+
+                            if let Some(change) = watchin.next().await {
+                                match change {
+                                    Ok(data) => {
+                                        if let Some(doc) = data.full_document {
+                                            let transaction: Transaction =
+                                                from_document(doc).unwrap();
+                                            let str_trx =
+                                                serde_json::to_string(&transaction).unwrap();
+                                            let request = Req { req: str_trx };
+                                            swarm
+                                                .behaviour_mut()
+                                                .req_res
+                                                .send_request(&peer_id, request);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        write_log(&format!(
+                                            "Error in watching of mongodb {e}-line(53)"
+                                        ));
                                     }
                                 }
-                                Err(e) => {
-                                    write_log(&format!(
-                                        "Error in watching of mongodb {e}-line(53)"
-                                    ));
+                            }
+                        }
+                        Err(_) => {
+                            write_log("database connection error in check mongo changes-line(59)");
+                        }
+                    }
+                }
+                SwarmEvent::OutgoingConnectionError { .. } => {
+                    let my_addr_file = File::open("/etc/myaddress.dat");
+                    if let Ok(file) = my_addr_file {
+                        let reader = BufReader::new(file);
+                        for line in reader.lines() {
+                            if let Ok(addr) = line {
+                                let multiaddr: Multiaddr = addr.parse().unwrap();
+                                match swarm.dial(multiaddr) {
+                                    Ok(_) => {}
+                                    Err(_) => {}
                                 }
                             }
                         }
                     }
-                    Err(_) => {
-                        write_log("database connection error in check mongo changes-line(59)");
-                    }
                 }
-            }
-            SwarmEvent::OutgoingConnectionError { .. } => {
-                let my_addr_file = File::open("/etc/myaddress.dat");
-                if let Ok(file) = my_addr_file {
-                    let reader = BufReader::new(file);
-                    for line in reader.lines() {
-                        if let Ok(addr) = line {
-                            let multiaddr: Multiaddr = addr.parse().unwrap();
-                            match swarm.dial(multiaddr) {
-                                Ok(_) => {}
-                                Err(_) => {}
-                            }
-                        }
-                    }
-                }
-            }
-            SwarmEvent::Behaviour(mybehaviour) => {
-                match mybehaviour {
+                SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                     MyBehaviourEvent::Gossipsub(event) => match event {
                         _ => {}
                     },
@@ -130,9 +139,9 @@ pub async fn checker(swarm: &mut Swarm<MyBehaviour>) {
                         },
                         _ => {}
                     },
-                }
+                },
+                _ => {}
             }
-            _ => {}
         }
     }
 }

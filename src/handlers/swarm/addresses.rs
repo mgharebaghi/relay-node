@@ -10,10 +10,7 @@ use rand::seq::SliceRandom;
 
 use serde::Deserialize;
 
-use crate::handlers::tools::{
-    create_log::write_log,
-    relay::{First, DialedRelays, Relay},
-};
+use crate::handlers::{practical::relay::{DialedRelays, First, Relay}, tools::create_log::write_log};
 
 use super::CentichainBehaviour;
 
@@ -77,7 +74,9 @@ impl Addresses {
                             Ok(_) => Self::contacting(collection, swarm, db).await,
                             Err(e) => {
                                 if e == "first" {
-                                    write_log("You Are First Node In The Centichain Network, Welcome:)");
+                                    write_log(
+                                        "You Are First Node In The Centichain Network, Welcome:)",
+                                    );
                                     let dialed_relays = DialedRelays::new(First::Yes, Vec::new());
                                     Ok(dialed_relays)
                                 } else {

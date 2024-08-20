@@ -4,7 +4,7 @@ use mongodb::{
     Collection, Database,
 };
 
-use super::validator::Validator;
+use crate::handlers::practical::validator::Validator;
 
 pub struct Waiting;
 

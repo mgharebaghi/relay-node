@@ -11,7 +11,7 @@ use libp2p::{
 use mongodb::Database;
 use serde::{Deserialize, Serialize};
 
-use super::tools::relay::DialedRelays;
+use super::practical::relay::DialedRelays;
 mod addresses;
 
 #[derive(Debug, Serialize, Deserialize)]

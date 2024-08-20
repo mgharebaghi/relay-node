@@ -1,5 +1,5 @@
 mod server;
-pub use server::handle_requests;
+pub use server::Rpc;
 mod transaction;
 mod utxo;
 mod reciept;

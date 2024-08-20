@@ -4,20 +4,20 @@ use serde_with::{serde_as, DisplayFromStr};
 use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 
-use axum::{
-    http::Method,
-    routing::post,
-    Router,
-};
+use axum::{http::Method, routing::post, Router};
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
     services::ServeDir,
 };
 
-use crate::handlers::tools::{block::Block, create_log::write_log};
+use crate::handlers::{practical::block::Block, tools::create_log::write_log};
 
 use super::{
-    block::handle_block, one_utxo::a_utxo, reciept::{handle_reciept, handle_user_reciepts}, transaction::handle_transaction, utxo::handle_utxo
+    block::handle_block,
+    one_utxo::a_utxo,
+    reciept::{handle_reciept, handle_user_reciepts},
+    transaction::handle_transaction,
+    utxo::handle_utxo,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,25 +75,31 @@ pub struct TxRes {
     pub description: String,
 }
 
-pub async fn handle_requests() {
-    let cors = CorsLayer::new()
-        .allow_methods([Method::GET, Method::POST])
-        .allow_origin(Any)
-        .allow_headers(AllowHeaders::any());
-    let app: Router = Router::new()
-        .route("/trx", post(handle_transaction))
-        .route("/utxo", post(handle_utxo))
-        .route("/reciept", post(handle_reciept))
-        .route("/urec", post(handle_user_reciepts))
-        .route("/block", post(handle_block))
-        .route("/autxo", post(a_utxo))
-        .layer(cors)
-        .layer(ConcurrencyLimitLayer::new(100))
-        .nest_service("/blockchain", ServeDir::new("/home"));
-    let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
+pub struct Rpc;
 
-    match axum_server::bind(addr).serve(app.into_make_service()).await {
-        Ok(_) => {}
-        Err(e) => write_log(&format!("error from RPC server:\n{}", e)),
+impl Rpc {
+    pub async fn handle_requests() {
+        let cors = CorsLayer::new()
+            .allow_methods([Method::GET, Method::POST])
+            .allow_origin(Any)
+            .allow_headers(AllowHeaders::any());
+        let app: Router = Router::new()
+            .route("/trx", post(handle_transaction))
+            .route("/utxo", post(handle_utxo))
+            .route("/reciept", post(handle_reciept))
+            .route("/urec", post(handle_user_reciepts))
+            .route("/block", post(handle_block))
+            .route("/autxo", post(a_utxo))
+            .layer(cors)
+            .layer(ConcurrencyLimitLayer::new(100))
+            .nest_service("/blockchain", ServeDir::new("/home"));
+        let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
+
+        println!("socket address: {}", addr.to_string());
+
+        match axum_server::bind(addr).serve(app.into_make_service()).await {
+            Ok(_) => {}
+            Err(e) => write_log(&format!("error from RPC server:\n{}", e)),
+        }
     }
 }

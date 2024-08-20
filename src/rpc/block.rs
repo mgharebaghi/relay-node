@@ -4,7 +4,7 @@ use axum::{
 };
 
 use mongodb::{bson::{doc, from_document, Document}, Collection};
-use crate::handlers::tools::{block::Block, db::Mongodb};
+use crate::handlers::practical::{block::Block, db::Mongodb};
 
 use super::server::{BlockReq, BlockRes};
 

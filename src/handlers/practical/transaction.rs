@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use sp_core::{ed25519::Public, Pair};
 
-use super::{header::Sign, utxo::UTXO, HashMaker, MerkelRoot};
+use crate::handlers::tools::{utxo::UTXO, HashMaker, MerkelRoot};
+
+use super::header::Sign;
 
 // Define a transaction in the Centichain network
 // The hash of the transaction is derived from the hashes of its inputs and outputs
