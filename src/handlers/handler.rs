@@ -1,9 +1,10 @@
 use futures::StreamExt;
-use libp2p::{swarm::SwarmEvent, Swarm};
+use libp2p::{swarm::SwarmEvent, PeerId, Swarm};
 use mongodb::Database;
 
 use super::{
     practical::{
+        addresses::Listeners,
         block::Block,
         relay::{DialedRelays, Relay},
     },
@@ -18,18 +19,26 @@ impl State {
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
         dialed_relays: &mut DialedRelays,
+        peerid: &PeerId,
     ) {
         //Prerequisites
         let mut recieved_blocks: Vec<Block> = Vec::new();
+        let mut p2p_address = String::new();
 
         //start handeling of events that recieve in p2p network with relays and validators
-        'handle: loop {
+        'handle_loop: loop {
             match swarm.select_next_some().await {
                 //handle listeners and addresses
                 SwarmEvent::NewListenAddr { address, .. } => {
                     if dialed_relays.is_first() {
-                        //send address to server
-                        println!("your p2p address: {}", address);
+                        //send addresses to server after generate new listener
+                        //if it has error break from loop to handler(start fn)
+                        if let Ok(listener) = Listeners::new(&address, peerid).await {
+                            match listener.post().await {
+                                Ok(_) => p2p_address.push_str(&listener.p2p),
+                                Err(_) => break 'handle_loop,
+                            }
+                        }
                     }
                 }
                 //after conenction stablished check peerid and if it was in dialed relays then relay update in database
@@ -60,7 +69,7 @@ impl State {
                                 write_log(&format!("Dialing failed with: {}", peer_id.unwrap()));
                                 write_log(&format!("Relay Removed: {}", peer_id.unwrap()));
                                 if dialed_relays.relays.len() < 1 {
-                                    break 'handle;
+                                    break 'handle_loop;
                                 }
                             }
                             Err(e) => write_log(e),
