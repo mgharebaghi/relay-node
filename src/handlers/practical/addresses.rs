@@ -1,5 +1,5 @@
 use libp2p::{Multiaddr, PeerId};
-use mongodb::{bson::{to_document, Document}, Collection, Database};
+use mongodb::{bson::{doc, to_document, Document}, Collection, Database};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -37,6 +37,7 @@ impl Listeners {
                     };
                     let collection: Collection<Document> = db.collection("raddress");
                     let listener_to_doc = to_document(&new_listener).unwrap();
+                    collection.delete_many(doc! {}).await.unwrap();
                     collection.insert_one(listener_to_doc).await.unwrap();
                     Ok(new_listener)
                 } else {
