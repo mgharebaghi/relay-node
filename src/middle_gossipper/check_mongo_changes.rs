@@ -34,9 +34,7 @@ impl MiddleGossipper {
         let addr_doc = collection.find_one(doc! {}).await.unwrap().unwrap(); // find relay address from database
         let addresses: Listeners = from_document(addr_doc).unwrap(); // deserialize document to listener structure
         let dial_address: Multiaddr = addresses.p2p.parse().unwrap(); // pars p2p of listener to multi address for dialing
-        swarm.dial(dial_address.clone()).unwrap(); // dialing
-
-        println!("dialing from middlegossipper with: {}", dial_address);
+        swarm.dial(dial_address).unwrap(); // dialing
 
         let mut connected_id = String::new();
         loop {
