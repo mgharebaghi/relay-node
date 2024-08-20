@@ -1,3 +1,4 @@
+use reqwest::Client;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -10,7 +11,10 @@ use tower_http::{
     services::ServeDir,
 };
 
-use crate::handlers::{practical::block::Block, tools::create_log::write_log};
+use crate::handlers::{
+    practical::{addresses::MyAddress, block::Block},
+    tools::create_log::write_log,
+};
 
 use super::{
     block::handle_block,
@@ -97,9 +101,16 @@ impl Rpc {
         let public_ip = public_ip::addr().await;
 
         if let Some(addr) = public_ip {
-            println!("public ip is: {}", addr)
-        } else {
-            println!("You dont have public ip!")
+            let client = Client::new();
+            match client
+                .post("https://centichain.org/api/rpc")
+                .json(&MyAddress::new(addr.to_string()))
+                .send()
+                .await
+            {
+                Ok(_) => println!("Your ip address successfully sent"),
+                Err(e) => println!("{}", e.to_string()),
+            }
         }
 
         match axum_server::bind(addr).serve(app.into_make_service()).await {
