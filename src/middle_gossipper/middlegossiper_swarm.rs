@@ -1,6 +1,4 @@
 use std::{
-    fs::File,
-    io::{BufRead, BufReader},
     pin::Pin,
     time::Duration,
 };
@@ -48,7 +46,7 @@ impl MiddleSwarmConf for MyBehaviour {
         let swarm_config = libp2p::swarm::Config::with_tokio_executor()
             .with_idle_connection_timeout(Duration::from_secs(u64::MAX));
 
-            let mut swarm = SwarmBuilder::with_existing_identity(keypair)
+        let mut swarm = SwarmBuilder::with_existing_identity(keypair)
             .with_tokio()
             .with_tcp(
                 Default::default(),
@@ -69,20 +67,6 @@ impl MiddleSwarmConf for MyBehaviour {
 
         let listener: Multiaddr = "/ip4/0.0.0.0/tcp/0".parse().unwrap();
         swarm.listen_on(listener).unwrap();
-
-        let my_addr_file = File::open("/etc/myaddress.dat");
-        if let Ok(file) = my_addr_file {
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                if let Ok(addr) = line {
-                    let multiaddr: Multiaddr = addr.parse().unwrap();
-                    match swarm.dial(multiaddr) {
-                        Ok(_) => {}
-                        Err(_) => {}
-                    }
-                }
-            }
-        }
 
         Box::pin(swarm)
     }

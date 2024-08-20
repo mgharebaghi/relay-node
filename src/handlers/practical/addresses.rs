@@ -1,10 +1,11 @@
 use libp2p::{Multiaddr, PeerId};
+use mongodb::{bson::{to_document, Document}, Collection, Database};
 use reqwest::Client;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::handlers::tools::create_log::write_log;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Listeners {
     pub p2p: String,
     ip: String,
@@ -24,16 +25,20 @@ impl PostListener {
 
 impl Listeners {
     //generate new listener structure with get new listener address and peer id
-    pub async fn new<'a>(listener: &Multiaddr, peerid: &PeerId) -> Result<Self, &'a str> {
+    pub async fn new<'a>(listener: &Multiaddr, peerid: &PeerId, db:&'a Database) -> Result<Self, &'a str> {
         let p2p = format!("{}/p2p/{}", listener.to_string(), peerid);
         let public_ip = public_ip::addr().await;
         match public_ip {
             Some(ip) => {
                 if p2p.contains(&ip.to_string()) {
-                    Ok(Self {
+                    let new_listener = Self {
                         p2p,
                         ip: ip.to_string(),
-                    })
+                    };
+                    let collection: Collection<Document> = db.collection("raddress");
+                    let listener_to_doc = to_document(&new_listener).unwrap();
+                    collection.insert_one(listener_to_doc).await.unwrap();
+                    Ok(new_listener)
                 } else {
                     Err("")
                 }

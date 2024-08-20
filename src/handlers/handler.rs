@@ -19,7 +19,7 @@ impl State {
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
         dialed_relays: &mut DialedRelays,
-        peerid: &PeerId
+        peerid: &PeerId,
     ) {
         //Prerequisites
         let mut recieved_blocks: Vec<Block> = Vec::new();
@@ -30,15 +30,17 @@ impl State {
             match swarm.select_next_some().await {
                 //handle listeners and addresses
                 SwarmEvent::NewListenAddr { address, .. } => {
-                    if dialed_relays.is_first() {
-                        //send addresses to server after generate new listener
-                        //if it has error break from loop to handler(start fn)
-                        if let Ok(listener) = Listeners::new(&address, peerid).await {
+                    //send addresses to server after generate new listener
+                    //if it has error break from loop to handler(start fn)
+                    if let Ok(listener) = Listeners::new(&address, peerid, db).await {
+                        if dialed_relays.is_first() {
                             match listener.post().await {
                                 Ok(_) => p2p_address.push_str(&listener.p2p),
                                 Err(_) => break 'handle_loop,
                             }
-                        } 
+                        } else {
+                            p2p_address.push_str(&listener.p2p);
+                        }
                     }
                 }
                 //after conenction stablished check peerid and if it was in dialed relays then relay update in database
