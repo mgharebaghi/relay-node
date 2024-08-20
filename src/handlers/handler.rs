@@ -19,7 +19,7 @@ impl State {
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &Database,
         dialed_relays: &mut DialedRelays,
-        peerid: &PeerId,
+        peerid: &PeerId
     ) {
         //Prerequisites
         let mut recieved_blocks: Vec<Block> = Vec::new();

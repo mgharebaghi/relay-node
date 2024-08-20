@@ -28,10 +28,16 @@ impl Listeners {
         let p2p = format!("{}/p2p/{}", listener.to_string(), peerid);
         let public_ip = public_ip::addr().await;
         match public_ip {
-            Some(ip) => Ok(Self {
-                p2p,
-                ip: ip.to_string(),
-            }),
+            Some(ip) => {
+                if p2p.contains(&ip.to_string()) {
+                    Ok(Self {
+                        p2p,
+                        ip: ip.to_string(),
+                    })
+                } else {
+                    Err("")
+                }
+            },
             None => Err("You don't have any public ips!"),
         }
     }
