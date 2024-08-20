@@ -94,8 +94,13 @@ impl Rpc {
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
         let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
+        let public_ip = public_ip::addr().await;
 
-        println!("socket address: {}", addr.to_string());
+        if let Some(addr) = public_ip {
+            println!("public ip is: {}", addr)
+        } else {
+            println!("You dont have public ip!")
+        }
 
         match axum_server::bind(addr).serve(app.into_make_service()).await {
             Ok(_) => {}
