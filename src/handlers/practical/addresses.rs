@@ -41,7 +41,7 @@ impl Listeners {
         let client = Client::new();
 
         match client
-            .post("https://centichain/org/api/relays")
+            .post("https://centichain.org/api/relays")
             .json(&PostListener::new(&self.p2p))
             .send()
             .await

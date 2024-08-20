@@ -38,9 +38,7 @@ impl State {
                                 Ok(_) => p2p_address.push_str(&listener.p2p),
                                 Err(_) => break 'handle_loop,
                             }
-                        } else {
-                            println!("error from new listener");
-                        }
+                        } 
                     }
                 }
                 //after conenction stablished check peerid and if it was in dialed relays then relay update in database
