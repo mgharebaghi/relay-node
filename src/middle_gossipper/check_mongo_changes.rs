@@ -36,6 +36,8 @@ impl MiddleGossipper {
         loop {
             match swarm.select_next_some().await {
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
+                    write_log("Middlegossipper connection stablished.");
+
                     connected_id.push_str(&peer_id.to_string());
 
                     let transactions_coll: Collection<Document> = db.collection("Transactions");
@@ -68,11 +70,11 @@ impl MiddleGossipper {
                     }
                 }
                 SwarmEvent::OutgoingConnectionError { .. } => {
-                    write_log("middle gossiper dialing error!");
+                    write_log("ءiddlegossiper dialing error!");
                     std::process::exit(0)
                 }
                 SwarmEvent::ConnectionClosed { .. } => {
-                    write_log("middle gossiper connection closed!");
+                    write_log("ءiddlegossiper connection closed!");
                     std::process::exit(0)
                 }
                 SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
