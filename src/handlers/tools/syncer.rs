@@ -141,8 +141,4 @@ impl Sync {
         write_log("Relay Syncing Completed. :)");
         *self = Self::Synced;
     }
-
-    pub fn is_synced(&self) -> bool {
-        matches!(&self, Self::Synced)
-    }
 }
