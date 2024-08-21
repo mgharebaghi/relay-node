@@ -1,5 +1,8 @@
 use libp2p::{Multiaddr, PeerId};
-use mongodb::{bson::{doc, to_document, Document}, Collection, Database};
+use mongodb::{
+    bson::{doc, to_document, Document},
+    Collection, Database,
+};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +28,11 @@ impl PostListener {
 
 impl Listeners {
     //generate new listener structure with get new listener address and peer id
-    pub async fn new<'a>(listener: &Multiaddr, peerid: &PeerId, db:&'a Database) -> Result<Self, &'a str> {
+    pub async fn new<'a>(
+        listener: &Multiaddr,
+        peerid: &PeerId,
+        db: &'a Database,
+    ) -> Result<Self, &'a str> {
         let p2p = format!("{}/p2p/{}", listener.to_string(), peerid);
         let public_ip = public_ip::addr().await;
         match public_ip {
@@ -43,7 +50,7 @@ impl Listeners {
                 } else {
                     Err("")
                 }
-            },
+            }
             None => Err("You don't have any public ips!"),
         }
     }
@@ -65,18 +72,17 @@ impl Listeners {
                     .send()
                     .await
                 {
-                    Ok(_) => {
-                        println!("listeners sent to server: {:#?}", self);
-                        Ok(())
-                    },
-                    Err(e) => {
-                        Err(write_log(&format!("Sending ip address to server error: {}", e)))
-                    }
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(write_log(&format!(
+                        "Sending ip address to server error: {}",
+                        e
+                    ))),
                 }
             }
-            Err(e) => {
-                Err(write_log(&format!("Sending p2p address to server error: {}", e)))
-            }
+            Err(e) => Err(write_log(&format!(
+                "Sending p2p address to server error: {}",
+                e
+            ))),
         }
     }
 }

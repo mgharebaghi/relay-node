@@ -20,19 +20,10 @@ pub enum First {
     Yes,
     No,
 }
-impl First {
-    pub fn is(&self) -> bool {
-        matches!(&self, Self::Yes)
-    }
-}
 
 impl DialedRelays {
     pub fn new<'a>(first: First, relays: Vec<Relay>) -> Self {
         Self { first, relays }
-    }
-
-    pub fn is_first(&self) -> bool {
-        self.first.is()
     }
 }
 // =====================================================================

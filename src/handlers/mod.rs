@@ -5,7 +5,7 @@ use std::{
 
 use handler::State;
 use mongodb::Database;
-use sp_core::ed25519::Public;
+// use sp_core::ed25519::Public;
 use swarm::CentichainBehaviour;
 use tools::create_log::write_log;
 
@@ -32,7 +32,7 @@ impl Handler {
                         wallet_addr.push_str(&text);
                     }
                 }
-                let wallet: Public = wallet_addr.parse().unwrap();
+                // let wallet: Public = wallet_addr.parse().unwrap();
                 loop {
                     let (mut swarm, peerid) = CentichainBehaviour::new().await;
                     match CentichainBehaviour::dial(&mut swarm, &db).await {

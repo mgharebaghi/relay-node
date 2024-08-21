@@ -1,5 +1,5 @@
 use futures::StreamExt;
-use libp2p::{gossipsub::Event, swarm::SwarmEvent, PeerId, Swarm};
+use libp2p::{swarm::SwarmEvent, PeerId, Swarm};
 use mongodb::Database;
 
 use super::{
@@ -9,7 +9,7 @@ use super::{
         connections::StablishedHandler,
         relay::{DialedRelays, First},
     },
-    swarm::{CentichainBehaviour, CentichainBehaviourEvent},
+    swarm::CentichainBehaviour,
     tools::{create_log::write_log, syncer::Sync},
 };
 
@@ -37,15 +37,11 @@ impl State {
                     //if it has error break from loop to handler(start fn)
                     if let Ok(listener) = Listeners::new(&address, peerid, db).await {
                         match dialed_relays.first {
-                            First::Yes => {
-                                println!("You Are First Relay :)");
-                                match listener.post().await {
-                                    Ok(_) => {}
-                                    Err(_) => std::process::exit(0),
-                                }
-                            }
+                            First::Yes => match listener.post().await {
+                                Ok(_) => {}
+                                Err(_) => std::process::exit(0),
+                            },
                             First::No => {
-                                println!("You Are Not First Relay :(");
                                 multiaddress.push_str(&address.to_string()) //must save address for after syncing that should posts it to server
                             }
                         }
