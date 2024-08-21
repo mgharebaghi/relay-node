@@ -37,11 +37,15 @@ impl State {
                     //if it has error break from loop to handler(start fn)
                     if let Ok(listener) = Listeners::new(&address, peerid, db).await {
                         match dialed_relays.first {
-                            First::Yes => match listener.post().await {
-                                Ok(_) => {}
-                                Err(_) => std::process::exit(0),
-                            },
+                            First::Yes => {
+                                println!("You Are First Relay :)");
+                                match listener.post().await {
+                                    Ok(_) => {}
+                                    Err(_) => std::process::exit(0),
+                                }
+                            }
                             First::No => {
+                                println!("You Are Not First Relay :(");
                                 multiaddress.push_str(&address.to_string()) //must save address for after syncing that should posts it to server
                             }
                         }
