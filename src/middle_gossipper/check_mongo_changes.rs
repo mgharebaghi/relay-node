@@ -1,14 +1,10 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-    time::Duration,
-};
+use std::time::Duration;
 
 use futures::StreamExt;
 use libp2p::{
     request_response::{Event, Message},
     swarm::SwarmEvent,
-    Multiaddr, PeerId, Swarm,
+    Multiaddr, PeerId,
 };
 use mongodb::{
     bson::{doc, from_document, Document},
@@ -66,25 +62,18 @@ impl MiddleGossipper {
                                 }
                             }
                             Err(e) => {
-                                write_log(&format!("Error in watching of mongodb {e}-line(53)"));
+                                write_log(&format!("Error in watching of mongodb {e}-line(65)"));
                             }
                         }
                     }
                 }
                 SwarmEvent::OutgoingConnectionError { .. } => {
-                    let my_addr_file = File::open("/etc/myaddress.dat");
-                    if let Ok(file) = my_addr_file {
-                        let reader = BufReader::new(file);
-                        for line in reader.lines() {
-                            if let Ok(addr) = line {
-                                let multiaddr: Multiaddr = addr.parse().unwrap();
-                                match swarm.dial(multiaddr) {
-                                    Ok(_) => {}
-                                    Err(_) => {}
-                                }
-                            }
-                        }
-                    }
+                    write_log("middle gossiper dialing error!");
+                    std::process::exit(0)
+                }
+                SwarmEvent::ConnectionClosed { .. } => {
+                    write_log("middle gossiper connection closed!");
+                    std::process::exit(0)
                 }
                 SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                     MyBehaviourEvent::Gossipsub(event) => match event {
@@ -124,13 +113,15 @@ impl MiddleGossipper {
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    write_log(&format!("Error in watching of mongodb {e}-line(116)"));
+                                                    write_log(&format!("Error in watching of mongodb {e}-line(120)"));
+                                                    std::process::exit(0)
                                                 }
                                             }
                                         }
                                     }
                                     Err(_) => {
-                                        write_log("database connection error in check mongo changes-line(122)");
+                                        write_log("database connection error in check mongo changes-line(126)");
+                                        std::process::exit(0)
                                     }
                                 }
                             }

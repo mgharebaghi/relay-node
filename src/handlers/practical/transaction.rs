@@ -67,39 +67,39 @@ pub struct UnspentData {
     pub value: Decimal,
 }
 
-impl Output {
-    pub fn new(unspents: Vec<Unspent>) -> Self {
-        let str_outputs = serde_json::to_string(&unspents).unwrap();
-        let output = Self {
-            hash: HashMaker::generate(&str_outputs),
-            number: unspents.len(),
-            unspents,
-        };
+// impl Output {
+//     pub fn new(unspents: Vec<Unspent>) -> Self {
+//         let str_outputs = serde_json::to_string(&unspents).unwrap();
+//         let output = Self {
+//             hash: HashMaker::generate(&str_outputs),
+//             number: unspents.len(),
+//             unspents,
+//         };
 
-        output
-    }
-}
+//         output
+//     }
+// }
 
-impl Unspent {
-    pub fn new<'a>(wallet: Public, value: Decimal) -> Self {
-        let salt: u32 = rand::random();
-        let data = UnspentData {
-            wallet,
-            salt,
-            value,
-        };
+// impl Unspent {
+//     pub fn new<'a>(wallet: Public, value: Decimal) -> Self {
+//         let salt: u32 = rand::random();
+//         let data = UnspentData {
+//             wallet,
+//             salt,
+//             value,
+//         };
 
-        let hash_data = serde_json::to_string(&data).unwrap();
+//         let hash_data = serde_json::to_string(&data).unwrap();
 
-        Self {
-            hash: HashMaker::generate(&hash_data),
-            data,
-        }
-    }
-}
+//         Self {
+//             hash: HashMaker::generate(&hash_data),
+//             data,
+//         }
+//     }
+// }
 
 impl Transaction {
-    pub async fn validate<'a>(&self, db: &Database) -> Result<bool, &'a str> {
+    pub async fn validate<'a>(&self, db: &Database) -> Result<&Self, &'a str> {
         //make input and output hash to check hash that is correct or not
         let inputs_str = serde_json::to_string(&self.input.utxos).unwrap();
         let outputs_str = serde_json::to_string(&self.output.unspents).unwrap();
@@ -137,7 +137,7 @@ impl Transaction {
 
                     //if inputs utxo doesn't have any problems return true
                     if is_err.is_none() {
-                        Ok(true)
+                        Ok(self)
                     } else {
                         Err(is_err.unwrap())
                     }

@@ -7,3 +7,4 @@ pub mod reward;
 pub mod transaction;
 pub mod validator;
 pub mod addresses;
+pub mod connections;

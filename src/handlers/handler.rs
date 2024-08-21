@@ -1,15 +1,16 @@
 use futures::StreamExt;
-use libp2p::{swarm::SwarmEvent, PeerId, Swarm};
+use libp2p::{gossipsub::Event, swarm::SwarmEvent, PeerId, Swarm};
 use mongodb::Database;
 
 use super::{
     practical::{
         addresses::Listeners,
         block::Block,
-        relay::{DialedRelays, Relay},
+        connections::StablishedHandler,
+        relay::{DialedRelays, First},
     },
-    swarm::CentichainBehaviour,
-    tools::create_log::write_log,
+    swarm::{CentichainBehaviour, CentichainBehaviourEvent},
+    tools::{create_log::write_log, syncer::Sync},
 };
 
 pub struct State;
@@ -23,7 +24,9 @@ impl State {
     ) {
         //Prerequisites
         let mut recieved_blocks: Vec<Block> = Vec::new();
-        let mut p2p_address = String::new();
+        let mut multiaddress = String::new();
+        let mut sync_state = Sync::new();
+        let mut last_block: Vec<Block> = Vec::new();
 
         //start handeling of events that recieve in p2p network with relays and validators
         'handle_loop: loop {
@@ -33,28 +36,36 @@ impl State {
                     //send addresses to server after generate new listener
                     //if it has error break from loop to handler(start fn)
                     if let Ok(listener) = Listeners::new(&address, peerid, db).await {
-                        if dialed_relays.is_first() {
-                            match listener.post().await {
-                                Ok(_) => p2p_address.push_str(&listener.p2p),
-                                Err(_) => break 'handle_loop,
+                        match dialed_relays.first {
+                            First::Yes => match listener.post().await {
+                                Ok(_) => {}
+                                Err(_) => std::process::exit(0),
+                            },
+                            First::No => {
+                                multiaddress.push_str(&address.to_string()) //must save address for after syncing that should posts it to server
                             }
-                        } else {
-                            p2p_address.push_str(&listener.p2p);
                         }
                     }
                 }
                 //after conenction stablished check peerid and if it was in dialed relays then relay update in database
                 //set peerid in database
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                    write_log(&format!("Connection stablished with: {}", peer_id));
-                    if let Some(relay) = dialed_relays
-                        .relays
-                        .iter()
-                        .find(|relay| relay.addr.contains(&peer_id.to_string()))
+                    match StablishedHandler::handle(
+                        dialed_relays,
+                        peer_id,
+                        db,
+                        &mut sync_state,
+                        &mut recieved_blocks,
+                        &multiaddress,
+                        peerid,
+                        &mut last_block,
+                    )
+                    .await
                     {
-                        match Relay::update(&mut relay.clone(), db, Some(peer_id), None).await {
-                            Ok(_) => {}
-                            Err(e) => write_log(e),
+                        Ok(_) => {}
+                        Err(e) => {
+                            write_log(e);
+                            std::process::exit(0);
                         }
                     }
                 }
@@ -78,6 +89,24 @@ impl State {
                         }
                     }
                 }
+                SwarmEvent::Behaviour(behaviuor) => match behaviuor {
+                    // CentichainBehaviourEvent::Gossipsub(event) => match event {
+                    //     Event::Message {
+                    //         propagation_source,
+                    //         message,
+                    //         ..
+                    //     } => match sync_state {
+                    //         Sync::Synced => {
+                    //             println!("You are synced :)")
+                    //         }
+                    //         Sync::NotSynced => {
+                    //             println!("You Are Not Synced :(")
+                    //         }
+                    //     },
+                    //     _ => {}
+                    // },
+                    _ => {}
+                },
                 _ => {}
             }
         }

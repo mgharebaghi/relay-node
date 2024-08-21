@@ -26,7 +26,7 @@ pub async fn handle_transaction(
 
     match Mongodb::connect().await {
         Ok(db) => {
-            let trx_coll: Collection<Document> = db.collection("Transactions");
+            let trx_coll: Collection<Document> = db.collection("transactions");
             transaction.date.clear();
             transaction.fee = transaction.value * Decimal::from_str("0.01").unwrap();
             transaction

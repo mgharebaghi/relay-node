@@ -1,4 +1,7 @@
-use mongodb::Database;
+use mongodb::{
+    bson::{doc, to_document, Document},
+    Collection, Database,
+};
 use serde::{Deserialize, Serialize};
 use sp_core::Pair;
 
@@ -7,7 +10,7 @@ use crate::handlers::tools::{utxo::UTXO, waiting::Waiting};
 use super::{coinbase::Coinbase, header::Header, transaction::Transaction};
 
 // Define the structure of a block, including its header and body.
-#[derive(Debug, Serialize, Deserialize, PartialEq,Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Block {
     pub header: Header,
     pub body: Body,
@@ -26,7 +29,6 @@ impl Block {
         &self,
         last_block: &mut Vec<Self>,
         db: &'a Database,
-        mempool: &mut Vec<Transaction>,
     ) -> Result<&Self, &'a str> {
         if last_block[0].header.hash == self.header.previous {
             //check block signature that its signature data is block hash(block hash is hash of body)
@@ -43,21 +45,24 @@ impl Block {
                 //validate transactions in body
                 let mut trx_err = None;
                 let mut trx_backup: Vec<Transaction> = Vec::new();
+                let trx_collection: Collection<Document> = db.collection("transactions");
+
                 for i in 0..self.body.transactions.len() {
-                    let index = mempool
-                        .iter()
-                        .position(|trx| trx.hash == self.body.transactions[i].hash);
-                    //if trx was in mempool it means trx validated ans is correct so it removes from mempool
-                    //if trx was not in mempool it validates the trx and if it doesn't have any problems will be accepted
-                    if let Some(i) = index {
-                        trx_backup.push(mempool.remove(i));
-                    } else {
-                        match Transaction::validate(&self.body.transactions[i], db).await {
-                            Ok(_correcr) => {}
-                            Err(e) => {
-                                trx_err.get_or_insert(e);
-                                break;
+                    match Transaction::validate(&self.body.transactions[i], db).await {
+                        Ok(transaction) => {
+                            match trx_collection
+                                .delete_one(doc! {"hash": &transaction.hash})
+                                .await
+                            {
+                                Ok(_) => {
+                                    trx_backup.push(transaction.clone());
+                                }
+                                Err(_) => {}
                             }
+                        }
+                        Err(e) => {
+                            trx_err.get_or_insert(e);
+                            break;
                         }
                     }
                 }
@@ -120,20 +125,49 @@ impl Block {
                                 //else return error of updating
                                 match Waiting::update(db, &self.header.peerid).await {
                                     Ok(_) => Ok(self),
-                                    Err(e) => Err(e),
+                                    Err(e) => {
+                                        //return wrong block's transactions to database from backup
+                                        for trx in trx_backup {
+                                            let trx_doc = to_document(&trx).unwrap();
+                                            match trx_collection.insert_one(trx_doc).await {
+                                                Ok(_) => {}
+                                                Err(_) => {}
+                                            }
+                                        }
+                                        Err(e)
+                                    }
                                 }
                             } else {
+                                //return wrong block's transactions to database from backup
+                                for trx in trx_backup {
+                                    let trx_doc = to_document(&trx).unwrap();
+                                    match trx_collection.insert_one(trx_doc).await {
+                                        Ok(_) => {}
+                                        Err(_) => {}
+                                    }
+                                }
                                 Err(utxo_err.unwrap())
                             }
                         }
-                        Err(e) => Err(e),
+                        Err(e) => {
+                            //return wrong block's transactions to database from backup
+                            for trx in trx_backup {
+                                let trx_doc = to_document(&trx).unwrap();
+                                match trx_collection.insert_one(trx_doc).await {
+                                    Ok(_) => {}
+                                    Err(_) => {}
+                                }
+                            }
+                            Err(e)
+                        }
                     }
                 } else {
-                    //if there is any true trx in the rejected block that it removes its input utxos from database then it returns the trx to mempool
-                    //before return an error about block rejection
-                    if trx_backup.len() > 0 {
-                        for t in trx_backup {
-                            mempool.push(t);
+                    //return wrong block's transactions to database from backup
+                    for trx in trx_backup {
+                        let trx_doc = to_document(&trx).unwrap();
+                        match trx_collection.insert_one(trx_doc).await {
+                            Ok(_) => {}
+                            Err(_) => {}
                         }
                     }
                     Err(trx_err.unwrap())
