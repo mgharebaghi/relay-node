@@ -123,7 +123,7 @@ impl Block {
                             if utxo_err.is_none() {
                                 //if updating waiting doesn't any problems return block as correct block
                                 //else return error of updating
-                                match Waiting::update(db, &self.header.peerid).await {
+                                match Waiting::update(db, Some(&self.header.peerid)).await {
                                     Ok(_) => Ok(self),
                                     Err(e) => {
                                         //return wrong block's transactions to database from backup

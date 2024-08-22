@@ -8,3 +8,4 @@ pub mod transaction;
 pub mod validator;
 pub mod addresses;
 pub mod connections;
+pub mod outnode;

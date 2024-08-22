@@ -9,7 +9,7 @@ use crate::handlers::practical::validator::Validator;
 pub struct Waiting;
 
 impl Waiting {
-    pub async fn update<'a>(db: &'a Database, block_generator: &PeerId) -> Result<(), &'a str> {
+    pub async fn update<'a>(db: &'a Database, block_generator: Option<&PeerId>) -> Result<(), &'a str> {
         let collection: Collection<Document> = db.collection("validators");
         let query = collection.find(doc! {}).await;
         match query {
@@ -21,7 +21,7 @@ impl Waiting {
                             let mut validator: Validator = from_document(doc.clone()).unwrap();
                             //if validator was generator of block its waiting should be count of validators in the network
                             //else its waiting should sets waiting - 1
-                            if &validator.peerid == block_generator {
+                            if block_generator.is_some() && &validator.peerid == block_generator.unwrap() {
                                 validator.waiting =
                                     collection.count_documents(doc! {}).await.unwrap() as u64;
                                 let replacement = to_document(&validator).unwrap();

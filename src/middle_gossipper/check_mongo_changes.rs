@@ -24,6 +24,7 @@ pub struct MiddleGossipper;
 
 impl MiddleGossipper {
     pub async fn checker(db: &Database) {
+        //dialing to relay that is in the radsress collection(raddress means Relay Address)
         let mut swarm = MyBehaviour::new().await;
         sleep(Duration::from_secs(60)).await; //delay to save addresses of relay to DB
         let collection: Collection<Document> = db.collection("raddress");
@@ -70,11 +71,11 @@ impl MiddleGossipper {
                     }
                 }
                 SwarmEvent::OutgoingConnectionError { .. } => {
-                    write_log("ءiddlegossiper dialing error!");
+                    write_log("Middlegossiper dialing error!");
                     std::process::exit(0)
                 }
                 SwarmEvent::ConnectionClosed { .. } => {
-                    write_log("ءiddlegossiper connection closed!");
+                    write_log("Middlegossiper connection closed!");
                     std::process::exit(0)
                 }
                 SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {

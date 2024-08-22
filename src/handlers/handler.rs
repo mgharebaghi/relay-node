@@ -1,15 +1,15 @@
 use futures::StreamExt;
-use libp2p::{swarm::SwarmEvent, PeerId, Swarm};
+use libp2p::{gossipsub::Event, swarm::SwarmEvent, PeerId, Swarm};
 use mongodb::Database;
 
 use super::{
     practical::{
         addresses::Listeners,
         block::Block,
-        connections::StablishedHandler,
+        connections::{ConnectionsHandler, Kind},
         relay::{DialedRelays, First},
     },
-    swarm::CentichainBehaviour,
+    swarm::{CentichainBehaviour, CentichainBehaviourEvent},
     tools::{create_log::write_log, syncer::Sync},
 };
 
@@ -27,6 +27,7 @@ impl State {
         let mut multiaddress = String::new();
         let mut sync_state = Sync::new();
         let mut last_block: Vec<Block> = Vec::new();
+        let mut connections_handler = ConnectionsHandler::new();
 
         //start handeling of events that recieve in p2p network with relays and validators
         'handle_loop: loop {
@@ -47,10 +48,12 @@ impl State {
                         }
                     }
                 }
+
                 //after conenction stablished check peerid and if it was in dialed relays then relay update in database
                 //set peerid in database
                 SwarmEvent::ConnectionEstablished { peer_id, .. } => {
-                    match StablishedHandler::handle(
+                    match ConnectionsHandler::update_and_sync(
+                        &mut connections_handler,
                         dialed_relays,
                         peer_id,
                         db,
@@ -69,6 +72,7 @@ impl State {
                         }
                     }
                 }
+
                 //handle failed dialing and remove faled dialing address from database
                 //if dialed_address was 0 then loop breaks to start new dialing *(remember if connected with another relays that they dialing to my own relay then cancel breaks)*
                 SwarmEvent::OutgoingConnectionError { peer_id, .. } => {
@@ -89,22 +93,51 @@ impl State {
                         }
                     }
                 }
+
+                //handle closed connection
+                //remove closed connection from database as relay or validator
+                //break to dialing(mod) if there is no any connection with atleast a relay
+                SwarmEvent::ConnectionClosed { peer_id, .. } => {
+                    match connections_handler.remove(db, peer_id).await {
+                        Ok(_) => {
+                            write_log(&format!("connection closed and removed with: {}", peer_id));
+                            //break to dialing if there is no any connections with relays
+                            if connections_handler
+                                .connections
+                                .iter()
+                                .filter(|c| *c.kind.as_ref().unwrap() == Kind::Relay)
+                                .count()
+                                == 0
+                            {
+                                break 'handle_loop;
+                            }
+                        }
+                        Err(e) => {
+                            write_log(e);
+                            std::process::exit(0);
+                        }
+                    }
+                }
+
+                //handle Centichain behaviour that are gossipsub and request & response
                 SwarmEvent::Behaviour(behaviuor) => match behaviuor {
-                    // CentichainBehaviourEvent::Gossipsub(event) => match event {
-                    //     Event::Message {
-                    //         propagation_source,
-                    //         message,
-                    //         ..
-                    //     } => match sync_state {
-                    //         Sync::Synced => {
-                    //             println!("You are synced :)")
-                    //         }
-                    //         Sync::NotSynced => {
-                    //             println!("You Are Not Synced :(")
-                    //         }
-                    //     },
-                    //     _ => {}
-                    // },
+                    //handle gossipsub messages and subscribers
+                    CentichainBehaviourEvent::Gossipsub(event) => match event {
+                        Event::Subscribed { peer_id, topic } => {
+                            if topic.to_string() == "relay" {
+                                connections_handler.update_connection(peer_id, Kind::Relay);
+                            }
+                            if topic.to_string() == "validator" {
+                                connections_handler.update_connection(peer_id, Kind::Validator);
+                            }
+                        }
+                        // Event::Message {
+                        //     propagation_source,
+                        //     message,
+                        //     ..
+                        // } => {}
+                        _ => {}
+                    },
                     _ => {}
                 },
                 _ => {}
