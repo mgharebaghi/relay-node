@@ -8,7 +8,6 @@ use libp2p::{
     swarm::NetworkBehaviour,
     PeerId, StreamProtocol, Swarm, SwarmBuilder,
 };
-use mongodb::Database;
 use serde::{Deserialize, Serialize};
 
 use super::practical::relay::DialedRelays;
@@ -87,11 +86,8 @@ impl CentichainBehaviour {
     }
 
     //dialing to realys as random
-    pub async fn dial<'a>(
-        swarm: &mut Swarm<CentichainBehaviour>,
-        db: &Database,
-    ) -> Result<DialedRelays, &'a str> {
-        match Addresses::contact(swarm, db).await {
+    pub async fn dial<'a>(swarm: &mut Swarm<CentichainBehaviour>) -> Result<DialedRelays, &'a str> {
+        match Addresses::contact(swarm).await {
             Ok(dialed_relays) => Ok(dialed_relays),
             Err(e) => Err(e),
         }

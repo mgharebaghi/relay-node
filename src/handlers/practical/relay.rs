@@ -47,34 +47,34 @@ impl Relay {
     }
 
     //update relay
-    pub async fn update(
-        &mut self,
-        db: &Database,
-        peerid: Option<PeerId>,
-        wallet: Option<String>,
-    ) -> Result<Self, &str> {
-        let collection: Collection<Document> = db.collection("relay");
-        let mut update = None;
-        if peerid.is_some() {
-            update.get_or_insert(doc! {"$set": {"peerid": peerid.unwrap().to_string()}});
-            self.peerid.get_or_insert(peerid.unwrap());
-        } else {
-            self.wallet.push_str(&wallet.clone().unwrap());
-            update.get_or_insert(doc! {"$set": {"wallet": wallet.unwrap()}});
-        };
-        match collection.update_one(doc! {}, update.unwrap()).await {
-            Ok(_) => {
-                let find_doc = collection.find_one(doc! {}).await;
-                if let Ok(doc) = find_doc {
-                    let relay: Relay = from_document(doc.unwrap()).unwrap();
-                    Ok(relay)
-                } else {
-                    Err("Error while finding connected relay-(events/relay 45)")
-                }
-            }
-            Err(_) => Err("Updating relay error-(events/relay 48)"),
-        }
-    }
+    // pub async fn update(
+    //     &mut self,
+    //     db: &Database,
+    //     peerid: Option<PeerId>,
+    //     wallet: Option<String>,
+    // ) -> Result<Self, &str> {
+    //     let collection: Collection<Document> = db.collection("relay");
+    //     let mut update = None;
+    //     if peerid.is_some() {
+    //         update.get_or_insert(doc! {"$set": {"peerid": peerid.unwrap().to_string()}});
+    //         self.peerid.get_or_insert(peerid.unwrap());
+    //     } else {
+    //         self.wallet.push_str(&wallet.clone().unwrap());
+    //         update.get_or_insert(doc! {"$set": {"wallet": wallet.unwrap()}});
+    //     };
+    //     match collection.update_one(doc! {}, update.unwrap()).await {
+    //         Ok(_) => {
+    //             let find_doc = collection.find_one(doc! {}).await;
+    //             if let Ok(doc) = find_doc {
+    //                 let relay: Relay = from_document(doc.unwrap()).unwrap();
+    //                 Ok(relay)
+    //             } else {
+    //                 Err("Error while finding connected relay-(events/relay 45)")
+    //             }
+    //         }
+    //         Err(_) => Err("Updating relay error-(events/relay 48)"),
+    //     }
+    // }
 
     //return a connected relay ip address as random
     pub async fn ip_adress<'a>(db: &'a Database) -> Result<String, &'a str> {
@@ -116,50 +116,40 @@ impl Relay {
     //     }
     // }
 
-    pub async fn remove<'a>(
+    pub async fn delete_req<'a>(
         &self,
-        db: &'a Database,
         dialed_relays: &mut DialedRelays,
     ) -> Result<(), &'a str> {
-        //delete relay from database at first
-        let collection: Collection<Document> = db.collection("relay");
-        match collection.delete_one(doc! {"addr": &self.addr}).await {
+        //find relay in relay_number that are relays contacted with they then remove relay from that
+        let index = dialed_relays
+            .relays
+            .iter()
+            .position(|relay| relay == self)
+            .unwrap();
+        dialed_relays.relays.remove(index);
+        //post relay address and ip to Centichain server for remove these from server
+        let client = Client::new();
+        match client
+            .delete(format!(
+                "https://centichain.org/api/relays?addr={}",
+                self.addr
+            ))
+            .send()
+            .await
+        {
             Ok(_) => {
-                //find relay in relay_number that are relays contacted with they then remove relay from that
-                let index = dialed_relays
-                    .relays
-                    .iter()
-                    .position(|relay| relay == self)
-                    .unwrap();
-                dialed_relays.relays.remove(index);
-                //post relay address and ip to Centichain server for remove these from server
-                let client = Client::new();
+                let ip = self.addr.trim_start_matches("/ip4/");
+                let ip = ip.split("/").next().unwrap();
                 match client
-                    .delete(format!(
-                        "https://centichain.org/api/relays?addr={}",
-                        self.addr
-                    ))
+                    .delete(format!("https://centichain.org/api/relays?addr={}", ip))
                     .send()
                     .await
                 {
-                    Ok(_) => {
-                        let ip = self.addr.trim_start_matches("/ip4/");
-                        let ip = ip.split("/").next().unwrap();
-                        match client
-                            .delete(format!("https://centichain.org/api/relays?addr={}", ip))
-                            .send()
-                            .await
-                        {
-                            Ok(_) => Ok(()),
-                            Err(_) => {
-                                Err("Deleting relay's IP from server problem-(tools/relay 135)")
-                            }
-                        }
-                    }
-                    Err(_) => Err("Deleting relay from server problem-(tools/relay 138)"),
+                    Ok(_) => Ok(()),
+                    Err(_) => Err("Deleting relay's IP from server problem-(tools/relay 155)"),
                 }
             }
-            Err(_) => Err("Deleting relay problem-(tools/relay 141)"),
+            Err(_) => Err("Deleting relay from server problem-(tools/relay 159)"),
         }
     }
 }

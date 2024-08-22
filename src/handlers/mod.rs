@@ -35,7 +35,7 @@ impl Handler {
                 // let wallet: Public = wallet_addr.parse().unwrap();
                 loop {
                     let (mut swarm, peerid) = CentichainBehaviour::new().await;
-                    match CentichainBehaviour::dial(&mut swarm, &db).await {
+                    match CentichainBehaviour::dial(&mut swarm).await {
                         Ok(mut relay_number) => {
                             //handle state of events of network
                             State::handle(&mut swarm, &db, &mut relay_number, &peerid).await;

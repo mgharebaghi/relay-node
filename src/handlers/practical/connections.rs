@@ -9,11 +9,7 @@ use crate::handlers::tools::{
     syncer::{Sync, Syncer},
 };
 
-use super::{
-    addresses::Listeners,
-    block::Block,
-    relay::{DialedRelays, Relay},
-};
+use super::{addresses::Listeners, block::Block, relay::DialedRelays};
 
 pub struct ConnectionsHandler {
     pub connections: Vec<Connection>,
@@ -87,47 +83,37 @@ impl ConnectionsHandler {
         peerid: &PeerId,
         last_block: &mut Vec<Block>,
     ) -> Result<(), &'a str> {
-        //if connections stablished was in dialed relays then reays should updates its peerid in database
+        //if connections stablished was in dialed relays then goes to syncing
         //else push to connections vector to check wrongdoers and remove thats' connections
-        if let Some(relay) = dialed_relays
+        if dialed_relays
             .relays
             .iter()
             .find(|relay| relay.addr.contains(&connection_peerid.to_string()))
+            .is_some()
         {
             write_log(&format!(
                 "Connection stablished with this dialed relay: {}",
                 connection_peerid
             ));
-            //updating relay peerid in database
-            match Relay::update(&mut relay.clone(), db, Some(connection_peerid), None).await {
-                Ok(_) => {
-                    //if sync is NotSynced start syncing with the network
-                    match sync_state {
-                        Sync::Synced => Ok(()),
-                        Sync::NotSynced => {
-                            write_log("start syncing...");
-                            if let Err(e) = Syncer::syncing(db, recieved_blocks, last_block).await {
-                                write_log(e);
-                                Err(e)
-                            } else {
-                                sync_state.synced(); //if syncing doesn't have problem change sync state to Synced
+            //if sync is NotSynced start syncing with the network
+            match sync_state {
+                Sync::Synced => Ok(()),
+                Sync::NotSynced => {
+                    write_log("start syncing...");
+                    if let Err(e) = Syncer::syncing(db, recieved_blocks, last_block).await {
+                        write_log(e);
+                        Err(e)
+                    } else {
+                        sync_state.synced(); //if syncing doesn't have problem change sync state to Synced
 
-                                match Listeners::new(&multiaddress.parse().unwrap(), peerid, db)
-                                    .await
-                                {
-                                    Ok(listeners) => match listeners.post().await {
-                                        Ok(_) => Ok(()),
-                                        Err(_) => Err(""),
-                                    },
-                                    Err(e) => Err(e),
-                                }
-                            }
+                        match Listeners::new(&multiaddress.parse().unwrap(), peerid, db).await {
+                            Ok(listeners) => match listeners.post().await {
+                                Ok(_) => Ok(()),
+                                Err(_) => Err(""),
+                            },
+                            Err(e) => Err(e),
                         }
                     }
-                }
-                Err(e) => {
-                    write_log(e);
-                    Err("Error while updating relay-(practical/connections 63)")
                 }
             }
         } else {
@@ -141,60 +127,35 @@ impl ConnectionsHandler {
 
     //remove connection from connections ad db if it closed
     pub async fn remove<'a>(&mut self, db: &'a Database, peerid: PeerId) -> Result<(), &'a str> {
-        //find connection in connections
-        let connection = self
+        //define validator collection for deleting nodes from their
+        let v_collection: Collection<Document> = db.collection("validator");
+
+        //find index of connection in connections for removing from connections
+        let index = self
             .connections
             .iter()
-            .find(|node| node.peerid == peerid)
+            .position(|conn| conn.peerid == peerid)
             .unwrap();
 
-        //if it was relay it will be removed from relay collection and connections vector
-        //also relays validators will be removed from validators collection
-        //else validator will be removed from validators collection
-        if *connection.kind.as_ref().unwrap() == Kind::Relay {
-            let relay_collection: Collection<Document> = db.collection("relay");
-            let validators_collection: Collection<Document> = db.collection("relay");
-            match relay_collection
-                .delete_one(doc! {"peerid": connection.peerid.to_string()})
+        //if kind of connection was relay it will be removed from relay collection if there is(if it was relay then its validators will be removed)
+        //else it will be removed from validators if there is
+        if *self.connections[index].kind.as_ref().unwrap() == Kind::Relay {
+            self.connections.remove(index);
+            match v_collection
+                .delete_many(doc! {"relay": peerid.to_string()})
                 .await
             {
-                Ok(_) => {
-                    match validators_collection
-                        .delete_many(doc! {"relay": connection.peerid.to_string()})
-                        .await
-                    {
-                        Ok(_) => {
-                            let index = self.connections.iter().position(|conn| conn.peerid == connection.peerid).unwrap();
-                            self.connections.remove(index);
-                            Ok(())
-                        },
-                        Err(_) => Err(
-                            "Error during deletation of validators-(handlers/practical/connections 149)",
-                        ),
-                    }
-                }
-                Err(_) => {
-                    Err("Error during deletation of relay-(handlers/practical/connections 154)")
-                }
+                Ok(_) => Ok(()),
+                Err(_) => Err("Deleting validator problem-(handlers/practical/connections 170)"),
             }
         } else {
-            let collection: Collection<Document> = db.collection("validators");
-            match collection
-                .delete_one(doc! {"peerid": connection.peerid.to_string()})
+            self.connections.remove(index);
+            match v_collection
+                .delete_one(doc! {"peerid": peerid.to_string()})
                 .await
             {
-                Ok(_) => {
-                    let index = self
-                        .connections
-                        .iter()
-                        .position(|conn| conn.peerid == connection.peerid)
-                        .unwrap();
-                    self.connections.remove(index);
-                    Ok(())
-                }
-                Err(_) => Err(
-                    "Error during deletation of validators-(handlers/practical/connections 165)",
-                ),
+                Ok(_) => Ok(()),
+                Err(_) => Err("Deleting validator problem-(handlers/practical/connections 183)"),
             }
         }
     }

@@ -81,7 +81,7 @@ impl State {
                         .iter()
                         .find(|r| r.addr.contains(&peer_id.unwrap().to_string()))
                     {
-                        match relay.clone().remove(db, dialed_relays).await {
+                        match relay.clone().delete_req(dialed_relays).await {
                             Ok(_) => {
                                 write_log(&format!("Dialing failed with: {}", peer_id.unwrap()));
                                 write_log(&format!("Relay Removed: {}", peer_id.unwrap()));
@@ -114,7 +114,6 @@ impl State {
                         }
                         Err(e) => {
                             write_log(e);
-                            std::process::exit(0);
                         }
                     }
                 }
