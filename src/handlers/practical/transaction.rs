@@ -6,7 +6,7 @@ use sp_core::{ed25519::Public, Pair};
 
 use crate::handlers::tools::{utxo::UTXO, HashMaker, MerkelRoot};
 
-use super::header::Sign;
+use super::block::header::Sign;
 
 // Define a transaction in the Centichain network
 // The hash of the transaction is derived from the hashes of its inputs and outputs
@@ -66,37 +66,6 @@ pub struct UnspentData {
     #[serde_as(as = "DisplayFromStr")]
     pub value: Decimal,
 }
-
-// impl Output {
-//     pub fn new(unspents: Vec<Unspent>) -> Self {
-//         let str_outputs = serde_json::to_string(&unspents).unwrap();
-//         let output = Self {
-//             hash: HashMaker::generate(&str_outputs),
-//             number: unspents.len(),
-//             unspents,
-//         };
-
-//         output
-//     }
-// }
-
-// impl Unspent {
-//     pub fn new<'a>(wallet: Public, value: Decimal) -> Self {
-//         let salt: u32 = rand::random();
-//         let data = UnspentData {
-//             wallet,
-//             salt,
-//             value,
-//         };
-
-//         let hash_data = serde_json::to_string(&data).unwrap();
-
-//         Self {
-//             hash: HashMaker::generate(&hash_data),
-//             data,
-//         }
-//     }
-// }
 
 impl Transaction {
     pub async fn validate<'a>(&self, db: &Database) -> Result<&Self, &'a str> {

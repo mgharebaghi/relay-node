@@ -1,13 +1,18 @@
 use futures::StreamExt;
-use libp2p::{gossipsub::Event, swarm::SwarmEvent, PeerId, Swarm};
+use libp2p::{
+    gossipsub::Event as GossipsubEvent, request_response::Event as ReqResEvent, swarm::SwarmEvent,
+    PeerId, Swarm,
+};
 use mongodb::Database;
+use sp_core::ed25519::Public;
 
 use super::{
     practical::{
         addresses::Listeners,
-        block::Block,
+        block::block::Block,
         connections::{ConnectionsHandler, Kind},
         relay::{DialedRelays, First},
+        requests::Requests,
     },
     swarm::{CentichainBehaviour, CentichainBehaviourEvent},
     tools::{create_log::write_log, syncer::Sync},
@@ -21,6 +26,7 @@ impl State {
         db: &Database,
         dialed_relays: &mut DialedRelays,
         peerid: &PeerId,
+        wallet: &Public,
     ) {
         //Prerequisites
         let mut recieved_blocks: Vec<Block> = Vec::new();
@@ -120,9 +126,26 @@ impl State {
 
                 //handle Centichain behaviour that are gossipsub and request & response
                 SwarmEvent::Behaviour(behaviuor) => match behaviuor {
+                    //handle requests that are handshaking, transactions and blocks
+                    CentichainBehaviourEvent::Reqres(event) => match event {
+                        ReqResEvent::Message { message, .. } => match message {
+                            libp2p::request_response::Message::Request {
+                                request, channel, ..
+                            } => {
+                                //if relay synced then handle requests
+                                if sync_state == Sync::Synced {
+                                    Requests::handler(db, request, channel, swarm, wallet).await;
+                                }
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    },
+
                     //handle gossipsub messages and subscribers
                     CentichainBehaviourEvent::Gossipsub(event) => match event {
-                        Event::Subscribed { peer_id, topic } => {
+                        //get new subsctiber and push it to connections if there was any connections
+                        GossipsubEvent::Subscribed { peer_id, topic } => {
                             if topic.to_string() == "relay" {
                                 connections_handler.update_connection(peer_id, Kind::Relay);
                             }
@@ -130,14 +153,18 @@ impl State {
                                 connections_handler.update_connection(peer_id, Kind::Validator);
                             }
                         }
-                        // Event::Message {
-                        //     propagation_source,
-                        //     message,
-                        //     ..
-                        // } => {}
+
+                        //handle messages and if it was new block message goes to handle it
+                        //else if it was transaction goes to handle it
+                        GossipsubEvent::Message {
+                            propagation_source,
+                            message,
+                            ..
+                        } => {
+                            println!("this validator: {}\nsend this message: {:?}", propagation_source, message)
+                        }
                         _ => {}
                     },
-                    _ => {}
                 },
                 _ => {}
             }

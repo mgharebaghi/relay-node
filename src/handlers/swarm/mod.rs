@@ -23,6 +23,12 @@ pub struct Res {
     pub res: String,
 }
 
+impl Res {
+    pub fn new(res: String) -> Self {
+        Self { res }
+    }
+}
+
 #[derive(NetworkBehaviour)]
 pub struct CentichainBehaviour {
     pub gossipsub: libp2p::gossipsub::Behaviour,

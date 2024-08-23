@@ -5,14 +5,14 @@ use std::{
 
 use handler::State;
 use mongodb::Database;
-// use sp_core::ed25519::Public;
+use sp_core::ed25519::Public;
 use swarm::CentichainBehaviour;
 use tools::create_log::write_log;
 
 pub mod handler;
+pub mod practical;
 pub mod swarm;
 pub mod tools;
-pub mod practical;
 
 pub struct Handler;
 
@@ -22,7 +22,7 @@ impl Handler {
         //it's important for handshaking requests from validators
         let wallet_file = File::open("/etc/wallet.dat");
         let mut wallet_addr = String::new();
-    
+
         match wallet_file {
             Ok(file) => {
                 let reader = BufReader::new(file);
@@ -32,13 +32,14 @@ impl Handler {
                         wallet_addr.push_str(&text);
                     }
                 }
-                // let wallet: Public = wallet_addr.parse().unwrap();
+                let wallet: Public = wallet_addr.parse().unwrap();
                 loop {
                     let (mut swarm, peerid) = CentichainBehaviour::new().await;
                     match CentichainBehaviour::dial(&mut swarm).await {
                         Ok(mut relay_number) => {
                             //handle state of events of network
-                            State::handle(&mut swarm, &db, &mut relay_number, &peerid).await;
+                            State::handle(&mut swarm, &db, &mut relay_number, &peerid, &wallet)
+                                .await;
                         }
                         Err(e) => {
                             write_log(e);
@@ -52,5 +53,5 @@ impl Handler {
                 std::process::exit(404)
             }
         }
-    }   
+    }
 }

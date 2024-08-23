@@ -1,10 +1,10 @@
-use axum::{
-    extract,
-    Json,
-};
+use axum::{extract, Json};
 
-use mongodb::{bson::{doc, from_document, Document}, Collection};
-use crate::handlers::practical::{block::Block, db::Mongodb};
+use crate::handlers::practical::{block::block::Block, db::Mongodb};
+use mongodb::{
+    bson::{doc, from_document, Document},
+    Collection,
+};
 
 use super::server::{BlockReq, BlockRes};
 

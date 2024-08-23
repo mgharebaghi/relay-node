@@ -1,11 +1,9 @@
+pub mod addresses;
 pub mod block;
-pub mod coinbase;
+pub mod connections;
 pub mod db;
-pub mod header;
+pub mod outnode;
 pub mod relay;
-pub mod reward;
 pub mod transaction;
 pub mod validator;
-pub mod addresses;
-pub mod connections;
-pub mod outnode;
+pub mod requests;

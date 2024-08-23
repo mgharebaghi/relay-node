@@ -9,7 +9,7 @@ use crate::handlers::tools::{
     syncer::{Sync, Syncer},
 };
 
-use super::{addresses::Listeners, block::Block, relay::DialedRelays};
+use super::{addresses::Listeners, block::block::Block, relay::DialedRelays};
 
 pub struct ConnectionsHandler {
     pub connections: Vec<Connection>,

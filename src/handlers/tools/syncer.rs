@@ -7,7 +7,7 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
 
-use crate::handlers::practical::{block::Block, relay::Relay};
+use crate::handlers::practical::{block::block::Block, relay::Relay};
 
 use super::{bsons::Bson, create_log::write_log, downloader::Downloader, zipp::Zip};
 
@@ -127,6 +127,7 @@ impl Syncer {
 }
 
 //define sync for checks that relay is sync or not
+#[derive(Debug, PartialEq)]
 pub enum Sync {
     Synced,
     NotSynced,
