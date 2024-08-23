@@ -52,6 +52,7 @@ impl Requests {
     ) {
         //if request was handhsake then goes to handshaker
         if request.req == "handshake".to_string() {
+            println!("handshake request get");
             match Self::handshaker(swarm, db, wallet.to_string(), channel).await {
                 Ok(_) => {}
                 Err(e) => write_log(e),
