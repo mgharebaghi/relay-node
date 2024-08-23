@@ -15,7 +15,7 @@ pub struct DialedRelays {
     pub relays: Vec<Relay>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum First {
     Yes,
     No,

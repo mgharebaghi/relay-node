@@ -17,7 +17,7 @@ pub struct ConnectionsHandler {
 
 //change when relay gets subscribtion
 //if peerid was in connection change its kind based on subscribe topic
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Kind {
     Relay,
     Validator,

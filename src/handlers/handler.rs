@@ -110,16 +110,17 @@ impl State {
                         Ok(_) => {
                             write_log(&format!("connection closed and removed with: {}", peer_id));
                             //break to dialing if there is no any connections with relays
-                            if connections_handler.connections.len() > 0 {
-                                if connections_handler
-                                    .connections
-                                    .iter()
-                                    .filter(|c| *c.kind.as_ref().unwrap() == Kind::Relay)
-                                    .count()
-                                    == 0
-                                {
-                                    break 'handle_loop;
+                            let mut connections_relay_count = 0;
+                            for node in &connections_handler.connections {
+                                if node.kind.clone().unwrap() == Kind::Relay {
+                                    connections_relay_count += 1;
                                 }
+                            }
+                            if (connections_handler.connections.len() < 1
+                                || connections_relay_count < 1)
+                                && dialed_relays.first == First::No
+                            {
+                                break 'handle_loop;
                             }
                         }
                         Err(e) => {

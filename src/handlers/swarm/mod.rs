@@ -43,12 +43,14 @@ impl CentichainBehaviour {
 
         //topic for subscribing to a gossipsub protocol group
         let r_topic = IdentTopic::new("relay");
+        let v_topic = IdentTopic::new("validator");
 
         //configure gossipsub protocol
         let auth = MessageAuthenticity::Signed(keypair.clone());
         let conf = Config::default();
         let mut gossipsub = libp2p::gossipsub::Behaviour::new(auth, conf).unwrap();
         gossipsub.subscribe(&r_topic).unwrap();
+        gossipsub.subscribe(&v_topic).unwrap();
 
         //configure request response protocol
         let reqres = cbor::Behaviour::<Req, Res>::new(
