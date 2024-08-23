@@ -45,7 +45,9 @@ impl State {
                     if let Ok(listener) = Listeners::new(&address, peerid, db).await {
                         match dialed_relays.first {
                             First::Yes => match listener.post().await {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    sync_state.synced();
+                                }
                                 Err(_) => std::process::exit(0),
                             },
                             First::No => {
