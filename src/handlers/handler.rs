@@ -108,14 +108,16 @@ impl State {
                         Ok(_) => {
                             write_log(&format!("connection closed and removed with: {}", peer_id));
                             //break to dialing if there is no any connections with relays
-                            if connections_handler
-                                .connections
-                                .iter()
-                                .filter(|c| *c.kind.as_ref().unwrap() == Kind::Relay)
-                                .count()
-                                == 0
-                            {
-                                break 'handle_loop;
+                            if connections_handler.connections.len() > 0 {
+                                if connections_handler
+                                    .connections
+                                    .iter()
+                                    .filter(|c| *c.kind.as_ref().unwrap() == Kind::Relay)
+                                    .count()
+                                    == 0
+                                {
+                                    break 'handle_loop;
+                                }
                             }
                         }
                         Err(e) => {
@@ -161,7 +163,10 @@ impl State {
                             message,
                             ..
                         } => {
-                            println!("this validator: {}\nsend this message: {:?}", propagation_source, message)
+                            println!(
+                                "this validator: {}\nsend this message: {:?}",
+                                propagation_source, message
+                            )
                         }
                         _ => {}
                     },
