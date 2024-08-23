@@ -9,7 +9,11 @@ use crate::handlers::tools::{
     syncer::{Sync, Syncer},
 };
 
-use super::{addresses::Listeners, block::block::Block, relay::DialedRelays};
+use super::{
+    addresses::Listeners,
+    block::block::Block,
+    relay::{DialedRelays, First},
+};
 
 pub struct ConnectionsHandler {
     pub connections: Vec<Connection>,
@@ -17,7 +21,7 @@ pub struct ConnectionsHandler {
 
 //change when relay gets subscribtion
 //if peerid was in connection change its kind based on subscribe topic
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum Kind {
     Relay,
     Validator,
@@ -157,6 +161,28 @@ impl ConnectionsHandler {
                 Ok(_) => Ok(()),
                 Err(_) => Err("Deleting validator problem-(handlers/practical/connections 183)"),
             }
+        }
+    }
+
+    //check relays' connection and if there is no any connections with any relays return true for breaks handle_loop
+    pub fn breaker(&self, dialed_relays: &mut DialedRelays) -> bool {
+        let mut relays_count = 0;
+        //break to dialing if there is no any connections with relays
+        if self.connections.len() > 0 {
+            for i in 0..self.connections.len() {
+                match &self.connections[i].kind {
+                    Some(kind) => match kind {
+                        Kind::Relay => relays_count += 1,
+                        Kind::Validator => {}
+                    },
+                    None => {}
+                }
+            }
+        }
+        if relays_count == 0 && dialed_relays.first == First::No {
+            true
+        } else {
+            false
         }
     }
 }

@@ -104,22 +104,12 @@ impl State {
 
                 //handle closed connection
                 //remove closed connection from database as relay or validator
-                //break to dialing(mod) if there is no any connection with atleast a relay
+                //break to dialing(mod) if there is no connection with atleast a relay
                 SwarmEvent::ConnectionClosed { peer_id, .. } => {
                     match connections_handler.remove(db, peer_id).await {
                         Ok(_) => {
                             write_log(&format!("connection closed and removed with: {}", peer_id));
-                            //break to dialing if there is no any connections with relays
-                            let mut connections_relay_count = 0;
-                            for node in &connections_handler.connections {
-                                if node.kind.clone().unwrap() == Kind::Relay {
-                                    connections_relay_count += 1;
-                                }
-                            }
-                            if (connections_handler.connections.len() < 1
-                                || connections_relay_count < 1)
-                                && dialed_relays.first == First::No
-                            {
+                            if connections_handler.breaker(dialed_relays) {
                                 break 'handle_loop;
                             }
                         }
