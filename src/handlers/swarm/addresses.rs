@@ -81,8 +81,8 @@ impl Addresses {
         write_log("Relays found, Start dialing...");
         //choos 6 relays as random for dialing
         let mut random_relays: Vec<Relay> = Vec::new();
-        if relays.len() > 6 {
-            while random_relays.len() <= 6 {
+        if relays.len() > 10 {
+            while random_relays.len() <= 10 {
                 let random_relay = relays.choose(&mut rand::thread_rng()).unwrap();
                 if !random_relays.contains(&random_relay) {
                     random_relays.push(random_relay.clone());

@@ -158,7 +158,7 @@ impl State {
                         } => {
                             println!(
                                 "this validator: {}\nsend this message: {:?}",
-                                propagation_source, message
+                                propagation_source, message.data
                             )
                         }
                         _ => {}
