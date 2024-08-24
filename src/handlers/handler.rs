@@ -158,7 +158,8 @@ impl State {
                         } => {
                             println!(
                                 "this validator: {}\nsend this message: {:?}",
-                                propagation_source, message.data
+                                propagation_source,
+                                String::from_utf8(message.data).unwrap()
                             )
                         }
                         _ => {}
