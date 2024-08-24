@@ -7,3 +7,4 @@ pub mod relay;
 pub mod transaction;
 pub mod validator;
 pub mod requests;
+pub mod gossipmessages;
