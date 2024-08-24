@@ -44,8 +44,14 @@ impl Listeners {
                     };
                     let collection: Collection<Document> = db.collection("raddress");
                     let listener_to_doc = to_document(&new_listener).unwrap();
-                    collection.delete_many(doc! {}).await.unwrap();
-                    collection.insert_one(listener_to_doc).await.unwrap();
+                    match collection.delete_many(doc! {}).await {
+                        Ok(_) => {}
+                        Err(_) => {}
+                    }
+                    match collection.insert_one(listener_to_doc).await {
+                        Ok(_) => {}
+                        Err(_) => {}
+                    }
                     Ok(new_listener)
                 } else {
                     Err("")
