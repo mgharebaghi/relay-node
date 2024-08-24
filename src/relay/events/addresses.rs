@@ -1,4 +1,4 @@
-use crate::handlers::tools::create_log::write_log;
+use crate::relay::tools::create_log::write_log;
 use libp2p::{Multiaddr, PeerId};
 use mongodb::{
     bson::{doc, to_document, Document},

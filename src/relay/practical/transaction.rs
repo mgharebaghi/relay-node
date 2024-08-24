@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use sp_core::{ed25519::Public, Pair};
 
-use crate::handlers::tools::{utxo::UTXO, HashMaker, MerkelRoot};
+use crate::relay::tools::{utxo::UTXO, HashMaker, MerkelRoot};
 
 use super::block::header::Sign;
 

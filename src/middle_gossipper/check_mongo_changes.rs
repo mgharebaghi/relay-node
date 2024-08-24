@@ -12,10 +12,8 @@ use mongodb::{
 };
 use tokio::time::sleep;
 
-use crate::handlers::{
-    practical::{addresses::Listeners, db::Mongodb, transaction::Transaction},
-    swarm::Req,
-    tools::create_log::write_log,
+use crate::relay::{
+    events::addresses::Listeners, practical::{db::Mongodb, swarm::Req, transaction::Transaction}, tools::create_log::write_log
 };
 
 use super::middlegossiper_swarm::{MiddleSwarmConf, MyBehaviour, MyBehaviourEvent};

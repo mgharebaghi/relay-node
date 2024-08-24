@@ -3,15 +3,14 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use handler::State;
+use events::handler::State;
 use mongodb::Database;
+use practical::swarm::CentichainBehaviour;
 use sp_core::ed25519::Public;
-use swarm::CentichainBehaviour;
 use tools::create_log::write_log;
 
-pub mod handler;
+pub mod events;
 pub mod practical;
-pub mod swarm;
 pub mod tools;
 
 pub struct Handler;

@@ -1,6 +1,6 @@
 use axum::{extract, Json};
 
-use crate::handlers::practical::{block::block::Block, db::Mongodb};
+use crate::relay::practical::{block::block::Block, db::Mongodb};
 use mongodb::{
     bson::{doc, from_document, Document},
     Collection,

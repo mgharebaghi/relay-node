@@ -6,16 +6,18 @@ use libp2p::{
 use mongodb::Database;
 use sp_core::ed25519::Public;
 
-use super::{
-    practical::{
+use crate::relay::{
+    events::{
         addresses::Listeners,
-        block::block::Block,
         connections::{ConnectionsHandler, Kind},
-        gossipmessages::GossipMessages,
-        relay::{DialedRelays, First},
+        gossip_messages::GossipMessages,
         requests::Requests,
     },
-    swarm::{CentichainBehaviour, CentichainBehaviourEvent},
+    practical::{
+        block::block::Block,
+        relay::{DialedRelays, First},
+        swarm::{CentichainBehaviour, CentichainBehaviourEvent},
+    },
     tools::{create_log::write_log, syncer::Sync},
 };
 

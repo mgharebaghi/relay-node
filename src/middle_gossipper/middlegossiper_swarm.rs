@@ -1,7 +1,4 @@
-use std::{
-    pin::Pin,
-    time::Duration,
-};
+use std::{pin::Pin, time::Duration};
 
 use libp2p::{
     identity::Keypair,
@@ -10,7 +7,7 @@ use libp2p::{
     Multiaddr, StreamProtocol, Swarm, SwarmBuilder,
 };
 
-use crate::handlers::swarm::{Req, Res};
+use crate::relay::practical::swarm::{Req, Res};
 
 pub trait MiddleSwarmConf {
     async fn new() -> Pin<Box<Swarm<MyBehaviour>>>;

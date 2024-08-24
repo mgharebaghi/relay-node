@@ -1,3 +1,4 @@
+mod addresses;
 use std::{pin::Pin, time::Duration};
 
 use addresses::Addresses;
@@ -10,8 +11,7 @@ use libp2p::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::practical::relay::DialedRelays;
-mod addresses;
+use super::relay::DialedRelays;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Req {

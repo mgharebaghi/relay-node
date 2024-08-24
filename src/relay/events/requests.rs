@@ -6,10 +6,7 @@ use mongodb::{
 use serde::Serialize;
 use sp_core::ed25519::Public;
 
-use crate::handlers::{
-    swarm::{CentichainBehaviour, Req, Res},
-    tools::create_log::write_log,
-};
+use crate::relay::{practical::swarm::{CentichainBehaviour, Req, Res}, tools::create_log::write_log};
 
 pub struct Requests;
 

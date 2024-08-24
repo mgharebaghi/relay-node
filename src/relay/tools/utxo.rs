@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use sp_core::ed25519::Public;
 
-use crate::handlers::practical::transaction::Unspent;
+use crate::relay::practical::transaction::Unspent;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Person {

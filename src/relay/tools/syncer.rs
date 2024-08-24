@@ -7,7 +7,7 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
 
-use crate::handlers::practical::{block::block::Block, relay::Relay};
+use crate::relay::practical::{block::block::Block, relay::Relay};
 
 use super::{bsons::Bson, create_log::write_log, downloader::Downloader, zipp::Zip};
 

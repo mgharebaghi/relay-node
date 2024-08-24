@@ -1,8 +1,8 @@
-mod handlers;
+mod relay;
 mod rpc;
-use handlers::practical::db::Mongodb;
-use handlers::tools::create_log::write_log;
-use handlers::Handler;
+use relay::practical::db::Mongodb;
+use relay::tools::create_log::write_log;
+use relay::Handler;
 use middle_gossipper::check_mongo_changes::MiddleGossipper;
 mod middle_gossipper;
 use rpc::Rpc;

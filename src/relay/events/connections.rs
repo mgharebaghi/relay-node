@@ -4,16 +4,12 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::handlers::tools::{
+use crate::relay::{practical::{block::block::Block, relay::{DialedRelays, First}}, tools::{
     create_log::write_log,
     syncer::{Sync, Syncer},
-};
+}};
 
-use super::{
-    addresses::Listeners,
-    block::block::Block,
-    relay::{DialedRelays, First},
-};
+use super::addresses::Listeners;
 
 pub struct ConnectionsHandler {
     pub connections: Vec<Connection>,

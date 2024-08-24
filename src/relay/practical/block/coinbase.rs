@@ -4,7 +4,7 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
-use crate::handlers::{practical::transaction::{Output, Transaction}, tools::MerkelRoot};
+use crate::relay::{practical::transaction::{Output, Transaction}, tools::MerkelRoot};
 
 use super::{block::Block, reward::Reward};
 

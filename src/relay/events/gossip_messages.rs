@@ -1,8 +1,6 @@
 use serde::Deserialize;
 
-use crate::handlers::tools::syncer::VSync;
-
-use super::{block::message::BlockMessage, transaction::Transaction};
+use crate::relay::{practical::{block::message::BlockMessage, transaction::Transaction}, tools::syncer::VSync};
 
 #[derive(Debug, Deserialize)]
 pub enum GossipMessages {
