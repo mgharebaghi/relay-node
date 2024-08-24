@@ -1,3 +1,4 @@
+use crate::handlers::tools::create_log::write_log;
 use libp2p::{Multiaddr, PeerId};
 use mongodb::{
     bson::{doc, to_document, Document},
@@ -5,8 +6,6 @@ use mongodb::{
 };
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-
-use crate::handlers::tools::create_log::write_log;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Listeners {
@@ -45,12 +44,17 @@ impl Listeners {
                     let collection: Collection<Document> = db.collection("raddress");
                     let listener_to_doc = to_document(&new_listener).unwrap();
                     match collection.delete_many(doc! {}).await {
-                        Ok(_) => {}
-                        Err(_) => {}
-                    }
-                    match collection.insert_one(listener_to_doc).await {
-                        Ok(_) => {}
-                        Err(_) => {}
+                        Ok(_) => match collection.insert_one(listener_to_doc).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                write_log(&format!("problem with mongodb: {}", e));
+                                std::process::exit(0);
+                            }
+                        },
+                        Err(e) => {
+                            write_log(&format!("problem with mongodb: {}", e));
+                            std::process::exit(0);
+                        }
                     }
                     Ok(new_listener)
                 } else {
