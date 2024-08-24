@@ -8,10 +8,15 @@ use sp_core::ed25519::Public;
 
 use super::{
     practical::{
-        addresses::Listeners, block::block::Block, connections::{ConnectionsHandler, Kind}, gossipmessages::GossipMessages, relay::{DialedRelays, First}, requests::Requests
+        addresses::Listeners,
+        block::block::Block,
+        connections::{ConnectionsHandler, Kind},
+        gossipmessages::GossipMessages,
+        relay::{DialedRelays, First},
+        requests::Requests,
     },
     swarm::{CentichainBehaviour, CentichainBehaviourEvent},
-    tools::{create_log::write_log, syncer::{Sync, VSync}},
+    tools::{create_log::write_log, syncer::Sync},
 };
 
 pub struct State;
@@ -147,14 +152,8 @@ impl State {
 
                         //handle messages and if it was new block message goes to handle it
                         //else if it was transaction goes to handle it
-                        GossipsubEvent::Message {
-                            propagation_source,
-                            message,
-                            ..
-                        } => {
-                            let str_message = String::from_utf8(message.data).unwrap();
-                            let deserialize: GossipMessages = serde_json::from_str(&str_message).unwrap();
-                            GossipMessages::check_message(deserialize);
+                        GossipsubEvent::Message { message, .. } => {
+                            GossipMessages::check_message(message.data);
                         }
                         _ => {}
                     },

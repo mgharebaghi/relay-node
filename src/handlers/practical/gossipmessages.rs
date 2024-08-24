@@ -12,16 +12,20 @@ pub enum GossipMessages {
 }
 
 impl GossipMessages {
-    pub fn check_message(message: GossipMessages) {
-        match message {
-            GossipMessages::BlockMessage(block) => {
-                println!("{:?}", block)
-            }
-            GossipMessages::Transaction(transaction) => {
-                println!("{:?}", transaction);
-            }
-            GossipMessages::SyncMessage(vsync) => {
-                println!("{:?}", vsync)
+    pub fn check_message(message: Vec<u8>) {
+        if let Ok(str_message) = String::from_utf8(message) {
+            if let Ok(gossip_message) = serde_json::from_str::<Self>(&str_message) {
+                match gossip_message {
+                    GossipMessages::BlockMessage(block) => {
+                        println!("{:?}", block)
+                    }
+                    GossipMessages::Transaction(transaction) => {
+                        println!("{:?}", transaction);
+                    }
+                    GossipMessages::SyncMessage(vsync) => {
+                        println!("{:?}", vsync)
+                    }
+                }
             }
         }
     }
