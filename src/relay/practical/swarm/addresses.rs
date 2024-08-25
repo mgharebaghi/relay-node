@@ -7,7 +7,7 @@ use rand::seq::SliceRandom;
 use serde::Deserialize;
 
 use crate::relay::{
-    practical::relay::{DialedRelays, First, Relay},
+    practical::relay::{DialedRelays, First, RelayStruct},
     tools::create_log::write_log,
 };
 
@@ -25,7 +25,7 @@ struct Address {
 }
 
 impl Addresses {
-    pub async fn get<'a>() -> Result<Vec<Relay>, &'a str> {
+    pub async fn get<'a>() -> Result<Vec<RelayStruct>, &'a str> {
         let response = reqwest::get("https://centichain.org/api/relays").await;
         match response {
             Ok(data) => match serde_json::from_str::<Addresses>(&data.text().await.unwrap()) {
@@ -33,7 +33,7 @@ impl Addresses {
                     let mut relays = Vec::new();
                     if res.status == "success" && res.data.len() > 0 {
                         for relay in res.data {
-                            relays.push(Relay::new(None, String::new(), relay.addr));
+                            relays.push(RelayStruct::new(None, String::new(), relay.addr));
                         }
                         Ok(relays)
                     } else {
@@ -75,12 +75,12 @@ impl Addresses {
     }
 
     async fn contacting<'a>(
-        relays: Vec<Relay>,
+        relays: Vec<RelayStruct>,
         swarm: &mut Swarm<CentichainBehaviour>,
     ) -> Result<DialedRelays, &'a str> {
         write_log("Relays found, Start dialing...");
         //choos 6 relays as random for dialing
-        let mut random_relays: Vec<Relay> = Vec::new();
+        let mut random_relays: Vec<RelayStruct> = Vec::new();
         if relays.len() > 10 {
             while random_relays.len() <= 10 {
                 let random_relay = relays.choose(&mut rand::thread_rng()).unwrap();

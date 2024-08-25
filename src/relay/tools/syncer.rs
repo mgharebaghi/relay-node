@@ -1,13 +1,17 @@
 use libp2p::PeerId;
 use mongodb::{
-    bson::{doc, from_document, Document},
+    bson::{doc, from_document, to_document, Document},
     options::FindOneOptions,
     Collection, Database,
 };
 use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
 
-use crate::relay::practical::{block::block::Block, relay::Relay};
+use crate::relay::practical::{
+    block::block::Block,
+    relay::{DialedRelays, RelayStruct},
+    validator::Validator,
+};
 
 use super::{bsons::Bson, create_log::write_log, downloader::Downloader, zipp::Zip};
 
@@ -19,13 +23,51 @@ pub struct VSync {
     wallet: Public,
 }
 
+impl VSync {
+    pub async fn handle<'a>(&self, db: &'a Database) -> Result<(), &'a str> {
+        match Validator::new(db, self.peerid, self.relay, self.wallet).await {
+            Ok(validator) => {
+                let o_colecction: Collection<Document> = db.collection("outnodes");
+                let v_collection: Collection<Document> = db.collection("validators");
+
+                //check outnodes and if it doesn't include new node peer id then insert new node as validator
+                match o_colecction
+                    .find_one(doc! {"peerid": self.peerid.to_string()})
+                    .await
+                {
+                    Ok(doc_option) => {
+                        if doc_option.is_none() {
+                            match v_collection
+                                .insert_one(to_document(&validator).unwrap())
+                                .await
+                            {
+                                Ok(_) => Ok(()),
+                                Err(_) => Err(
+                                    "Error while inserting new validator-(relay/tools/syncer 46)",
+                                ),
+                            }
+                        } else {
+                            write_log(
+                                "New Sync message is from a validator that is in the outnodes! so message rejected.",
+                            );
+                            Ok(())
+                        }
+                    }
+                    Err(_) => Err("Error while querying from outnodes-(relay/tools/syncer 56)"),
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
 pub struct Syncer;
 
 impl Syncer {
     //download and extract the blockchain and then insert it to database
-    async fn get_blockchain<'a>(db: &'a Database) -> Result<(), &'a str> {
+    async fn get_blockchain<'a>(dialed_relays: &mut DialedRelays) -> Result<(), &'a str> {
         //get connected relay ip and make blockchain download link from it
-        let relay_ip = Relay::ip_adress(db).await;
+        let relay_ip = RelayStruct::ip_adress(dialed_relays);
         match relay_ip {
             Ok(splited_addr) => {
                 //start downloading blockchain from connected relay
@@ -43,7 +85,10 @@ impl Syncer {
     }
 
     //after getting blockchain and unzip it to bson files syncing start inserting thos into database
-    async fn insert_bsons<'a>(db: &'a Database) -> Result<(), &'a str> {
+    async fn insert_bsons<'a>(
+        db: &'a Database,
+        dialed_relays: &mut DialedRelays,
+    ) -> Result<(), &'a str> {
         //define collection names for use in collection name parameter of bson::add
         //and us it for bson addreess in bson::add
         let collections = vec![
@@ -57,7 +102,7 @@ impl Syncer {
         let mut error = None; //for get error in loop of bson::add and return it at the end if it's some
 
         //get blockchain and unzip it at first and if there was problem return error of propblem
-        match Self::get_blockchain(db).await {
+        match Self::get_blockchain(dialed_relays).await {
             Ok(_) => {
                 //add bsons to database or mempool by a loop
                 for coll in collections {
@@ -88,8 +133,9 @@ impl Syncer {
         db: &'a Database,
         recieved_blocks: &mut Vec<Block>,
         last_block: &mut Vec<Block>,
+        dialed_relays: &mut DialedRelays,
     ) -> Result<(), &'a str> {
-        match Self::insert_bsons(db).await {
+        match Self::insert_bsons(db, dialed_relays).await {
             Ok(_) => {
                 let mut is_err = None;
                 //finding last block after inserted bsons

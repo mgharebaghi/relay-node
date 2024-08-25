@@ -13,9 +13,9 @@ pub mod events;
 pub mod practical;
 pub mod tools;
 
-pub struct Handler;
+pub struct Relay;
 
-impl Handler {
+impl Relay {
     pub async fn start(db: &Database) {
         //try to open wallet file to get wallet address of relay
         //it's important for handshaking requests from validators

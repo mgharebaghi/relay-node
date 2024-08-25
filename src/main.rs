@@ -2,9 +2,9 @@ mod relay;
 mod rpc;
 use relay::practical::db::Mongodb;
 use relay::tools::create_log::write_log;
-use relay::Handler;
 use middle_gossipper::check_mongo_changes::MiddleGossipper;
 mod middle_gossipper;
+use relay::Relay;
 use rpc::Rpc;
 
 #[tokio::main]
@@ -14,7 +14,7 @@ async fn main() {
             let (_, _, _) = tokio::join!(
                 Rpc::handle_requests(),
                 MiddleGossipper::checker(&db),
-                Handler::start(&db)
+                Relay::start(&db)
             );
         }
         Err(e) => {

@@ -154,8 +154,19 @@ impl State {
 
                         //handle messages and if it was new block message goes to handle it
                         //else if it was transaction goes to handle it
-                        GossipsubEvent::Message { message, .. } => {
-                            GossipMessages::check_message(message.data);
+                        GossipsubEvent::Message {
+                            message,
+                            propagation_source,
+                            ..
+                        } => {
+                            GossipMessages::handle(
+                                message.data,
+                                propagation_source,
+                                db,
+                                swarm,
+                                &mut connections_handler,
+                            )
+                            .await;
                         }
                         _ => {}
                     },

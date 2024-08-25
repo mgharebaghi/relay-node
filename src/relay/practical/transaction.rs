@@ -1,4 +1,7 @@
-use mongodb::Database;
+use mongodb::{
+    bson::{to_document, Document},
+    Collection, Database,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -118,6 +121,15 @@ impl Transaction {
             }
         } else {
             Err("Transaction is incorrect.(input/output hash problem!)")
+        }
+    }
+
+    pub async fn insertion<'a>(&self, db: &Database) -> Result<(), &'a str> {
+        let collection: Collection<Document> = db.collection("transactions");
+        let trx_to_doc = to_document(self).unwrap();
+        match collection.insert_one(trx_to_doc).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err("Transaction insertion problem-(relay/practical/transaction 129)"),
         }
     }
 }

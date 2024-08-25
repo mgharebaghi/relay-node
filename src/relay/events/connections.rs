@@ -100,7 +100,7 @@ impl ConnectionsHandler {
                 Sync::Synced => Ok(()),
                 Sync::NotSynced => {
                     write_log("start syncing...");
-                    if let Err(e) = Syncer::syncing(db, recieved_blocks, last_block).await {
+                    if let Err(e) = Syncer::syncing(db, recieved_blocks, last_block, dialed_relays).await {
                         write_log(e);
                         Err(e)
                     } else {
@@ -146,7 +146,7 @@ impl ConnectionsHandler {
                 .await
             {
                 Ok(_) => Ok(()),
-                Err(_) => Err("Deleting validator problem-(handlers/practical/connections 170)"),
+                Err(_) => Err("Deleting validator problem-(handlers/practical/connections 149)"),
             }
         } else {
             self.connections.remove(index);
@@ -155,7 +155,7 @@ impl ConnectionsHandler {
                 .await
             {
                 Ok(_) => Ok(()),
-                Err(_) => Err("Deleting validator problem-(handlers/practical/connections 183)"),
+                Err(_) => Err("Deleting validator problem-(handlers/practical/connections 158)"),
             }
         }
     }

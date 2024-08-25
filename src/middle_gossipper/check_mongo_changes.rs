@@ -39,7 +39,7 @@ impl MiddleGossipper {
 
                     connected_id.push_str(&peer_id.to_string());
 
-                    let transactions_coll: Collection<Document> = db.collection("Transactions");
+                    let transactions_coll: Collection<Document> = db.collection("transactions");
                     let pipeline = vec![doc! { "$match": {
                         "operationType": "insert"
                     }}];
@@ -87,7 +87,7 @@ impl MiddleGossipper {
                                 match Mongodb::connect().await {
                                     Ok(db) => {
                                         let transactions_coll: Collection<Document> =
-                                            db.collection("Transactions");
+                                            db.collection("transactions");
                                         let pipeline = vec![doc! { "$match": {
                                             "operationType": "insert"
                                         }}];
