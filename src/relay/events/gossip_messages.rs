@@ -61,13 +61,14 @@ impl GossipMessages {
                     GossipMessages::SyncMessage(vsync) => {
                         //add sync messages user to validators
                         match vsync.handle(db).await {
-                            Ok(_) => {}
+                            Ok(_) => {
+                                println!("{:?}", vsync)
+                            }
                             Err(e) => {
                                 write_log(e);
                                 std::process::exit(0);
                             }
                         }
-                        println!("{:?}", vsync)
                     }
                 }
             }
