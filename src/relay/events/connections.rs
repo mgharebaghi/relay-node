@@ -128,7 +128,7 @@ impl ConnectionsHandler {
     //remove connection from connections ad db if it closed
     pub async fn remove<'a>(&mut self, db: &'a Database, peerid: PeerId) -> Result<(), &'a str> {
         //define validator collection for deleting nodes from their
-        let v_collection: Collection<Document> = db.collection("validator");
+        let v_collection: Collection<Document> = db.collection("validators");
 
         //find index of connection in connections for removing from connections
         let index = self
