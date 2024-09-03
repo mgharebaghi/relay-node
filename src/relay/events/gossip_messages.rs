@@ -4,9 +4,12 @@ use serde::Deserialize;
 
 use crate::relay::{
     practical::{
-        block::message::BlockMessage, swarm::CentichainBehaviour, transaction::Transaction,
+        block::{block::Block, message::BlockMessage},
+        leader::Leader,
+        swarm::CentichainBehaviour,
+        transaction::Transaction,
     },
-    tools::{create_log::write_log, syncer::VSync},
+    tools::syncer::{Sync, VSync},
 };
 
 use super::connections::ConnectionsHandler;
@@ -16,23 +19,37 @@ pub enum GossipMessages {
     BlockMessage(BlockMessage),
     Transaction(Transaction),
     SyncMessage(VSync),
+    LeaderVote(PeerId),
 }
 
 impl GossipMessages {
-    pub async fn handle(
+    pub async fn handle<'a>(
         message: Vec<u8>,
         propagation_source: PeerId,
-        db: &Database,
+        db: &'a Database,
         swarm: &mut Swarm<CentichainBehaviour>,
         connections_handler: &mut ConnectionsHandler,
-    ) {
+        leader: &mut Leader,
+        sync_state: &Sync,
+        recvied_blocks: &mut Vec<BlockMessage>,
+        last_block: &mut Vec<Block>,
+    ) -> Result<(), &'a str> {
         if let Ok(str_message) = String::from_utf8(message) {
             if let Ok(gossip_message) = serde_json::from_str::<Self>(&str_message) {
                 match gossip_message {
                     //check block messages
                     GossipMessages::BlockMessage(block_message) => {
-                        //at first checks next leader and if that was true then checks block
-                        println!("{:?}", block_message)
+                        block_message
+                            .handle(
+                                swarm,
+                                db,
+                                recvied_blocks,
+                                sync_state,
+                                last_block,
+                                leader,
+                                connections_handler,
+                            )
+                            .await
                     }
 
                     //check transactions
@@ -41,37 +58,41 @@ impl GossipMessages {
                         match transaction.validate(db).await {
                             Ok(trx) => {
                                 //insert transaction to transactions collection
-                                match trx.insertion(db).await {
-                                    Ok(_) => {}
-                                    Err(e) => write_log(e),
-                                }
+                                trx.insertion(db, leader, connections_handler, swarm).await
                             }
                             Err(_) => {
-                                match connections_handler.remove(db, propagation_source).await {
-                                    Ok(_) => {
-                                        swarm.disconnect_peer_id(propagation_source).unwrap();
-                                    }
-                                    Err(e) => write_log(e),
-                                }
+                                connections_handler
+                                    .remove(db, propagation_source, swarm)
+                                    .await
                             }
                         }
                     }
 
                     //handle sync messages
                     GossipMessages::SyncMessage(vsync) => {
-                        //add sync messages user to validators
-                        match vsync.handle(db).await {
-                            Ok(_) => {
-                                println!("{:?}", vsync)
-                            }
-                            Err(e) => {
-                                write_log(e);
-                                std::process::exit(0);
-                            }
+                        match sync_state {
+                            Sync::Synced => vsync.handle(db).await, //add new validator to validators document if it was correct message}
+                            _ => Ok(()),
                         }
                     }
+
+                    //handle votes
+                    GossipMessages::LeaderVote(vote) => match sync_state {
+                        Sync::Synced => {
+                            if leader.in_check {
+                                leader.check_votes(db, vote).await
+                            } else {
+                                Ok(())
+                            }
+                        }
+                        Sync::NotSynced => Ok(()),
+                    },
                 }
+            } else {
+                Ok(())
             }
+        } else {
+            Ok(())
         }
     }
 }

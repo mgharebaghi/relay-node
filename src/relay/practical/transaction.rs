@@ -1,5 +1,7 @@
+use chrono::Utc;
+use libp2p::Swarm;
 use mongodb::{
-    bson::{to_document, Document},
+    bson::{doc, to_document, Document},
     Collection, Database,
 };
 use rust_decimal::Decimal;
@@ -7,9 +9,16 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use sp_core::{ed25519::Public, Pair};
 
-use crate::relay::tools::{utxo::UTXO, HashMaker, MerkelRoot};
+use crate::relay::{
+    events::connections::ConnectionsHandler,
+    tools::{utxo::UTXO, HashMaker, MerkelRoot},
+};
 
-use super::block::header::Sign;
+use super::{
+    block::header::Sign,
+    leader::{Leader, LeaderTime},
+    swarm::CentichainBehaviour,
+};
 
 // Define a transaction in the Centichain network
 // The hash of the transaction is derived from the hashes of its inputs and outputs
@@ -124,12 +133,44 @@ impl Transaction {
         }
     }
 
-    pub async fn insertion<'a>(&self, db: &Database) -> Result<(), &'a str> {
+    pub async fn insertion<'a>(
+        &self,
+        db: &'a Database,
+        leader: &mut Leader,
+        connection_handler: &mut ConnectionsHandler,
+        swarm: &mut Swarm<CentichainBehaviour>,
+    ) -> Result<(), &'a str> {
         let collection: Collection<Document> = db.collection("transactions");
         let trx_to_doc = to_document(self).unwrap();
         match collection.insert_one(trx_to_doc).await {
-            Ok(_) => Ok(()),
-            Err(_) => Err("Transaction insertion problem-(relay/practical/transaction 129)"),
+            Ok(_) => match collection.count_documents(doc! {}).await {
+                Ok(count) => {
+                    if count > 1 && !leader.in_check {
+                        match leader.timer {
+                            LeaderTime::On => {
+                                let now = Utc::now();
+
+                                if now > leader.time.unwrap() {
+                                    Leader::start_voting(leader, db, connection_handler, swarm)
+                                        .await
+                                } else {
+                                    Ok(())
+                                }
+                            }
+                            LeaderTime::Off => {
+                                leader.timer_start();
+                                Ok(())
+                            }
+                        }
+                    } else {
+                        Ok(())
+                    }
+                }
+                Err(_) => {
+                    Err("Get count of transactions problem-(relay/practical/transaction 170)")
+                }
+            },
+            Err(_) => Err("Transaction insertion problem-(relay/practical/transaction 173)"),
         }
     }
 }

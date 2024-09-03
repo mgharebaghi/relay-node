@@ -14,7 +14,8 @@ use crate::relay::{
         requests::Requests,
     },
     practical::{
-        block::block::Block,
+        block::{block::Block, message::BlockMessage},
+        leader::Leader,
         relay::{DialedRelays, First},
         swarm::{CentichainBehaviour, CentichainBehaviourEvent},
     },
@@ -32,11 +33,12 @@ impl State {
         wallet: &Public,
     ) {
         //Prerequisites
-        let mut recieved_blocks: Vec<Block> = Vec::new();
+        let mut recieved_blocks: Vec<BlockMessage> = Vec::new();
         let mut multiaddress = String::new();
         let mut sync_state = Sync::new();
         let mut last_block: Vec<Block> = Vec::new();
         let mut connections_handler = ConnectionsHandler::new();
+        let mut leader = Leader::new(None);
 
         //start handeling of events that recieve in p2p network with relays and validators
         'handle_loop: loop {
@@ -73,6 +75,7 @@ impl State {
                         &multiaddress,
                         peerid,
                         &mut last_block,
+                        &mut leader,
                     )
                     .await
                     {
@@ -109,7 +112,7 @@ impl State {
                 //remove closed connection from database as relay or validator
                 //break to dialing(mod) if there is no connection with atleast a relay
                 SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                    match connections_handler.remove(db, peer_id).await {
+                    match connections_handler.remove(db, peer_id, swarm).await {
                         Ok(_) => {
                             write_log(&format!("connection closed and removed with: {}", peer_id));
                             if connections_handler.breaker(dialed_relays) {
@@ -159,14 +162,25 @@ impl State {
                             propagation_source,
                             ..
                         } => {
-                            GossipMessages::handle(
+                            match GossipMessages::handle(
                                 message.data,
                                 propagation_source,
                                 db,
                                 swarm,
                                 &mut connections_handler,
+                                &mut leader,
+                                &sync_state,
+                                &mut recieved_blocks,
+                                &mut last_block
                             )
-                            .await;
+                            .await
+                            {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    write_log(e);
+                                    std::process::exit(0)
+                                }
+                            }
                         }
                         _ => {}
                     },

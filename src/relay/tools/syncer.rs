@@ -8,9 +8,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
 
 use crate::relay::practical::{
-    block::block::Block,
-    relay::{DialedRelays, RelayStruct},
-    validator::Validator,
+    block::{block::Block, message::BlockMessage}, leader::Leader, relay::{DialedRelays, RelayStruct}, validator::Validator
 };
 
 use super::{bsons::Bson, create_log::write_log, downloader::Downloader, zipp::Zip};
@@ -131,9 +129,10 @@ impl Syncer {
     //after insert bsons add recieved blocks to syncing complete
     pub async fn syncing<'a>(
         db: &'a Database,
-        recieved_blocks: &mut Vec<Block>,
+        recieved_blocks: &mut Vec<BlockMessage>,
         last_block: &mut Vec<Block>,
         dialed_relays: &mut DialedRelays,
+        leader: &mut Leader
     ) -> Result<(), &'a str> {
         match Self::insert_bsons(db, dialed_relays).await {
             Ok(_) => {
@@ -153,9 +152,11 @@ impl Syncer {
                 let deserialized_block_doc: Block = from_document(last_block_doc).unwrap();
                 last_block.clear();
                 last_block.push(deserialized_block_doc);
-                for block in recieved_blocks {
-                    match block.validation(last_block, db).await {
-                        Ok(_) => {}
+                for msg in recieved_blocks {
+                    match msg.block.validation(last_block, db).await {
+                        Ok(_block) => {
+                            leader.update(Some(msg.next_leader));
+                        }
                         Err(e) => {
                             is_err.get_or_insert(e);
                         }

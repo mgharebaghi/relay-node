@@ -7,6 +7,7 @@ pub mod syncer;
 pub mod downloader;
 pub mod zipp;
 pub mod bsons;
+pub mod wrongdoer;
 
 pub struct MerkelRoot;
 

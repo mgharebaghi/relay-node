@@ -33,7 +33,7 @@ impl Waiting {
                                 match collection.replace_one(doc, replacement).await {
                                     Ok(_) => {}
                                     Err(_) => {
-                                        is_err.get_or_insert("Error during the replacing of document-(tools/waiting 31)");
+                                        is_err.get_or_insert("Error during the replacing of document-(tools/waiting 36)");
                                         break;
                                     }
                                 }
@@ -45,7 +45,7 @@ impl Waiting {
                                     match collection.replace_one(doc, replacement).await {
                                         Ok(_) => {}
                                         Err(_) => {
-                                            is_err.get_or_insert("Error during the replacing of document-(tools/waiting 41)");
+                                            is_err.get_or_insert("Error during the replacing of document-(tools/waiting 48)");
                                             break;
                                         }
                                     }
@@ -54,7 +54,7 @@ impl Waiting {
                         }
                         Err(_) => {
                             is_err.get_or_insert(
-                                "Error in err arm of check result of cursor-(tools/waiting 49)",
+                                "Error in err arm of check result of cursor-(tools/waiting 57)",
                             );
                             break;
                         }
@@ -66,7 +66,7 @@ impl Waiting {
                     Err(is_err.unwrap())
                 }
             }
-            Err(_) => Err("Error during quering in-(tools/waiting 61)"),
+            Err(_) => Err("Error during quering in-(tools/waiting 69)"),
         }
     }
 

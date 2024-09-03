@@ -8,7 +8,7 @@ pub struct Header {
     pub number: u64,
     pub hash: String,
     pub previous: String,
-    pub peerid: PeerId,
+    pub validator: PeerId,
     pub relay_id: PeerId,
     merkel: String,
     pub signature: Sign,
