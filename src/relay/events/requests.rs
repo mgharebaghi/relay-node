@@ -73,7 +73,6 @@ impl Requests {
                 //if request was handhsake model then goes to handshaker for make the client response
                 Requests::Handshake(msg) => {
                     if msg == "handshake".to_string() {
-                        println!("handshake request get");
                         match Self::handshaker(swarm, db, wallet.to_string(), channel).await {
                             Ok(_) => {}
                             Err(e) => write_log(e),
@@ -186,7 +185,7 @@ impl Requests {
             .send_response(channel, response)
         {
             Ok(_) => Ok(()),
-            Err(_) => Err("Sending handshake response error-(handlers/practical/requests 76)"),
+            Err(_) => Err("Sending handshake response error-(handlers/practical/requests 188)"),
         }
     }
 }
