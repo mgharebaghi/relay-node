@@ -1,14 +1,29 @@
-use libp2p::{request_response::ResponseChannel, Swarm};
+use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, Swarm};
 use mongodb::{
     bson::{doc, Document},
     Collection, Database,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sp_core::ed25519::Public;
 
-use crate::relay::{practical::swarm::{CentichainBehaviour, Req, Res}, tools::create_log::write_log};
+use crate::relay::{
+    practical::{
+        block::{block::Block, message::BlockMessage},
+        leader::Leader,
+        swarm::{CentichainBehaviour, Req, Res},
+        transaction::Transaction,
+    },
+    tools::{create_log::write_log, syncer::Sync},
+};
 
-pub struct Requests;
+use super::{connections::ConnectionsHandler, gossip_messages::GossipMessages};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Requests {
+    Handshake(String),
+    BlockMessage(BlockMessage),
+    Transaction(Transaction),
+}
 
 //handshake response structure
 #[derive(Debug, Serialize)]
@@ -46,13 +61,97 @@ impl Requests {
         channel: ResponseChannel<Res>,
         swarm: &mut Swarm<CentichainBehaviour>,
         wallet: &Public,
+        leader: &mut Leader,
+        connections_handler: &mut ConnectionsHandler,
+        recieved_blocks: &mut Vec<BlockMessage>,
+        sync_state: &Sync,
+        last_block: &mut Vec<Block>,
     ) {
         //if request was handhsake then goes to handshaker
-        if request.req == "handshake".to_string() {
-            println!("handshake request get");
-            match Self::handshaker(swarm, db, wallet.to_string(), channel).await {
-                Ok(_) => {}
-                Err(e) => write_log(e),
+        if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
+            match request_model {
+                //if request was handhsake model then goes to handshaker for make the client response
+                Requests::Handshake(msg) => {
+                    if msg == "handshake".to_string() {
+                        println!("handshake request get");
+                        match Self::handshaker(swarm, db, wallet.to_string(), channel).await {
+                            Ok(_) => {}
+                            Err(e) => write_log(e),
+                        }
+                    }
+                }
+
+                //if request was transaction then validating it then propagate to the network
+                //if propagating has problem process, will be exited
+                //if insertion to database has problem, process will be exited
+                Requests::Transaction(transaction) => match transaction.validate(db).await {
+                    Ok(trx) => match trx.insertion(db, leader, connections_handler, swarm).await {
+                        Ok(_) => {
+                            let gossip_message = GossipMessages::Transaction(transaction);
+                            let str_gossip_message =
+                                serde_json::to_string(&gossip_message).unwrap();
+                            match swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(IdentTopic::new("validator"), str_gossip_message)
+                            {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    write_log(&format!(
+                                        "Gossiping transaction problem: {}",
+                                        e.to_string()
+                                    ));
+                                    std::process::exit(0);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            write_log(e);
+                            std::process::exit(0);
+                        }
+                    },
+                    Err(e) => write_log(e),
+                },
+
+                //if request was block message then goes to validating it
+                //if propagating has problem, process will be exited
+                //if block message handeling has problem, process will be exited
+                Requests::BlockMessage(block_message) => {
+                    match block_message
+                        .handle(
+                            swarm,
+                            db,
+                            recieved_blocks,
+                            sync_state,
+                            last_block,
+                            leader,
+                            connections_handler,
+                        )
+                        .await
+                    {
+                        Ok(_) => {
+                            let str_block_message = serde_json::to_string(&block_message).unwrap();
+                            match swarm
+                                .behaviour_mut()
+                                .gossipsub
+                                .publish(IdentTopic::new("validator"), str_block_message)
+                            {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    write_log(&format!(
+                                        "Gossiping block message problem: {}",
+                                        e.to_string()
+                                    ));
+                                    std::process::exit(0);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            write_log(e);
+                            std::process::exit(0);
+                        }
+                    }
+                }
             }
         }
     }

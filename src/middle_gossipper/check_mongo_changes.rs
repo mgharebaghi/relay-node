@@ -13,7 +13,9 @@ use mongodb::{
 use tokio::time::sleep;
 
 use crate::relay::{
-    events::addresses::Listeners, practical::{db::Mongodb, swarm::Req, transaction::Transaction}, tools::create_log::write_log
+    events::{addresses::Listeners, requests::Requests},
+    practical::{db::Mongodb, swarm::Req, transaction::Transaction},
+    tools::create_log::write_log,
 };
 
 use super::middlegossiper_swarm::{MiddleSwarmConf, MyBehaviour, MyBehaviourEvent};
@@ -54,7 +56,9 @@ impl MiddleGossipper {
                             Ok(data) => {
                                 if let Some(doc) = data.full_document {
                                     let transaction: Transaction = from_document(doc).unwrap();
-                                    let str_trx = serde_json::to_string(&transaction).unwrap();
+                                    let str_trx =
+                                        serde_json::to_string(&Requests::Transaction(transaction))
+                                            .unwrap();
                                     let request = Req { req: str_trx };
                                     swarm
                                         .behaviour_mut()
@@ -63,7 +67,7 @@ impl MiddleGossipper {
                                 }
                             }
                             Err(e) => {
-                                write_log(&format!("Error in watching of mongodb {e}-line(65)"));
+                                write_log(&format!("Error in watching of mongodb {e}-line(70)"));
                             }
                         }
                     }
@@ -103,9 +107,10 @@ impl MiddleGossipper {
                                                     if let Some(doc) = data.full_document {
                                                         let transaction: Transaction =
                                                             from_document(doc).unwrap();
-                                                        let str_trx =
-                                                            serde_json::to_string(&transaction)
-                                                                .unwrap();
+                                                        let str_trx = serde_json::to_string(
+                                                            &Requests::Transaction(transaction),
+                                                        )
+                                                        .unwrap();
                                                         let request = Req { req: str_trx };
                                                         swarm
                                                             .behaviour_mut()
@@ -114,14 +119,14 @@ impl MiddleGossipper {
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    write_log(&format!("Error in watching of mongodb {e}-line(120)"));
+                                                    write_log(&format!("Error in watching of mongodb {e}-line(122)"));
                                                     std::process::exit(0)
                                                 }
                                             }
                                         }
                                     }
                                     Err(_) => {
-                                        write_log("database connection error in check mongo changes-line(126)");
+                                        write_log("database connection error in check mongo changes-line(129)");
                                         std::process::exit(0)
                                     }
                                 }

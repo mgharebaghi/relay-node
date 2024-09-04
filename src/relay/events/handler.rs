@@ -135,7 +135,19 @@ impl State {
                             } => {
                                 //if relay synced then handle requests
                                 if sync_state == Sync::Synced {
-                                    Requests::handler(db, request, channel, swarm, wallet).await;
+                                    Requests::handler(
+                                        db,
+                                        request,
+                                        channel,
+                                        swarm,
+                                        wallet,
+                                        &mut leader,
+                                        &mut connections_handler,
+                                        &mut recieved_blocks,
+                                        &sync_state,
+                                        &mut last_block
+                                    )
+                                    .await;
                                 }
                             }
                             _ => {}
@@ -171,7 +183,7 @@ impl State {
                                 &mut leader,
                                 &sync_state,
                                 &mut recieved_blocks,
-                                &mut last_block
+                                &mut last_block,
                             )
                             .await
                             {

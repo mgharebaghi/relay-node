@@ -187,7 +187,7 @@ impl ConnectionsHandler {
                                 }
                             }
                             Err(_) => Err(
-                                "Deleting validator problem-(handlers/practical/connections 191)",
+                                "Deleting validator problem-(handlers/practical/connections 190)",
                             ),
                         },
                         Err(_) => Err(""),
@@ -200,7 +200,7 @@ impl ConnectionsHandler {
                     {
                         Ok(_) => Waiting::update(db, None).await,
                         Err(_) => {
-                            Err("Deleting validator problem-(handlers/practical/connections 205)")
+                            Err("Deleting validator problem-(handlers/practical/connections 203)")
                         }
                     }
                 }

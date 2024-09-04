@@ -1,6 +1,6 @@
 use libp2p::{PeerId, Swarm};
 use mongodb::Database;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::relay::{
     practical::{
@@ -14,7 +14,7 @@ use crate::relay::{
 
 use super::connections::ConnectionsHandler;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum GossipMessages {
     BlockMessage(BlockMessage),
     Transaction(Transaction),

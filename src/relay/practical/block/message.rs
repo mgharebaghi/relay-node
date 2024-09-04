@@ -13,7 +13,7 @@ use crate::relay::{
 
 use super::block::Block;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BlockMessage {
     pub block: Block,
     pub next_leader: PeerId,
@@ -22,14 +22,14 @@ pub struct BlockMessage {
 impl BlockMessage {
     //handle recieved block messages
     pub async fn handle<'a>(
-        self,
+        &self,
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &'a Database,
         recvied_blocks: &mut Vec<Self>,
         sync_state: &Sync,
         last_block: &mut Vec<Block>,
         leader: &mut Leader,
-        connection_handler: &mut ConnectionsHandler,
+        connections_handler: &mut ConnectionsHandler,
     ) -> Result<(), &'a str> {
         //if leader is true then validatig block
         if self.block.header.validator == leader.peerid.unwrap() {
@@ -43,19 +43,19 @@ impl BlockMessage {
                             Ok(_) => {
                                 Ok(leader.update(Some(self.next_leader))) //if block was valid and inserted to DB then changes leader 
                             }
-                            Err(_) => Err("Error while inserting new block to database-(generator/block/message 81)")
+                            Err(_) => Err("Error while inserting new block to database-(generator/block/message 46)")
                         }
                     }
                     Err(e) => {
                         write_log(e);
-                        leader.start_voting(db, connection_handler, swarm).await
+                        leader.start_voting(db, connections_handler, swarm).await
                     }
                 },
                 //if validator is not synced recieved message pushs to recieved block for syncing
-                Sync::NotSynced => Ok(recvied_blocks.push(self)),
+                Sync::NotSynced => Ok(recvied_blocks.push(self.clone())),
             }
         } else {
-            Ok(())
+            connections_handler.remove(db, self.block.header.validator, swarm).await
         }
     }
 }
