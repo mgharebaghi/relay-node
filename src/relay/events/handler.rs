@@ -129,7 +129,7 @@ impl State {
                 SwarmEvent::Behaviour(behaviuor) => match behaviuor {
                     //handle requests that are handshaking, transactions and blocks
                     CentichainBehaviourEvent::Reqres(event) => match event {
-                        ReqResEvent::Message { message, .. } => match message {
+                        ReqResEvent::Message { message, peer } => match message {
                             libp2p::request_response::Message::Request {
                                 request, channel, ..
                             } => {
@@ -145,7 +145,8 @@ impl State {
                                         &mut connections_handler,
                                         &mut recieved_blocks,
                                         &sync_state,
-                                        &mut last_block
+                                        &mut last_block,
+                                        peer
                                     )
                                     .await;
                                 }

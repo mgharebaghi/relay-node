@@ -1,4 +1,4 @@
-use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, Swarm};
+use libp2p::{gossipsub::IdentTopic, request_response::ResponseChannel, PeerId, Swarm};
 use mongodb::{
     bson::{doc, Document},
     Collection, Database,
@@ -66,6 +66,7 @@ impl Requests {
         recieved_blocks: &mut Vec<BlockMessage>,
         sync_state: &Sync,
         last_block: &mut Vec<Block>,
+        sender: PeerId
     ) {
         //if request was handhsake then goes to handshaker
         if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
@@ -73,7 +74,7 @@ impl Requests {
                 //if request was handhsake model then goes to handshaker for make the client response
                 Requests::Handshake(msg) => {
                     if msg == "handshake".to_string() {
-                        match Self::handshaker(swarm, db, wallet.to_string(), channel).await {
+                        match Self::handshaker(swarm, db, wallet.to_string(), channel, sender, leader).await {
                             Ok(_) => {}
                             Err(e) => write_log(e),
                         }
@@ -161,6 +162,8 @@ impl Requests {
         db: &'a Database,
         wallet: String,
         channel: ResponseChannel<Res>,
+        sender: PeerId,
+        leader: &mut Leader
     ) -> Result<(), &'a str> {
         let mut handshake_reponse = HandshakeResponse::new(wallet);
         //check blocks count and validators count from DB
@@ -171,7 +174,8 @@ impl Requests {
 
         //if there is no any blocks and validators in the network then send response as first node for validator
         if blocks_count == 0 && validators_count == 0 {
-            handshake_reponse.set_is_first()
+            handshake_reponse.set_is_first();
+            leader.update(Some(sender));
         }
 
         //serialize response to string and generate new response
