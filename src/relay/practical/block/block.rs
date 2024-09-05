@@ -33,7 +33,7 @@ impl Block {
         last_block: &mut Vec<Self>,
         db: &'a Database,
     ) -> Result<&Self, &'a str> {
-        if last_block[0].header.hash == self.header.previous
+        if (last_block.len() > 0 && last_block[0].header.hash == self.header.previous)
             || self.header.previous == "This Is The Genesis Block".to_string()
         {
             //check block signature that its signature data is block hash(block hash is hash of body)
