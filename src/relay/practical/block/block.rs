@@ -7,7 +7,7 @@ use sp_core::Pair;
 
 use crate::relay::{
     practical::transaction::Transaction,
-    tools::{utxo::UTXO, waiting::Waiting},
+    tools::{utxo::UTXO, waiting::Waiting, HashMaker},
 };
 
 use super::{coinbase::Coinbase, header::Header};
@@ -37,10 +37,11 @@ impl Block {
             || self.header.previous == "This Is The Genesis Block".to_string()
         {
             //check block signature that its signature data is block hash(block hash is hash of body)
-            let hash_of_body = serde_json::to_string(&self.body).unwrap();
+            let hash_data = serde_json::to_string(&self.body).unwrap();
+            let hash = HashMaker::generate(&hash_data);
             let sign_check = sp_core::ed25519::Pair::verify(
                 &self.header.signature.signatgure,
-                hash_of_body,
+                hash,
                 &self.header.signature.key,
             );
 
