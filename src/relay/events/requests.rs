@@ -66,7 +66,7 @@ impl Requests {
         recieved_blocks: &mut Vec<BlockMessage>,
         sync_state: &Sync,
         last_block: &mut Vec<Block>,
-        sender: PeerId
+        sender: PeerId,
     ) {
         //if request was handhsake then goes to handshaker
         if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
@@ -74,7 +74,16 @@ impl Requests {
                 //if request was handhsake model then goes to handshaker for make the client response
                 Requests::Handshake(msg) => {
                     if msg == "handshake".to_string() {
-                        match Self::handshaker(swarm, db, wallet.to_string(), channel, sender, leader).await {
+                        match Self::handshaker(
+                            swarm,
+                            db,
+                            wallet.to_string(),
+                            channel,
+                            sender,
+                            leader,
+                        )
+                        .await
+                        {
                             Ok(_) => {}
                             Err(e) => write_log(e),
                         }
@@ -117,6 +126,7 @@ impl Requests {
                 //if propagating has problem, process will be exited
                 //if block message handeling has problem, process will be exited
                 Requests::BlockMessage(block_message) => {
+                    println!("block message got");
                     match block_message
                         .handle(
                             swarm,
@@ -163,7 +173,7 @@ impl Requests {
         wallet: String,
         channel: ResponseChannel<Res>,
         sender: PeerId,
-        leader: &mut Leader
+        leader: &mut Leader,
     ) -> Result<(), &'a str> {
         let mut handshake_reponse = HandshakeResponse::new(wallet);
         //check blocks count and validators count from DB
