@@ -6,7 +6,10 @@ use mongodb::{
 
 use crate::relay::{
     practical::{
-        block::{block::Block, message::BlockMessage}, leader::Leader, relay::{DialedRelays, First}, swarm::CentichainBehaviour
+        block::{block::Block, message::BlockMessage},
+        leader::Leader,
+        relay::{DialedRelays, First},
+        swarm::CentichainBehaviour,
     },
     tools::{
         create_log::write_log,
@@ -89,7 +92,7 @@ impl ConnectionsHandler {
         multiaddress: &String,
         peerid: &PeerId,
         last_block: &mut Vec<Block>,
-        leader: &mut Leader
+        leader: &mut Leader,
     ) -> Result<(), &'a str> {
         //if connections stablished was in dialed relays then goes to syncing
         //else push to connections vector to check wrongdoers and remove thats' connections
@@ -109,7 +112,8 @@ impl ConnectionsHandler {
                 Sync::NotSynced => {
                     write_log("start syncing...");
                     if let Err(e) =
-                        Syncer::syncing(db, recieved_blocks, last_block, dialed_relays, leader).await
+                        Syncer::syncing(db, recieved_blocks, last_block, dialed_relays, leader)
+                            .await
                     {
                         write_log(e);
                         Err(e)
@@ -187,10 +191,12 @@ impl ConnectionsHandler {
                                 }
                             }
                             Err(_) => Err(
-                                "Deleting validator problem-(handlers/practical/connections 190)",
+                                "Deleting validator problem-(handlers/practical/connections 194)",
                             ),
                         },
-                        Err(_) => Err(""),
+                        Err(_) => Err(
+                            "Get count of documents problem-(handlers/practical/connections 198)",
+                        ),
                     }
                 } else {
                     self.connections.remove(index);
@@ -200,7 +206,7 @@ impl ConnectionsHandler {
                     {
                         Ok(_) => Waiting::update(db, None).await,
                         Err(_) => {
-                            Err("Deleting validator problem-(handlers/practical/connections 203)")
+                            Err("Deleting validator problem-(handlers/practical/connections 209)")
                         }
                     }
                 }

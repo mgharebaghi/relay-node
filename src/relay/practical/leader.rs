@@ -73,18 +73,33 @@ impl Leader {
         conection_handler: &mut ConnectionsHandler,
         swarm: &mut Swarm<CentichainBehaviour>,
     ) -> Result<(), &'a str> {
-        // set in_check of leader true
-        self.check_start();
-
         //first, delete left leader from validators as a wrongdoer
         match conection_handler
             .remove(db, self.peerid.unwrap(), swarm)
             .await
         {
-            Ok(_) => Ok(write_log(&format!(
-                "Left leader remove as a wrongdoer: {}",
-                self.peerid.unwrap()
-            ))),
+            Ok(_) => {
+                let collection: Collection<Document> = db.collection("validators");
+
+                match collection.count_documents(doc! {}).await {
+                    Ok(count) => {
+                        if count > 0 {
+                            // set in_check of leader true
+                            self.check_start();
+                        } else {
+                            self.update(None);
+                        }
+
+                        Ok(write_log(&format!(
+                            "Left leader remove as a wrongdoer: {}",
+                            self.peerid.unwrap()
+                        )))
+                    }
+                    Err(_) => {
+                        Err("Error during counting of validators-(relay/practical/leader 99)")
+                    }
+                }
+            }
             Err(e) => Err(e),
         }
     }
@@ -115,7 +130,7 @@ impl Leader {
                 }
                 Ok(())
             }
-            Err(_) => Err("Error while get count of validators' doc-(generator/leader 169)"),
+            Err(_) => Err("Error while get count of validators' doc-(generator/leader 133)"),
         }
     }
 }

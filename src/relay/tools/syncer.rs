@@ -28,36 +28,26 @@ impl VSync {
     pub async fn handle<'a>(&self, db: &'a Database) -> Result<(), &'a str> {
         match Validator::new(db, self.peerid, self.relay, self.wallet).await {
             Ok(validator) => {
-                let o_colecction: Collection<Document> = db.collection("outnodes");
-                let v_collection: Collection<Document> = db.collection("validators");
+                let collection: Collection<Document> = db.collection("validators");
+                let filter = to_document(&validator).unwrap();
+                let query = collection.find_one(filter).await;
 
-                //check outnodes and if it doesn't include new node peer id then insert new node as validator
-                match o_colecction
-                    .find_one(doc! {"peerid": self.peerid.to_string()})
-                    .await
-                {
-                    Ok(doc_option) => {
-                        if doc_option.is_none() {
-                            match v_collection
-                                .insert_one(to_document(&validator).unwrap())
-                                .await
-                            {
-                                Ok(_) => Ok(write_log(&format!(
-                                    "New synced validator added: {}",
-                                    self.peerid
-                                ))),
-                                Err(_) => Err(
-                                    "Error while inserting new validator-(relay/tools/syncer 46)",
-                                ),
-                            }
-                        } else {
-                            write_log(
-                                "New Sync message is from a validator that is in the outnodes! so message rejected.",
-                            );
-                            Ok(())
+                //check validators and if it doesn't include new node peer id then insert new node as validator
+                if let Ok(Some(_doc)) = query {
+                    Ok(())
+                } else {
+                    match collection
+                        .insert_one(to_document(&validator).unwrap())
+                        .await
+                    {
+                        Ok(_) => Ok(write_log(&format!(
+                            "New synced validator added: {}",
+                            self.peerid
+                        ))),
+                        Err(_) => {
+                            Err("Error while inserting new validator-(relay/tools/syncer 48)")
                         }
                     }
-                    Err(_) => Err("Error while querying from outnodes-(relay/tools/syncer 56)"),
                 }
             }
             Err(e) => Err(e),
@@ -97,7 +87,6 @@ impl Syncer {
         //and us it for bson addreess in bson::add
         let collections = vec![
             "Blocks",
-            "outnodes",
             "Transactions",
             "UTXOs",
             "validators, reciept, Transactions",
