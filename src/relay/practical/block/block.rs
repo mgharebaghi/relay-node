@@ -5,7 +5,10 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 use sp_core::Pair;
 
-use crate::relay::{practical::transaction::Transaction, tools::{utxo::UTXO, waiting::Waiting}};
+use crate::relay::{
+    practical::transaction::Transaction,
+    tools::{utxo::UTXO, waiting::Waiting},
+};
 
 use super::{coinbase::Coinbase, header::Header};
 
@@ -30,7 +33,9 @@ impl Block {
         last_block: &mut Vec<Self>,
         db: &'a Database,
     ) -> Result<&Self, &'a str> {
-        if last_block[0].header.hash == self.header.previous {
+        if last_block[0].header.hash == self.header.previous
+            || self.header.previous == "This Is The Genesis Block".to_string()
+        {
             //check block signature that its signature data is block hash(block hash is hash of body)
             let hash_of_body = serde_json::to_string(&self.body).unwrap();
             let sign_check = sp_core::ed25519::Pair::verify(
