@@ -70,6 +70,7 @@ impl Requests {
     ) {
         //if request was handhsake then goes to handshaker
         if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
+            println!("{:?}", request_model);
             match request_model {
                 //if request was handhsake model then goes to handshaker for make the client response
                 Requests::Handshake(msg) => {
