@@ -4,7 +4,10 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
-use crate::relay::{practical::transaction::{Output, Transaction}, tools::MerkelRoot};
+use crate::relay::{
+    practical::transaction::{Output, Transaction},
+    tools::MerkelRoot,
+};
 
 use super::{block::Block, reward::Reward};
 
@@ -41,15 +44,19 @@ impl Coinbase {
     ) -> Result<(), &'a str> {
         let reward = Reward::calculate(last_block);
         if self.reward == reward {
-            //make merkel root of block's transactions
-            let mut trx_hashes = Vec::new();
-            for t in transactions {
-                trx_hashes.push(&t.hash);
+            let mut merkel = "First".to_string();
+
+            if transactions.len() > 0 {
+                //make merkel root of block's transactions
+                let mut trx_hashes = Vec::new();
+                for t in transactions {
+                    trx_hashes.push(&t.hash);
+                }
+                merkel = MerkelRoot::make(trx_hashes).first().unwrap().clone();
             }
-            let merkel = MerkelRoot::make(trx_hashes);
 
             //check merkel root that maked with coinbase merkel root to validation
-            if merkel[0] == self.merkel {
+            if merkel == self.merkel {
                 //calculate fees
                 let fees: Decimal = transactions.iter().map(|trx| trx.fee).sum();
                 let relay_fee = fees * Decimal::from_str("0.10").unwrap();
