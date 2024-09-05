@@ -68,6 +68,7 @@ impl Requests {
         last_block: &mut Vec<Block>,
         sender: PeerId,
     ) {
+        println!("{:?}", request.req);
         //if request was handhsake then goes to handshaker
         if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
             println!("{:?}", request_model);
