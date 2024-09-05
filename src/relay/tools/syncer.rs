@@ -65,9 +65,9 @@ impl Syncer {
         match relay_ip {
             Ok(splited_addr) => {
                 //start downloading blockchain from connected relay
-                let url = format!("http://{}:33369/blockchain/blockchain.zip", splited_addr);
-                match Downloader::download(&url, "/home/Downloads/blockchain.zip").await {
-                    Ok(_) => match Zip::extract("./etc/dump/Blockchain") {
+                let url = format!("http://{}:33369/blockchain/Centichain.zip", splited_addr);
+                match Downloader::download(&url, "/home/Centichain.zip").await {
+                    Ok(_) => match Zip::extract("./etc/dump/Centichain") {
                         Ok(_) => Ok(()),
                         Err(e) => Err(e),
                     },

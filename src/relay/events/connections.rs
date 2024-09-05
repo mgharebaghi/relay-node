@@ -16,6 +16,7 @@ use crate::relay::{
         syncer::{Sync, Syncer},
         waiting::Waiting,
         wrongdoer::WrongDoer,
+        zipp::Zip,
     },
 };
 
@@ -135,7 +136,11 @@ impl ConnectionsHandler {
                 "Connection stablished with: {}",
                 connection_peerid
             ));
-            Ok(Self::push_new_connection(self, connection_peerid))
+            //making zip of database for new connection to download it
+            match Zip::maker() {
+                Ok(_) => Ok(Self::push_new_connection(self, connection_peerid)),
+                Err(e) => Err(e),
+            }
         }
     }
 
