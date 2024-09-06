@@ -85,12 +85,7 @@ impl Syncer {
     ) -> Result<(), &'a str> {
         //define collection names for use in collection name parameter of bson::add
         //and us it for bson addreess in bson::add
-        let collections = vec![
-            "Blocks",
-            "Transactions",
-            "UTXOs",
-            "validators, reciept, Transactions",
-        ];
+        let collections = vec!["Blocks", "Transactions", "UTXOs", "validators, reciept"];
 
         let mut error = None; //for get error in loop of bson::add and return it at the end if it's some
 

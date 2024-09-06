@@ -16,7 +16,7 @@ impl Bson {
         bson: &str,
     ) -> Result<(), &'a str> {
         //open bson file that its address is in the bson argument
-        let bson_addr = format!("/home/Downloads/etc/dump/Blockchain/{}", bson);
+        let bson_addr = format!("/home/etc/dump/Centichain/{}", bson);
         let open_file = File::open(bson_addr);
         match open_file {
             Ok(file) => {

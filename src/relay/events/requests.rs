@@ -68,10 +68,8 @@ impl Requests {
         last_block: &mut Vec<Block>,
         sender: PeerId,
     ) {
-        println!("{:?}", request.req);
         //if request was handhsake then goes to handshaker
         if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
-            println!("{:?}", request_model);
             match request_model {
                 //if request was handhsake model then goes to handshaker for make the client response
                 Requests::Handshake(msg) => {
@@ -128,7 +126,6 @@ impl Requests {
                 //if propagating has problem, process will be exited
                 //if block message handeling has problem, process will be exited
                 Requests::BlockMessage(block_message) => {
-                    println!("block message got");
                     match block_message
                         .handle(
                             swarm,
