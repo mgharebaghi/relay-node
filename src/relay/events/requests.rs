@@ -10,6 +10,7 @@ use crate::relay::{
     practical::{
         block::{block::Block, message::BlockMessage},
         leader::Leader,
+        reciept::Reciept,
         swarm::{CentichainBehaviour, Req, Res},
         transaction::Transaction,
     },
@@ -96,7 +97,7 @@ impl Requests {
                 Requests::Transaction(transaction) => match transaction.validate(db).await {
                     Ok(trx) => match trx.insertion(db, leader, connections_handler, swarm).await {
                         Ok(_) => {
-                            let gossip_message = GossipMessages::Transaction(transaction);
+                            let gossip_message = GossipMessages::Transaction(transaction.clone());
                             let str_gossip_message =
                                 serde_json::to_string(&gossip_message).unwrap();
                             match swarm
@@ -104,7 +105,17 @@ impl Requests {
                                 .gossipsub
                                 .publish(IdentTopic::new("validator"), str_gossip_message)
                             {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    match Reciept::insertion(None, Some(&transaction), None, db)
+                                        .await
+                                    {
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            write_log(e);
+                                            std::process::exit(0)
+                                        }
+                                    }
+                                }
                                 Err(e) => {
                                     write_log(&format!(
                                         "Gossiping transaction problem: {}",

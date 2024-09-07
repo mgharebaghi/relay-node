@@ -5,3 +5,4 @@ pub mod transaction;
 pub mod validator;
 pub mod swarm;
 pub mod leader;
+pub mod reciept;

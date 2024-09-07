@@ -6,6 +6,7 @@ use crate::relay::{
     practical::{
         block::{block::Block, message::BlockMessage},
         leader::Leader,
+        reciept::Reciept,
         swarm::CentichainBehaviour,
         transaction::Transaction,
     },
@@ -58,7 +59,10 @@ impl GossipMessages {
                         match transaction.validate(db).await {
                             Ok(trx) => {
                                 //insert transaction to transactions collection
-                                trx.insertion(db, leader, connections_handler, swarm).await
+                                match trx.insertion(db, leader, connections_handler, swarm).await {
+                                    Ok(_) => Reciept::insertion(None, Some(trx), None, db).await,
+                                    Err(e) => Err(e),
+                                }
                             }
                             Err(_) => {
                                 connections_handler

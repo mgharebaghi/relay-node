@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::relay::{
     events::connections::ConnectionsHandler,
-    practical::{leader::Leader, swarm::CentichainBehaviour},
+    practical::{leader::Leader, reciept::Reciept, swarm::CentichainBehaviour},
     tools::{create_log::write_log, syncer::Sync},
 };
 
@@ -36,14 +36,35 @@ impl BlockMessage {
             match sync_state {
                 //if validator is synced then validating block
                 Sync::Synced => match self.block.validation(last_block, db).await {
+                    //if block was valid then insert it to blockchain
                     Ok(block) => {
                         let collection: Collection<Document> = db.collection("Blocks");
                         let doc = to_document(block).unwrap();
                         match collection.insert_one(doc).await {
+                            //if block insertion doesn't problem then insert reciepts of coinbases output and transactions
                             Ok(_) => {
-                                Ok(leader.update(Some(self.next_leader))) //if block was valid and inserted to DB then changes leader 
+                                let mut is_err = None;
+                                match Reciept::insertion(Some(self.block.header.number), None, Some(&self.block.body.coinbase), db).await {
+                                    Ok(_) => {
+                                        for transaction in self.block.body.transactions.clone() {
+                                            match Reciept::confirmation(db, &transaction.hash, &self.block.header.number).await {
+                                                Ok(_) => {}
+                                                Err(e) => {
+                                                    is_err.get_or_insert(e);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    Err(e) => {is_err.get_or_insert(e);}
+                                }
+                                
+                                match is_err {
+                                    None => Ok(leader.update(Some(self.next_leader))), //if reciepts insertion doesn't any problem then update leader and return ok
+                                    Some(e) => Err(e)
+                                }
                             }
-                            Err(_) => Err("Error while inserting new block to database-(generator/block/message 46)")
+                            Err(_) => Err("Error while inserting new block to database-(generator/block/message 67)")
                         }
                     }
                     Err(e) => {
@@ -55,7 +76,9 @@ impl BlockMessage {
                 Sync::NotSynced => Ok(recvied_blocks.push(self.clone())),
             }
         } else {
-            connections_handler.remove(db, self.block.header.validator, swarm).await
+            connections_handler
+                .remove(db, self.block.header.validator, swarm)
+                .await
         }
     }
 }

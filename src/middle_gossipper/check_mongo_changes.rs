@@ -72,14 +72,17 @@ impl MiddleGossipper {
                         }
                     }
                 }
+
                 SwarmEvent::OutgoingConnectionError { .. } => {
                     write_log("Middlegossiper dialing error!");
                     std::process::exit(0)
                 }
+
                 SwarmEvent::ConnectionClosed { .. } => {
                     write_log("Middlegossiper connection closed!");
                     std::process::exit(0)
                 }
+                
                 SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                     MyBehaviourEvent::Gossipsub(event) => match event {
                         _ => {}
