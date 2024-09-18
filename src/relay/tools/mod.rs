@@ -8,6 +8,7 @@ pub mod downloader;
 pub mod zipp;
 pub mod bsons;
 pub mod wrongdoer;
+pub mod get_last_block;
 
 pub struct MerkelRoot;
 
