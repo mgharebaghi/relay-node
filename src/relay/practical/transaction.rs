@@ -141,36 +141,58 @@ impl Transaction {
         swarm: &mut Swarm<CentichainBehaviour>,
     ) -> Result<(), &'a str> {
         let collection: Collection<Document> = db.collection("transactions");
-        let trx_to_doc = to_document(self).unwrap();
-        match collection.insert_one(trx_to_doc).await {
-            Ok(_) => match collection.count_documents(doc! {}).await {
-                Ok(count) => {
-                    if count > 1 && !leader.in_check {
-                        match leader.timer {
-                            LeaderTime::On => {
-                                let now = Utc::now();
 
-                                if now > leader.time.unwrap() {
-                                    Leader::start_voting(leader, db, connection_handler, swarm)
-                                        .await
-                                } else {
-                                    Ok(())
+        //filtering transactin hash
+        let filter = doc! {"hash": self.hash.to_string()};
+        let query = collection.find_one(filter).await;
+
+        //check trx that it is in the transactions coll or not
+        //if not then insertion will be done
+        if let Ok(opt) = query {
+            if opt.is_none() {
+                let trx_to_doc = to_document(self).unwrap();
+                match collection.insert_one(trx_to_doc).await {
+                    Ok(_) => match collection.count_documents(doc! {}).await {
+                        Ok(count) => {
+                            if count > 1 && !leader.in_check {
+                                match leader.timer {
+                                    LeaderTime::On => {
+                                        let now = Utc::now();
+
+                                        if now > leader.time.unwrap() {
+                                            Leader::start_voting(
+                                                leader,
+                                                db,
+                                                connection_handler,
+                                                swarm,
+                                            )
+                                            .await
+                                        } else {
+                                            Ok(())
+                                        }
+                                    }
+                                    LeaderTime::Off => {
+                                        leader.timer_start();
+                                        Ok(())
+                                    }
                                 }
-                            }
-                            LeaderTime::Off => {
-                                leader.timer_start();
+                            } else {
                                 Ok(())
                             }
                         }
-                    } else {
-                        Ok(())
+                        Err(_) => Err(
+                            "Get count of transactions problem-(relay/practical/transaction 170)",
+                        ),
+                    },
+                    Err(_) => {
+                        Err("Transaction insertion problem-(relay/practical/transaction 173)")
                     }
                 }
-                Err(_) => {
-                    Err("Get count of transactions problem-(relay/practical/transaction 170)")
-                }
-            },
-            Err(_) => Err("Transaction insertion problem-(relay/practical/transaction 173)"),
+            } else {
+                Ok(())
+            }
+        } else {
+            Err("Querying transaction problem-(relay/practical/transaction 152)")
         }
     }
 }

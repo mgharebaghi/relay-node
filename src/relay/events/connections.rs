@@ -144,7 +144,7 @@ impl ConnectionsHandler {
         }
     }
 
-    //remove connection from connections ad db if it closed
+    //remove connection from connections and db if it closed
     pub async fn remove<'a>(
         &mut self,
         db: &'a Database,
