@@ -4,7 +4,7 @@ use mongodb::{
     Collection, Database,
 };
 
-use crate::relay::practical::validator::Validator;
+use crate::relay::practical::{leader::Leader, validator::Validator};
 
 pub struct Waiting;
 
@@ -71,7 +71,7 @@ impl Waiting {
     }
 
     //return new waiting as number for set it to new validator that gossips itself with vsync message
-    pub async fn new<'a>(db: &'a Database) -> Result<u64, &'a str> {
+    pub async fn new<'a>(db: &'a Database, leader: &mut Leader, leader_id: PeerId) -> Result<u64, &'a str> {
         //check count of vadator documents and then return it if it was bigger than 0
         let collection: Collection<Document> = db.collection("validators");
         let coun_query = collection.count_documents(doc! {}).await;
@@ -80,6 +80,7 @@ impl Waiting {
                 if count > 0 {
                     Ok(count * 2)
                 } else {
+                    leader.update(Some(leader_id));
                     Ok(0)
                 }
             }

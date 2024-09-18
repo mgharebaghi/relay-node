@@ -5,6 +5,8 @@ use sp_core::ed25519::Public;
 
 use crate::relay::tools::waiting::Waiting;
 
+use super::leader::Leader;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Validator {
     pub peerid: PeerId,
@@ -19,9 +21,10 @@ impl Validator {
         peerid: PeerId,
         relay: PeerId,
         wallet: Public,
+        leader: &mut Leader
     ) -> Result<Self, &'a str> {
         //make waiting number to return new validator with its waiting
-        match Waiting::new(db).await {
+        match Waiting::new(db, leader,peerid).await {
             Ok(waiting) => Ok(Self {
                 peerid,
                 relay,

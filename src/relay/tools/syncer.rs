@@ -25,8 +25,8 @@ pub struct VSync {
 }
 
 impl VSync {
-    pub async fn handle<'a>(&self, db: &'a Database) -> Result<(), &'a str> {
-        match Validator::new(db, self.peerid, self.relay, self.wallet).await {
+    pub async fn handle<'a>(&self, db: &'a Database, leader: &mut Leader) -> Result<(), &'a str> {
+        match Validator::new(db, self.peerid, self.relay, self.wallet, leader).await {
             Ok(validator) => {
                 let collection: Collection<Document> = db.collection("validators");
                 let filter = to_document(&validator).unwrap();

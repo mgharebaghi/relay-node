@@ -75,7 +75,7 @@ impl GossipMessages {
                     //handle sync messages
                     GossipMessages::SyncMessage(vsync) => {
                         match sync_state {
-                            Sync::Synced => vsync.handle(db).await, //add new validator to validators document if it was correct message}
+                            Sync::Synced => vsync.handle(db, leader).await, //add new validator to validators document if it was correct message}
                             _ => Ok(()),
                         }
                     }
