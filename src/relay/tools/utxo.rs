@@ -1,4 +1,7 @@
-use mongodb::{bson::{doc, from_document, to_document, Document}, Collection, Database};
+use mongodb::{
+    bson::{doc, from_document, to_document, Document},
+    Collection, Database,
+};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
@@ -32,8 +35,8 @@ pub struct UTXO {
 }
 
 impl UTXO {
-     //check a utxo that if exist remove it, else return error
-     pub async fn check<'a>(&self, db: &Database, wallet: &Public) -> Result<(), &'a str> {
+    //check a utxo that if exist remove it, else return error
+    pub async fn check<'a>(&self, db: &Database, wallet: &Public) -> Result<(), &'a str> {
         //query from UTXOs collection for find person's utxos
         //if exist remove utxo else return error
         let collection: Collection<Document> = db.collection("UTXOs");
@@ -52,7 +55,8 @@ impl UTXO {
                     //else return error
                     if let Some(i) = index {
                         let rm_utxo = person.utxos.remove(i); //put remove utxo from person to rm_utxo
-                        let update = doc! {"$pull": {"utxos": rm_utxo.unspent_hash}}; //update command
+                        let update =
+                            doc! {"$pull": {"utxos": {"unspent_hash": rm_utxo.unspent_hash}}}; //update command
 
                         //try to update the collection and if done return true
                         //else return error
@@ -73,8 +77,8 @@ impl UTXO {
         }
     }
 
-     //insert outputs of a transactions as UTXO
-     pub async fn generate<'a>(
+    //insert outputs of a transactions as UTXO
+    pub async fn generate<'a>(
         block: u64,
         trx_hash: &String,
         output_hash: &String,
