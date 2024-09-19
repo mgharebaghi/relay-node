@@ -77,7 +77,17 @@ impl Block {
                                     }
                                 }
                             }
-                            Some(_) => {}
+                            Some(_) => {
+                                match trx_collection
+                                    .delete_one(doc! {"hash": &self.body.transactions[i].hash})
+                                    .await
+                                {
+                                    Ok(_) => {
+                                        trx_backup.push(self.body.transactions[i].clone());
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
                         },
                         Err(_) => {
                             trx_err.get_or_insert(
