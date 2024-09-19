@@ -54,24 +54,39 @@ impl Block {
                 let trx_collection: Collection<Document> = db.collection("transactions");
 
                 for i in 0..self.body.transactions.len() {
-                    match Transaction::validate(&self.body.transactions[i], db).await {
-                        Ok(transaction) => {
-                            match trx_collection
-                                .delete_one(doc! {"hash": &transaction.hash})
-                                .await
-                            {
-                                Ok(_) => {
-                                    trx_backup.push(transaction.clone());
+                    let filter = doc! {"hash": self.body.transactions[i].hash.clone()};
+                    let query = trx_collection.find_one(filter).await;
+                    match query {
+                        Ok(opt) => match opt {
+                            Some(_doc) => {
+                                match Transaction::validate(&self.body.transactions[i], db).await {
+                                    Ok(transaction) => {
+                                        match trx_collection
+                                            .delete_one(doc! {"hash": &transaction.hash})
+                                            .await
+                                        {
+                                            Ok(_) => {
+                                                trx_backup.push(transaction.clone());
+                                            }
+                                            Err(_) => {}
+                                        }
+                                    }
+                                    Err(e) => {
+                                        trx_err.get_or_insert(e);
+                                        break;
+                                    }
                                 }
-                                Err(_) => {}
                             }
-                        }
-                        Err(e) => {
-                            trx_err.get_or_insert(e);
-                            break;
+                            None => {}
+                        },
+                        Err(_) => {
+                            trx_err.get_or_insert(
+                                "Querying transaction problem-(relay/practical/block 61)",
+                            );
                         }
                     }
                 }
+                
                 //if transactions of body doesn't have any problems then it goes to check coinbase transactions and insert utxos
                 if trx_err.is_none() {
                     //validating coinbase of block and if it was correct then it will handle transactions of block
