@@ -58,7 +58,7 @@ impl Block {
                     let query = trx_collection.find_one(filter).await;
                     match query {
                         Ok(opt) => match opt {
-                            Some(_doc) => {
+                            None => {
                                 match Transaction::validate(&self.body.transactions[i], db).await {
                                     Ok(transaction) => {
                                         match trx_collection
@@ -77,7 +77,7 @@ impl Block {
                                     }
                                 }
                             }
-                            None => {}
+                            Some(_) => {}
                         },
                         Err(_) => {
                             trx_err.get_or_insert(
@@ -86,7 +86,7 @@ impl Block {
                         }
                     }
                 }
-                
+
                 //if transactions of body doesn't have any problems then it goes to check coinbase transactions and insert utxos
                 if trx_err.is_none() {
                     //validating coinbase of block and if it was correct then it will handle transactions of block
