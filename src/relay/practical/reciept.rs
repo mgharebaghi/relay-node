@@ -150,7 +150,7 @@ impl Reciept {
         hash: &String,
         block: &u64,
     ) -> Result<(), &'a str> {
-        let collection: Collection<Document> = db.collection("reciept");
+        let collection: Collection<Document> = db.collection("reciepts");
         let filter = doc! {"hash": hash};
         let update = doc! {"$set": {"status": "Confirmed".to_string(), "description": "It was confirmed and placed in a block".to_string(), "block": block.to_string()}};
 
