@@ -4,7 +4,7 @@ use futures::StreamExt;
 use libp2p::{
     request_response::{Event, Message},
     swarm::SwarmEvent,
-    Multiaddr, PeerId,
+    Multiaddr, PeerId, Swarm,
 };
 use mongodb::{
     bson::{doc, from_document, Document},
@@ -14,7 +14,7 @@ use tokio::time::sleep;
 
 use crate::relay::{
     events::{addresses::Listeners, requests::Requests},
-    practical::{db::Mongodb, swarm::Req, transaction::Transaction},
+    practical::{swarm::Req, transaction::Transaction},
     tools::create_log::write_log,
 };
 
@@ -41,34 +41,11 @@ impl MiddleGossipper {
 
                     connected_id.push_str(&peer_id.to_string());
 
-                    let transactions_coll: Collection<Document> = db.collection("transactions");
-                    let pipeline = vec![doc! { "$match": {
-                        "operationType": "insert"
-                    }}];
-                    let mut watchin = transactions_coll
-                        .watch()
-                        .pipeline(pipeline)
-                        .await
-                        .expect("error in mongodb watching");
-
-                    if let Some(change) = watchin.next().await {
-                        match change {
-                            Ok(data) => {
-                                if let Some(doc) = data.full_document {
-                                    let transaction: Transaction = from_document(doc).unwrap();
-                                    let str_trx =
-                                        serde_json::to_string(&Requests::Transaction(transaction))
-                                            .unwrap();
-                                    let request = Req { req: str_trx };
-                                    swarm
-                                        .behaviour_mut()
-                                        .req_res
-                                        .send_request(&peer_id, request);
-                                }
-                            }
-                            Err(e) => {
-                                write_log(&format!("Error in watching of mongodb {e}-line(70)"));
-                            }
+                    match Self::wathcing(db, &mut swarm, peer_id).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            write_log(e);
+                            std::process::exit(0);
                         }
                     }
                 }
@@ -82,7 +59,7 @@ impl MiddleGossipper {
                     write_log("Middlegossiper connection closed!");
                     std::process::exit(0)
                 }
-                
+
                 SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
                     MyBehaviourEvent::Gossipsub(event) => match event {
                         _ => {}
@@ -91,46 +68,12 @@ impl MiddleGossipper {
                         Event::Message { message, .. } => match message {
                             Message::Response { .. } => {
                                 let peer_id: PeerId = connected_id.parse().unwrap();
-                                match Mongodb::connect().await {
-                                    Ok(db) => {
-                                        let transactions_coll: Collection<Document> =
-                                            db.collection("transactions");
-                                        let pipeline = vec![doc! { "$match": {
-                                            "operationType": "insert"
-                                        }}];
-                                        let mut watchin = transactions_coll
-                                            .watch()
-                                            .pipeline(pipeline)
-                                            .await
-                                            .expect("error in mongodb watching");
 
-                                        if let Some(change) = watchin.next().await {
-                                            match change {
-                                                Ok(data) => {
-                                                    if let Some(doc) = data.full_document {
-                                                        let transaction: Transaction =
-                                                            from_document(doc).unwrap();
-                                                        let str_trx = serde_json::to_string(
-                                                            &Requests::Transaction(transaction),
-                                                        )
-                                                        .unwrap();
-                                                        let request = Req { req: str_trx };
-                                                        swarm
-                                                            .behaviour_mut()
-                                                            .req_res
-                                                            .send_request(&peer_id, request);
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    write_log(&format!("Error in watching of mongodb {e}-line(122)"));
-                                                    std::process::exit(0)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    Err(_) => {
-                                        write_log("database connection error in check mongo changes-line(129)");
-                                        std::process::exit(0)
+                                match Self::wathcing(db, &mut swarm, peer_id).await {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        write_log(e);
+                                        std::process::exit(0);
                                     }
                                 }
                             }
@@ -141,6 +84,47 @@ impl MiddleGossipper {
                 },
                 _ => {}
             }
+        }
+    }
+
+    //wathcing mongo
+    async fn wathcing<'a>(
+        db: &Database,
+        swarm: &mut Swarm<MyBehaviour>,
+        peer_id: PeerId,
+    ) -> Result<(), &'a str> {
+        let transactions_coll: Collection<Document> = db.collection("transactions");
+        let pipeline = vec![doc! { "$match": {
+            "operationType": "insert"
+        }}];
+        let mut watchin = transactions_coll
+            .watch()
+            .pipeline(pipeline)
+            .await
+            .expect("error in mongodb watching");
+
+        if let Some(change) = watchin.next().await {
+            match change {
+                Ok(data) => {
+                    println!("a change watched");
+                    if let Some(doc) = data.full_document {
+                        let transaction: Transaction = from_document(doc).unwrap();
+                        let str_trx =
+                            serde_json::to_string(&Requests::Transaction(transaction)).unwrap();
+                        let request = Req { req: str_trx };
+                        swarm
+                            .behaviour_mut()
+                            .req_res
+                            .send_request(&peer_id, request);
+                        Ok(())
+                    } else {
+                        Ok(())
+                    }
+                }
+                Err(_) => Err("Error in watching of mongodb-line(138)"),
+            }
+        } else {
+            Ok(())
         }
     }
 }
