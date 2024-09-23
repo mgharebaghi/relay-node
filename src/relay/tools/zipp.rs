@@ -1,5 +1,8 @@
 use std::{
-    fs::{self, File}, io::{Read, Write}, path::Path, process::Command
+    fs::{self, File},
+    io::{Read, Write},
+    path::Path,
+    process::Command,
 };
 
 use super::create_log::write_log;
@@ -30,6 +33,7 @@ impl Zip {
         //if zip file exist removes it at first
         let path = Path::new("/home/Centichain.zip");
         if path.exists() {
+            println!("path find: {}", path);
             std::fs::remove_file(path).unwrap();
         }
 
