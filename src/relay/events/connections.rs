@@ -22,20 +22,21 @@ use crate::relay::{
 
 use super::addresses::Listeners;
 
+#[derive(Debug, Clone)]
 pub struct ConnectionsHandler {
     pub connections: Vec<Connection>,
 }
 
 //change when relay gets subscribtion
 //if peerid was in connection change its kind based on subscribe topic
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Kind {
     Relay,
     Validator,
 }
 
 //define new connection
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Connection {
     pub peerid: PeerId,
     pub kind: Option<Kind>,
@@ -170,7 +171,9 @@ impl ConnectionsHandler {
 
                 //if kind of connection was relay it will be removed from relay collection if there is(if it was relay then its validators will be removed)
                 //else it will be removed from validators if there is
-                if *self.connections[index].kind.as_ref().unwrap() == Kind::Relay {
+                if self.connections[index].clone().kind.is_some()
+                    && self.connections[index].clone().kind.unwrap() == Kind::Relay
+                {
                     self.connections.remove(index);
                     let filter = doc! {"relay": peerid.to_string()};
                     //get count of deletes for updating waiting of validators
