@@ -90,10 +90,14 @@ impl Leader {
                             self.update(None);
                         }
 
-                        Ok(write_log(&format!(
-                            "Left leader remove as a wrongdoer: {}",
-                            self.peerid.unwrap()
-                        )))
+                        if self.peerid.is_some() {
+                            Ok(write_log(&format!(
+                                "Left leader remove as a wrongdoer: {}",
+                                self.peerid.unwrap()
+                            )))
+                        } else {
+                            Ok(write_log("Leader is empty"))
+                        }
                     }
                     Err(_) => {
                         Err("Error during counting of validators-(relay/practical/leader 99)")
