@@ -207,7 +207,6 @@ impl Block {
                 Err("Block signature is wrong and Block rejected.")
             }
         } else {
-            println!("last block hash: {}", last_block[0].header.hash);
             Err("Block validation problem!, previous hash doesn't match and Block rejected.")
         }
     }
