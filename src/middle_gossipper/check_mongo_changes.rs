@@ -106,7 +106,6 @@ impl MiddleGossipper {
         if let Some(change) = watchin.next().await {
             match change {
                 Ok(data) => {
-                    println!("a change watched");
                     if let Some(doc) = data.full_document {
                         let transaction: Transaction = from_document(doc).unwrap();
                         let str_trx =
