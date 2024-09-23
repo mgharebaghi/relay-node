@@ -33,7 +33,7 @@ impl Zip {
         //if zip file exist removes it at first
         let path = Path::new("/home/Centichain.zip");
         if path.exists() {
-            println!("path find: {}", path);
+            println!("path find: {:?}", path);
             std::fs::remove_file(path).unwrap();
         }
 
