@@ -39,7 +39,7 @@ impl BlockMessage {
                     //if block was valid then insert it to blockchain
                     Ok(block) => {
                         let collection: Collection<Document> = db.collection("Blocks");
-                        let doc = to_document(block).unwrap();
+                        let doc = to_document(&block).unwrap();
                         match collection.insert_one(doc).await {
                             //if block insertion doesn't problem then insert reciepts of coinbases output and transactions
                             Ok(_) => {
@@ -60,7 +60,11 @@ impl BlockMessage {
                                 }
                                 
                                 match is_err {
-                                    None => Ok(leader.update(Some(self.next_leader))), //if reciepts insertion doesn't any problem then update leader and return ok
+                                    None => {
+                                        last_block.clear();
+                                        last_block.push(block.clone());
+                                        Ok(leader.update(Some(self.next_leader)))
+                                    }, //if reciepts insertion doesn't any problem then update leader and return ok
                                     Some(e) => Err(e)
                                 }
                             }
