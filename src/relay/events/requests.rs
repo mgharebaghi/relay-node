@@ -109,7 +109,24 @@ impl Requests {
                                     match Reciept::insertion(None, Some(&transaction), None, db)
                                         .await
                                     {
-                                        Ok(_) => {}
+                                        Ok(_) => {
+                                            let response = Res {
+                                                res: "".to_string(),
+                                            };
+                                            match swarm
+                                                .behaviour_mut()
+                                                .reqres
+                                                .send_response(channel, response)
+                                            {
+                                                Ok(_) => {}
+                                                Err(_e) => {
+                                                    write_log(
+                                                        "Sending transaction response error!",
+                                                    );
+                                                    std::process::exit(0)
+                                                }
+                                            }
+                                        }
                                         Err(e) => {
                                             write_log(e);
                                             std::process::exit(0)
