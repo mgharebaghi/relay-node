@@ -1,7 +1,5 @@
 use std::{
-    fs::{self, File},
-    io::{Read, Write},
-    process::Command,
+    fs::{self, File}, io::{Read, Write}, path::Path, process::Command
 };
 
 use super::create_log::write_log;
@@ -29,6 +27,13 @@ impl Zip {
     }
 
     pub fn maker<'a>() -> Result<(), &'a str> {
+        //if zip file exist removes it at first
+        let path = Path::new("/home/Centichain.zip");
+        if path.exists() {
+            std::fs::remove_file(path).unwrap();
+        }
+
+        //after remove zip file, makes a new
         match Command::new("mongodump")
             .arg("--db")
             .arg("Centichain")
