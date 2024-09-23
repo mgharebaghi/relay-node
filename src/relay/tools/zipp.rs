@@ -30,11 +30,18 @@ impl Zip {
     }
 
     pub fn maker<'a>() -> Result<(), &'a str> {
-        //if zip file exist removes it at first
-        let path = Path::new("/home/Centichain.zip");
-        if path.exists() {
-            println!("path find: {:?}", path);
-            std::fs::remove_file(path).unwrap();
+        //if zip file and dump folder existed removes those at first
+        let path1 = Path::new("/home/Centichain.zip");
+        let path2 = Path::new("/etc/dump");
+
+        //remove path 1
+        if path1.exists() {
+            std::fs::remove_file(path1).unwrap();
+        }
+
+        //remove path 2
+        if path2.exists() {
+            std::fs::remove_dir_all(path2).unwrap()
         }
 
         //after remove zip file, makes a new
