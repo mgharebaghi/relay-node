@@ -198,7 +198,7 @@ impl ConnectionsHandler {
                                         let gossip_message = GossipMessages::Outnode(peerid);
                                         let str_gossip_message =
                                             serde_json::to_string(&gossip_message).unwrap();
-                                        if self.connections.len() > 0 {
+                                        if self.connections.len() > 1 {
                                             match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
                                                 Ok(_) => Ok(()),
                                                 Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 198)")
@@ -221,9 +221,6 @@ impl ConnectionsHandler {
                 } else {
                     // Remove connection and associated validator document
                     self.connections.remove(index);
-                    println!("count connection {:?}", self.connections.len());
-                    println!("connection {:?}", self.connections);
-                    println!("left node: {:?}", peerid);
                     match collection
                         .delete_one(doc! {"peerid": peerid.to_string()})
                         .await
@@ -233,7 +230,7 @@ impl ConnectionsHandler {
                             let gossip_message = GossipMessages::Outnode(peerid);
                             let str_gossip_message =
                                 serde_json::to_string(&gossip_message).unwrap();
-                            if self.connections.len() > 0 {
+                            if self.connections.len() > 1 {
                                 match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
                                     Ok(_) => Waiting::update(db, None).await,
                                     Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 224)")
