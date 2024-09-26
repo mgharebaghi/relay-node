@@ -58,20 +58,20 @@ impl Connection {
 }
 
 impl ConnectionsHandler {
-    // Initialize a new ConnectionsHandler with an empty vector
+    // Initialize a new ConnectionsHandler with an empty vector of connections
     pub fn new() -> Self {
         Self {
             connections: Vec::new(),
         }
     }
 
-    // Add a new connection to the handler
+    // Add a new connection to the handler with the given PeerId
     fn push_new_connection(&mut self, peerid: PeerId) {
         let new_connection = Connection::new(peerid, None);
         self.connections.push(new_connection)
     }
 
-    // Update the kind of an existing connection
+    // Update the kind of an existing connection identified by PeerId
     pub fn update_connection(&mut self, peerid: PeerId, kind: Kind) {
         match self
             .connections
@@ -85,7 +85,7 @@ impl ConnectionsHandler {
         }
     }
 
-    // Update dialed relays and synchronize with the network if not already synced
+    // Update dialed relays, synchronize with the network if not already synced, and handle new connections
     pub async fn update_and_sync<'a>(
         &mut self,
         dialed_relays: &mut DialedRelays,
@@ -105,6 +105,7 @@ impl ConnectionsHandler {
             .find(|relay| relay.addr.contains(&connection_peerid.to_string()))
             .is_some()
         {
+            // Log successful connection with dialed relay
             write_log(&format!(
                 "Connection established with this dialed relay: {}",
                 connection_peerid
@@ -113,11 +114,13 @@ impl ConnectionsHandler {
             match sync_state {
                 Sync::Synced => Ok(()),
                 Sync::NotSynced => {
+                    // Log start of syncing process
                     write_log("start syncing...");
                     if let Err(e) =
                         Syncer::syncing(db, recieved_blocks, last_block, dialed_relays, leader)
                             .await
                     {
+                        // Log syncing error
                         write_log(e);
                         Err(e)
                     } else {
@@ -135,6 +138,7 @@ impl ConnectionsHandler {
                 }
             }
         } else {
+            // Log connection with non-relay peer
             write_log(&format!(
                 "Connection established with: {}",
                 connection_peerid
@@ -147,7 +151,7 @@ impl ConnectionsHandler {
         }
     }
 
-    // Remove a connection from the handler and database
+    // Remove a connection from the handler and database, and handle associated cleanup
     pub async fn remove<'a>(
         &mut self,
         db: &'a Database,
@@ -160,7 +164,7 @@ impl ConnectionsHandler {
             .position(|conn| conn.peerid == peerid)
         {
             Some(index) => {
-                // Disconnect the peer
+                // Attempt to disconnect the peer from the swarm
                 match swarm.disconnect_peer_id(peerid) {
                     Ok(_) => {}
                     Err(_) => {}
@@ -168,7 +172,7 @@ impl ConnectionsHandler {
 
                 let collection: Collection<Document> = db.collection("validators");
 
-                // Handle removal based on connection kind
+                // Handle removal based on connection kind (Relay or Validator)
                 if self.connections[index].clone().kind.is_some()
                     && self.connections[index].clone().kind.unwrap() == Kind::Relay
                 {
@@ -190,12 +194,17 @@ impl ConnectionsHandler {
                                 }
                                 match is_err {
                                     None => {
+                                        // Publish outnode message to gossipsub
                                         let gossip_message = GossipMessages::Outnode(peerid);
                                         let str_gossip_message =
                                             serde_json::to_string(&gossip_message).unwrap();
-                                        match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
-                                            Ok(_) => Ok(()),
-                                            Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 198)")
+                                        if self.connections.len() > 0 {
+                                            match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
+                                                Ok(_) => Ok(()),
+                                                Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 198)")
+                                            }
+                                        } else {
+                                            Ok(())
                                         }
                                     }
                                     Some(e) => Err(e),
@@ -210,19 +219,25 @@ impl ConnectionsHandler {
                         ),
                     }
                 } else {
+                    // Remove connection and associated validator document
                     self.connections.remove(index);
                     match collection
                         .delete_one(doc! {"peerid": peerid.to_string()})
                         .await
                     {
                         Ok(_) => {
+                            // Publish outnode message to gossipsub if connections remain
                             let gossip_message = GossipMessages::Outnode(peerid);
                             let str_gossip_message =
                                 serde_json::to_string(&gossip_message).unwrap();
-                            match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
-                                            Ok(_) => Waiting::update(db, None).await,
-                                            Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 224)")
-                                        }
+                            if self.connections.len() > 0 {
+                                match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
+                                    Ok(_) => Waiting::update(db, None).await,
+                                    Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 224)")
+                                }
+                            } else {
+                                Waiting::update(db, None).await
+                            }
                         }
                         Err(_) => {
                             Err("Deleting validator problem-(handlers/practical/connections 228)")
@@ -240,6 +255,7 @@ impl ConnectionsHandler {
     // Check if there are any relay connections and decide whether to break the handle loop
     pub fn breaker(&self, dialed_relays: &mut DialedRelays) -> bool {
         let mut relays_count = 0;
+        // Count the number of relay connections
         if self.connections.len() > 0 {
             for i in 0..self.connections.len() {
                 match &self.connections[i].kind {
@@ -251,7 +267,7 @@ impl ConnectionsHandler {
                 }
             }
         }
-        // Break if no relay connections and not the first dialed relay
+        // Return true if no relay connections and not the first dialed relay
         relays_count == 0 && dialed_relays.first == First::No
     }
 }
