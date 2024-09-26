@@ -221,6 +221,7 @@ impl ConnectionsHandler {
                 } else {
                     // Remove connection and associated validator document
                     self.connections.remove(index);
+                    println!("connections count:  {}", self.connections.len());
                     match collection
                         .delete_one(doc! {"peerid": peerid.to_string()})
                         .await
