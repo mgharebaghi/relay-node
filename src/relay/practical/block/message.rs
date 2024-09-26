@@ -20,7 +20,7 @@ pub struct BlockMessage {
 }
 
 impl BlockMessage {
-    //handle recieved block messages
+    // Handle received block messages
     pub async fn handle<'a>(
         &self,
         swarm: &mut Swarm<CentichainBehaviour>,
@@ -31,21 +31,23 @@ impl BlockMessage {
         leader: &mut Leader,
         connections_handler: &mut ConnectionsHandler,
     ) -> Result<(), &'a str> {
-        //if leader is true then validatig block
+        // Check if the current node is the leader
         if self.block.header.validator == leader.peerid.unwrap() {
             match sync_state {
-                //if validator is synced then validating block
+                // If the current relay node is synced, proceed with block validation
                 Sync::Synced => match self.block.validation(last_block, db).await {
-                    //if block was valid then insert it to blockchain
+                    // If the block is valid, insert it into the blockchain
                     Ok(block) => {
                         let collection: Collection<Document> = db.collection("Blocks");
                         let doc = to_document(&block).unwrap();
                         match collection.insert_one(doc).await {
-                            //if block insertion doesn't problem then insert reciepts of coinbases output and transactions
+                            // If block insertion succeeds, insert receipts for coinbase output and transactions
                             Ok(_) => {
                                 let mut is_err = None;
+                                // Insert receipt for coinbase
                                 match Reciept::insertion(Some(self.block.header.number), None, Some(&self.block.body.coinbase), db).await {
                                     Ok(_) => {
+                                        // Confirm receipts for all transactions in the block
                                         for transaction in self.block.body.transactions.clone() {
                                             match Reciept::confirmation(db, &transaction.hash, &self.block.header.number).await {
                                                 Ok(_) => {}
@@ -61,25 +63,33 @@ impl BlockMessage {
                                 
                                 match is_err {
                                     None => {
+                                        // Update last block and leader if all receipts are inserted successfully
                                         last_block.clear();
                                         last_block.push(block.clone());
                                         Ok(leader.update(Some(self.next_leader)))
-                                    }, //if reciepts insertion doesn't any problem then update leader and return ok
+                                    },
                                     Some(e) => Err(e)
                                 }
                             }
                             Err(_) => Err("Error while inserting new block to database-(generator/block/message 67)")
                         }
                     }
+                    // If block validation fails, remove the validator and start voting for a new leader
                     Err(e) => {
-                        write_log(e);
-                        leader.start_voting(db, connections_handler, swarm).await
+                        match connections_handler.remove(db, self.block.header.validator, swarm).await {
+                            Ok(_) => {
+                                write_log(e);
+                                leader.start_voting(db, connections_handler, swarm).await
+                            }
+                            Err(e) => Err(e)
+                        }
                     }
                 },
-                //if validator is not synced recieved message pushs to recieved block for syncing
+                // If the current relay node is not synced, store the received block message for later processing
                 Sync::NotSynced => Ok(recvied_blocks.push(self.clone())),
             }
         } else {
+            // If the block is from an unexpected validator, remove it from the network
             connections_handler
                 .remove(db, self.block.header.validator, swarm)
                 .await

@@ -19,6 +19,7 @@ use crate::relay::{
 
 use super::{connections::ConnectionsHandler, gossip_messages::GossipMessages};
 
+// Enum representing different types of requests that can be handled
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Requests {
     Handshake(String),
@@ -26,23 +27,22 @@ pub enum Requests {
     Transaction(Transaction),
 }
 
-//handshake response structure
+// Structure for handshake response
 #[derive(Debug, Serialize)]
 struct HandshakeResponse {
     wallet: String,
     first_node: FirstChecker,
 }
 
-//firstnode enum for handshake response that if it was yes it means the validator is first validator in the network
+// Enum to indicate if the node is the first in the network
 #[derive(Debug, Serialize)]
 enum FirstChecker {
     Yes,
     No,
 }
 
-//implement new for make new handshake response
-//and also set_is_first for set fist node variant of handshake respnse to yes if it was first
 impl HandshakeResponse {
+    // Create a new HandshakeResponse with default FirstChecker as No
     fn new(wallet: String) -> Self {
         Self {
             wallet,
@@ -50,12 +50,14 @@ impl HandshakeResponse {
         }
     }
 
+    // Set the node as the first node in the network
     fn set_is_first(&mut self) {
         self.first_node = FirstChecker::Yes
     }
 }
 
 impl Requests {
+    // Main handler for processing different types of requests
     pub async fn handler(
         db: &Database,
         request: Req,
@@ -69,10 +71,10 @@ impl Requests {
         last_block: &mut Vec<Block>,
         sender: PeerId,
     ) {
-        //if request was handhsake then goes to handshaker
+        // Parse the request and handle it based on its type
         if let Ok(request_model) = serde_json::from_str::<Self>(&request.req) {
             match request_model {
-                //if request was handhsake model then goes to handshaker for make the client response
+                // Handle handshake request
                 Requests::Handshake(msg) => {
                     if msg == "handshake".to_string() {
                         match Self::handshaker(
@@ -91,12 +93,11 @@ impl Requests {
                     }
                 }
 
-                //if request was transaction then validating it then propagate to the network
-                //if propagating has problem process, will be exited
-                //if insertion to database has problem, process will be exited
+                // Handle transaction request
                 Requests::Transaction(transaction) => match transaction.validate(db).await {
                     Ok(trx) => match trx.insertion(db, leader, connections_handler, swarm).await {
                         Ok(_) => {
+                            // Propagate the transaction to the network
                             let gossip_message = GossipMessages::Transaction(transaction.clone());
                             let str_gossip_message =
                                 serde_json::to_string(&gossip_message).unwrap();
@@ -106,6 +107,7 @@ impl Requests {
                                 .publish(IdentTopic::new("validator"), str_gossip_message)
                             {
                                 Ok(_) => {
+                                    // Insert receipt and send response
                                     match Reciept::insertion(None, Some(&transaction), None, db)
                                         .await
                                     {
@@ -147,12 +149,13 @@ impl Requests {
                             std::process::exit(0);
                         }
                     },
-                    Err(e) => write_log(e),
+                    Err(e) => match connections_handler.remove(db, sender, swarm).await{
+                        Ok(_) => write_log(e),
+                        Err(e) => write_log(e),
+                    },
                 },
 
-                //if request was block message then goes to validating it
-                //if propagating has problem, process will be exited
-                //if block message handeling has problem, process will be exited
+                // Handle block message request
                 Requests::BlockMessage(block_message) => {
                     match block_message
                         .handle(
@@ -167,6 +170,7 @@ impl Requests {
                         .await
                     {
                         Ok(_) => {
+                            // Propagate the block message to the network
                             let str_block_message = serde_json::to_string(&block_message).unwrap();
                             match swarm
                                 .behaviour_mut()
@@ -193,7 +197,7 @@ impl Requests {
         }
     }
 
-    //handle handshake requests
+    // Handle handshake requests
     async fn handshaker<'a>(
         swarm: &mut Swarm<CentichainBehaviour>,
         db: &'a Database,
@@ -203,23 +207,23 @@ impl Requests {
         leader: &mut Leader,
     ) -> Result<(), &'a str> {
         let mut handshake_reponse = HandshakeResponse::new(wallet);
-        //check blocks count and validators count from DB
+        
+        // Check blocks count and validators count from DB
         let b_collection: Collection<Document> = db.collection("Blocks");
         let v_collection: Collection<Document> = db.collection("validators");
         let blocks_count = b_collection.count_documents(doc! {}).await.unwrap();
         let validators_count = v_collection.count_documents(doc! {}).await.unwrap();
 
-        //if there is no any blocks and validators in the network then send response as first node for validator
+        // If there are no blocks and validators, set this node as the first node
         if blocks_count == 0 && validators_count == 0 {
             handshake_reponse.set_is_first();
             leader.update(Some(sender));
         }
 
-        //serialize response to string and generate new response
+        // Serialize response and send it
         let str_response = serde_json::to_string(&handshake_reponse).unwrap();
         let response = Res::new(str_response);
 
-        //sending response and if there was any problems return error
         match swarm
             .behaviour_mut()
             .reqres

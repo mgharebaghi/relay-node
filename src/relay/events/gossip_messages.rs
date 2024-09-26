@@ -10,20 +10,26 @@ use crate::relay::{
         swarm::CentichainBehaviour,
         transaction::Transaction,
     },
-    tools::syncer::{Sync, VSync},
+    tools::{
+        syncer::{Sync, VSync},
+        wrongdoer::WrongDoer,
+    },
 };
 
 use super::connections::ConnectionsHandler;
 
+// Enum representing different types of gossip messages that can be handled
 #[derive(Debug, Serialize, Deserialize)]
 pub enum GossipMessages {
     BlockMessage(BlockMessage),
     Transaction(Transaction),
     SyncMessage(VSync),
     LeaderVote(PeerId),
+    Outnode(PeerId),
 }
 
 impl GossipMessages {
+    // Main handler for processing different types of gossip messages
     pub async fn handle<'a>(
         message: Vec<u8>,
         propagation_source: PeerId,
@@ -35,11 +41,14 @@ impl GossipMessages {
         recvied_blocks: &mut Vec<BlockMessage>,
         last_block: &mut Vec<Block>,
     ) -> Result<(), &'a str> {
+        // Attempt to convert the message bytes to a UTF-8 string
         if let Ok(str_message) = String::from_utf8(message) {
+            // Try to deserialize the string into a GossipMessages enum
             if let Ok(gossip_message) = serde_json::from_str::<Self>(&str_message) {
                 match gossip_message {
-                    //check block messages
+                    // Handle block messages
                     GossipMessages::BlockMessage(block_message) => {
+                        // Process the block message
                         block_message
                             .handle(
                                 swarm,
@@ -53,18 +62,19 @@ impl GossipMessages {
                             .await
                     }
 
-                    //check transactions
+                    // Handle transactions
                     GossipMessages::Transaction(transaction) => {
-                        //check transactions
+                        // Validate the transaction
                         match transaction.validate(db).await {
                             Ok(trx) => {
-                                //insert transaction to transactions collection
+                                // Insert validated transaction into the database
                                 match trx.insertion(db, leader, connections_handler, swarm).await {
                                     Ok(_) => Reciept::insertion(None, Some(trx), None, db).await,
                                     Err(e) => Err(e),
                                 }
                             }
                             Err(_) => {
+                                // Remove the connection if transaction is invalid
                                 connections_handler
                                     .remove(db, propagation_source, swarm)
                                     .await
@@ -72,18 +82,19 @@ impl GossipMessages {
                         }
                     }
 
-                    //handle sync messages
+                    // Handle sync messages
                     GossipMessages::SyncMessage(vsync) => {
                         match sync_state {
-                            Sync::Synced => vsync.handle(db, leader).await, //add new validator to validators document if it was correct message}
+                            Sync::Synced => vsync.handle(db, leader).await, // Add new validator to validators document if it was a correct message
                             _ => Ok(()),
                         }
                     }
 
-                    //handle votes
+                    // Handle leader votes
                     GossipMessages::LeaderVote(vote) => match sync_state {
                         Sync::Synced => {
                             if leader.in_check {
+                                // Process the vote if the leader is being checked
                                 leader.check_votes(db, vote).await
                             } else {
                                 Ok(())
@@ -91,11 +102,27 @@ impl GossipMessages {
                         }
                         Sync::NotSynced => Ok(()),
                     },
+
+                    // Handle outnode messages
+                    GossipMessages::Outnode(peerid) => {
+                        if peerid == leader.peerid.unwrap() {
+                            // Start voting process if the outnode is the current leader
+                            leader.start_voting(db, connections_handler, swarm).await
+                        } else {
+                            // Remove the wrongdoer from the database
+                            match WrongDoer::remove(db, peerid).await {
+                                Ok(_) => Ok(()),
+                                Err(e) => Err(e),
+                            }
+                        }
+                    }
                 }
             } else {
+                // Return Ok if the message couldn't be deserialized
                 Ok(())
             }
         } else {
+            // Return Ok if the message couldn't be converted to a string
             Ok(())
         }
     }

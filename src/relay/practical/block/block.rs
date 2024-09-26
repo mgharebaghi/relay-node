@@ -33,10 +33,11 @@ impl Block {
         last_block: &mut Vec<Self>,
         db: &'a Database,
     ) -> Result<&Self, &'a str> {
+        // Check if the block is either the genesis block or if it correctly follows the last block
         if (last_block.len() > 0 && last_block[0].header.hash == self.header.previous)
             || self.header.previous == "This Is The Genesis Block".to_string()
         {
-            //check block signature that its signature data is block hash(block hash is hash of body)
+            // Check the block's signature to ensure its integrity
             let hash_data = serde_json::to_string(&self.body).unwrap();
             let hash = HashMaker::generate(&hash_data);
             let sign_check = sp_core::ed25519::Pair::verify(
@@ -45,14 +46,13 @@ impl Block {
                 &self.header.signature.key,
             );
 
-            //if block signature was correct then validation start validating of transactions in body of block
-            //if found even 1 incorrect trx then block will be rejected
+            // If the block's signature is valid, proceed to validate the transactions in the block's body
             if sign_check {
-                //validate transactions in body
                 let mut trx_err = None;
                 let mut trx_backup: Vec<Transaction> = Vec::new();
                 let trx_collection: Collection<Document> = db.collection("transactions");
 
+                // Validate each transaction in the block's body
                 for i in 0..self.body.transactions.len() {
                     let filter = doc! {"hash": self.body.transactions[i].hash.clone()};
                     let query = trx_collection.find_one(filter).await;
@@ -97,9 +97,8 @@ impl Block {
                     }
                 }
 
-                //if transactions of body doesn't have any problems then it goes to check coinbase transactions and insert utxos
+                // If no transaction errors were found, validate the coinbase transaction and generate UTXOs
                 if trx_err.is_none() {
-                    //validating coinbase of block and if it was correct then it will handle transactions of block
                     match Coinbase::validation(
                         &self.body.coinbase,
                         last_block,
@@ -109,7 +108,7 @@ impl Block {
                     {
                         Ok(_) => {
                             let mut utxo_err: Option<&str> = None;
-                            //generate new utxo for each unspents of outputs of coinbase of recieved block
+                            // Generate new UTXOs for each unspent output in the coinbase transaction
                             for unspent in &self.body.coinbase.output.unspents {
                                 match UTXO::generate(
                                     self.header.number,
@@ -128,7 +127,7 @@ impl Block {
                                 }
                             }
 
-                            //generate new utxo for each unspents of outputs of transactiosn of recieved block
+                            // Generate new UTXOs for each unspent output in the block's transactions
                             for trx in &self.body.transactions {
                                 for unspent in &trx.output.unspents {
                                     match UTXO::generate(
@@ -149,15 +148,12 @@ impl Block {
                                 }
                             }
 
-                            //if generating utxo in database doesn't have any errors then set waiting of validators
-                            //else return error of block
+                            // If no UTXO generation errors occurred, update the waiting validators
                             if utxo_err.is_none() {
-                                //if updating waiting doesn't any problems return block as correct block
-                                //else return error of updating
                                 match Waiting::update(db, Some(&self.header.validator)).await {
                                     Ok(_) => Ok(self),
                                     Err(e) => {
-                                        //return wrong block's transactions to database from backup
+                                        // If updating the waiting validators fails, restore the transactions from the backup
                                         for trx in trx_backup {
                                             let trx_doc = to_document(&trx).unwrap();
                                             match trx_collection.insert_one(trx_doc).await {
@@ -169,7 +165,7 @@ impl Block {
                                     }
                                 }
                             } else {
-                                //return wrong block's transactions to database from backup
+                                // If UTXO generation fails, restore the transactions from the backup
                                 for trx in trx_backup {
                                     let trx_doc = to_document(&trx).unwrap();
                                     match trx_collection.insert_one(trx_doc).await {
@@ -181,7 +177,7 @@ impl Block {
                             }
                         }
                         Err(e) => {
-                            //return wrong block's transactions to database from backup
+                            // If coinbase validation fails, restore the transactions from the backup
                             for trx in trx_backup {
                                 let trx_doc = to_document(&trx).unwrap();
                                 match trx_collection.insert_one(trx_doc).await {
@@ -193,7 +189,7 @@ impl Block {
                         }
                     }
                 } else {
-                    //return wrong block's transactions to database from backup
+                    // If transaction validation fails, restore the transactions from the backup
                     for trx in trx_backup {
                         let trx_doc = to_document(&trx).unwrap();
                         match trx_collection.insert_one(trx_doc).await {
