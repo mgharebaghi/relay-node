@@ -50,7 +50,9 @@ impl BlockMessage {
                                         // Confirm receipts for all transactions in the block
                                         for transaction in self.block.body.transactions.clone() {
                                             match Reciept::confirmation(db, &transaction.hash, &self.block.header.number).await {
-                                                Ok(_) => {}
+                                                Ok(_) => {
+                                                    println!("block {:?} inserted successfully", block.header.number);
+                                                }
                                                 Err(e) => {
                                                     is_err.get_or_insert(e);
                                                     break;

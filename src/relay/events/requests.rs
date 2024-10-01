@@ -177,7 +177,9 @@ impl Requests {
                                 .gossipsub
                                 .publish(IdentTopic::new("validator"), str_block_message)
                             {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    println!("block {:?} gossiped successfully", block_message.block.header.number);
+                                }
                                 Err(e) => {
                                     write_log(&format!(
                                         "Gossiping block message problem: {}",
