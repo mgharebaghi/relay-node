@@ -114,25 +114,31 @@ impl Leader {
         //get count documents for knowing votes are upper than 50% of documents number or not
         match collection.count_documents(doc! {}).await {
             Ok(count) => {
-                self.votes.push(vote);
+                if count > 1 {
+                    self.votes.push(vote);
 
-                //if votes are upper than 50% of validators find most vote to set as leader
-                if self.votes.len() >= ((count / 2) + 1) as usize {
-                    let mut hashmap_of_votes = HashMap::new(); //make hashmap to group by vote per peerid
-                    for v in self.votes.clone() {
-                        *hashmap_of_votes.entry(v).or_insert(0) += 1; //plus 1 if key is repetitive
+                    //if votes are upper than 50% of validators find most vote to set as leader
+                    if self.votes.len() >= ((count / 2) + 1) as usize {
+                        let mut hashmap_of_votes = HashMap::new(); //make hashmap to group by vote per peerid
+                        for v in self.votes.clone() {
+                            *hashmap_of_votes.entry(v).or_insert(0) += 1; //plus 1 if key is repetitive
+                        }
+                        //get the most vote and change leader
+                        let result = hashmap_of_votes
+                            .iter()
+                            .max_by_key(|v| *v)
+                            .unwrap()
+                            .0
+                            .clone();
+                        self.update(Some(result));
+                        self.timer_start();
                     }
-                    //get the most vote and change leader
-                    let result = hashmap_of_votes
-                        .iter()
-                        .max_by_key(|v| *v)
-                        .unwrap()
-                        .0
-                        .clone();
-                    self.update(Some(result));
-                    self.timer_start();
+                    Ok(())
+                } else {
+                    self.update(Some(vote));
+                    Ok(())
+
                 }
-                Ok(())
             }
             Err(_) => Err("Error while get count of validators' doc-(generator/leader 133)"),
         }
