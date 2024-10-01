@@ -48,6 +48,7 @@ impl GossipMessages {
                 match gossip_message {
                     // Handle block messages
                     GossipMessages::BlockMessage(block_message) => {
+                        println!("block {:?} received successfully", block_message.block.header.number);
                         // Process the block message
                         block_message
                             .handle(
