@@ -48,7 +48,10 @@ impl GossipMessages {
                 match gossip_message {
                     // Handle block messages
                     GossipMessages::BlockMessage(block_message) => {
-                        println!("block {:?} received successfully", block_message.block.header.number);
+                        println!(
+                            "block {:?} received successfully",
+                            block_message.block.header.number
+                        );
                         // Process the block message
                         block_message
                             .handle(
@@ -94,7 +97,9 @@ impl GossipMessages {
                     // Handle leader votes
                     GossipMessages::LeaderVote(vote) => match sync_state {
                         Sync::Synced => {
+                            println!("leader vote received");
                             if leader.in_check {
+                                println!("leader is being checked");
                                 // Process the vote if the leader is being checked
                                 leader.check_votes(db, vote).await
                             } else {
