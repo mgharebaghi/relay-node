@@ -31,7 +31,9 @@ impl Waiting {
                                     collection.count_documents(doc! {}).await.unwrap() as u64;
                                 let replacement = to_document(&validator).unwrap();
                                 match collection.replace_one(doc, replacement).await {
-                                    Ok(_) => {}
+                                    Ok(_) => {
+                                        println!("waiting of validator {:?} updated successfully. new waiting: {}", validator.peerid, validator.waiting);
+                                    }
                                     Err(_) => {
                                         is_err.get_or_insert("Error during the replacing of document-(tools/waiting 36)");
                                         break;
@@ -43,7 +45,9 @@ impl Waiting {
                                     validator.waiting -= 1;
                                     let replacement = to_document(&validator).unwrap();
                                     match collection.replace_one(doc, replacement).await {
-                                        Ok(_) => {}
+                                        Ok(_) => {
+                                            println!("waiting of validator {:?} updated successfully. new waiting: {}", validator.peerid, validator.waiting);
+                                        }
                                         Err(_) => {
                                             is_err.get_or_insert("Error during the replacing of document-(tools/waiting 48)");
                                             break;

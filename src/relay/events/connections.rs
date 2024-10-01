@@ -200,7 +200,10 @@ impl ConnectionsHandler {
                                             serde_json::to_string(&gossip_message).unwrap();
                                         if self.connections.len() > 1 {
                                             match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
-                                                Ok(_) => Ok(()),
+                                                Ok(_) => Ok(write_log(&format!(
+                                                    "connection closed and removed with: {}",
+                                                    peerid
+                                                ))),
                                                 Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 198)")
                                             }
                                         } else {
@@ -232,7 +235,13 @@ impl ConnectionsHandler {
                                 serde_json::to_string(&gossip_message).unwrap();
                             if self.connections.len() > 1 {
                                 match swarm.behaviour_mut().gossipsub.publish(IdentTopic::new("validator"), str_gossip_message.as_bytes()) {
-                                    Ok(_) => Waiting::update(db, None).await,
+                                    Ok(_) => {
+                                        write_log(&format!(
+                                            "connection closed and removed with: {}",
+                                            peerid
+                                        ));
+                                        Waiting::update(db, None).await
+                                    },
                                     Err(_) => Err("Failed to publish outnode message-(handlers/practical/connections.rs 224)")
                                 }
                             } else {
