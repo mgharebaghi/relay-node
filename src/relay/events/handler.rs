@@ -176,12 +176,14 @@ impl State {
                             CentichainBehaviourEvent::Gossipsub(event) => match event {
                                 //get new subsctiber and push it to connections if there was any connections
                                 GossipsubEvent::Subscribed { peer_id, topic } => {
-                                    if topic.to_string() == "relay" {
+                                    if topic.to_string() == "relay".to_string() {
                                         connections_handler.update_connection(peer_id, Kind::Relay);
                                     }
-                                    if topic.to_string() == "validator" {
+                                    if topic.to_string() == "validator".to_string() {
+                                        println!("new validator connected");
                                         connections_handler
                                             .update_connection(peer_id, Kind::Validator);
+                                        swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                                     }
                                 }
 
