@@ -100,7 +100,7 @@ impl Leader {
                         }
                     }
                     Err(_) => {
-                        Err("Error during counting of validators-(relay/practical/leader 99)")
+                        Err("Error during counting of validators-(relay/practical/leader 103)")
                     }
                 }
             }
@@ -140,7 +140,7 @@ impl Leader {
 
                 }
             }
-            Err(_) => Err("Error while get count of validators' doc-(generator/leader 133)"),
+            Err(_) => Err("Error while get count of validators' doc-(generator/leader 143)"),
         }
     }
 }

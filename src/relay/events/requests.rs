@@ -171,14 +171,15 @@ impl Requests {
                     {
                         Ok(_) => {
                             // Propagate the block message to the network
-                            let str_block_message = serde_json::to_string(&block_message).unwrap();
+                            let gossip_message = GossipMessages::BlockMessage(block_message);
+                            let str_gossip_message = serde_json::to_string(&gossip_message).unwrap();
                             match swarm
                                 .behaviour_mut()
                                 .gossipsub
-                                .publish(IdentTopic::new("validator"), str_block_message)
+                                .publish(IdentTopic::new("validator"), str_gossip_message)
                             {
                                 Ok(_) => {
-                                    println!("block {:?} gossiped successfully", block_message.block.header.number);
+                                    println!("block gossiped successfully");
                                 }
                                 Err(e) => {
                                     write_log(&format!(
