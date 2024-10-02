@@ -28,7 +28,7 @@ impl Waiting {
                                 && &validator.peerid == block_generator.unwrap()
                             {
                                 validator.waiting =
-                                    collection.count_documents(doc! {}).await.unwrap() as u64;
+                                    collection.count_documents(doc! {}).await.unwrap() as u64 - 1;
                                 let replacement = to_document(&validator).unwrap();
                                 match collection.replace_one(doc, replacement).await {
                                     Ok(_) => {
@@ -75,14 +75,18 @@ impl Waiting {
     }
 
     //return new waiting as number for set it to new validator that gossips itself with vsync message
-    pub async fn new<'a>(db: &'a Database, leader: &mut Leader, leader_id: PeerId) -> Result<u64, &'a str> {
+    pub async fn new<'a>(
+        db: &'a Database,
+        leader: &mut Leader,
+        leader_id: PeerId,
+    ) -> Result<u64, &'a str> {
         //check count of vadator documents and then return it if it was bigger than 0
         let collection: Collection<Document> = db.collection("validators");
         let coun_query = collection.count_documents(doc! {}).await;
         match coun_query {
             Ok(count) => {
                 if count > 0 {
-                    Ok(count * 2)
+                    Ok(count - 1)
                 } else {
                     leader.update(Some(leader_id));
                     Ok(0)
