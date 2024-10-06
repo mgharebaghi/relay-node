@@ -136,6 +136,7 @@ impl Leader {
                     Ok(())
                 } else {
                     self.update(Some(vote));
+                    println!("new leader is {}", vote);
                     Ok(())
 
                 }
