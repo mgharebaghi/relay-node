@@ -92,6 +92,7 @@ impl BlockMessage {
             }
         } else {
             println!("leader is wrong: {:?}", leader.peerid.unwrap());
+            println!("block leader is: {:?}", self.block.header.validator);
             // If the block is from an unexpected validator, remove it from the network
             connections_handler
                 .remove(db, self.block.header.validator, swarm)
