@@ -4,7 +4,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 
-use axum::{http::Method, routing::post, Router};
+use axum::{http::Method, routing::{get, post}, Router};
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
     services::ServeDir,
@@ -18,6 +18,7 @@ use super::{
     reciept::{handle_reciept, handle_user_reciepts},
     transaction::handle_transaction,
     utxo::handle_utxo,
+    ws::centis_socket_handler,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,6 +91,7 @@ impl Rpc {
             .route("/urec", post(handle_user_reciepts))
             .route("/block", post(handle_block))
             .route("/autxo", post(a_utxo))
+            .route("/ws", get(centis_socket_handler))
             .layer(cors)
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
