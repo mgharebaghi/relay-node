@@ -29,7 +29,9 @@ async fn realtime_centis(mut socket: WebSocket) {
                         let block: Block = from_document(document).unwrap();
                         // Send the coinbase reward to the WebSocket client
                         match socket.send(Message::Text(block.body.coinbase.reward.to_string())).await {
-                            Ok(_) => (),
+                            Ok(_) => (
+                                
+                            ),
                             Err(e) => {
                                 write_log(&format!("Error in sending block-line(24): {:?}", e));
                             }

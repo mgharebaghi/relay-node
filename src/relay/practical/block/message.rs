@@ -51,7 +51,6 @@ impl BlockMessage {
                                         for transaction in self.block.body.transactions.clone() {
                                             match Reciept::confirmation(db, &transaction.hash, &self.block.header.number).await {
                                                 Ok(_) => {
-                                                    println!("block {:?} inserted successfully", block.header.number);
                                                 }
                                                 Err(e) => {
                                                     is_err.get_or_insert(e);
@@ -91,8 +90,6 @@ impl BlockMessage {
                 Sync::NotSynced => Ok(recvied_blocks.push(self.clone())),
             }
         } else {
-            println!("leader is wrong: {:?}", leader.peerid.unwrap());
-            println!("block leader is: {:?}", self.block.header.validator);
             // If the block is from an unexpected validator, remove it from the network
             connections_handler
                 .remove(db, self.block.header.validator, swarm)

@@ -186,7 +186,6 @@ impl State {
                                         connections_handler.update_connection(peer_id, Kind::Relay);
                                     }
                                     if topic.to_string() == "validator".to_string() {
-                                        println!("new validator connected");
                                         connections_handler
                                             .update_connection(peer_id, Kind::Validator);
                                         swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
