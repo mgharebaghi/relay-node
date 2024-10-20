@@ -100,16 +100,9 @@ impl Rpc {
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
-        let addr = SocketAddr::from(([0, 0, 0, 0], 443)); // Change port to 443 for HTTPS
+        let addr = SocketAddr::from(([0, 0, 0, 0], 33369)); // Change port to 443 for HTTPS
 
-        let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(
-            "/etc/cert.pem",
-            "/etc/key.pem",
-        )
-        .await
-        .expect("Failed to load TLS config");
-
-        match axum_server::tls_rustls::bind_rustls(addr, config)
+        match axum_server::bind(addr)
             .serve(app.into_make_service())
             .await
         {
@@ -118,3 +111,4 @@ impl Rpc {
         }
     }
 }
+
