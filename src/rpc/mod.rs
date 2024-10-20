@@ -5,4 +5,4 @@ mod utxo;
 mod reciept;
 mod block;
 pub mod one_utxo;
-pub mod ws;
+pub mod sse;
