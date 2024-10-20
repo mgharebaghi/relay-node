@@ -109,7 +109,7 @@ impl Rpc {
         .await
         .expect("Failed to load TLS config");
 
-        match axum_server::bind_rustls(addr, config)
+        match axum_server::tls_rustls::bind_rustls(addr, config)
             .serve(app.into_make_service())
             .await
         {
