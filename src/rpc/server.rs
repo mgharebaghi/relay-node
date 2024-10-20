@@ -100,7 +100,7 @@ impl Rpc {
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
-        let addr = SocketAddr::from(([0, 0, 0, 0], 33369)); // Change port to 443 for HTTPS
+        let addr = SocketAddr::from(([0, 0, 0, 0], 443)); // Change port to 443 for HTTPS
 
         let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(
             "/etc/cert.pem",
