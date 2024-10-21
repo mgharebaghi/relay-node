@@ -22,7 +22,7 @@ use super::{
     block::handle_block,
     one_utxo::a_utxo,
     reciept::{handle_reciept, handle_user_reciepts},
-    sse::centis_sse_handler,
+    websocket::centis_ws_handler,
     transaction::handle_transaction,
     utxo::handle_utxo,
 };
@@ -97,7 +97,7 @@ impl Rpc {
             .route("/urec", post(handle_user_reciepts))
             .route("/block", post(handle_block))
             .route("/autxo", post(a_utxo))
-            .route("/coins", get(centis_sse_handler))
+            .route("/coins", get(centis_ws_handler))
             .layer(cors)
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
