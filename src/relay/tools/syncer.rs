@@ -91,30 +91,24 @@ impl Syncer {
         match Self::get_blockchain(dialed_relays).await {
             Ok(_) => {
                 //add bsons to database or mempool by a loop
-               //add bsons to database or mempool by a loop
-               let path = "./etc/dump/Centichain";
-               for entry in fs::read_dir(path).unwrap() {
-                   let item = entry.unwrap();
-                   let file_name = item.file_name();
-                   let collection_name =
-                       Path::new(&file_name).file_stem().unwrap().to_str().unwrap();
-                   let str_name = file_name.to_str().unwrap();
-                   if str_name.contains("bson") {
-                    match Bson::add(
-                        db,
-                        collection_name,
-                        str_name
-                    )
-                    .await
-                    {
-                        Ok(_) => {}
-                        Err(e) => {
-                            error = Some(e);
-                            break;
+                //add bsons to database or mempool by a loop
+                let path = "./etc/dump/Centichain";
+                for entry in fs::read_dir(path).unwrap() {
+                    let item = entry.unwrap();
+                    let file_name = item.file_name();
+                    let collection_name =
+                        Path::new(&file_name).file_stem().unwrap().to_str().unwrap();
+                    let str_name = file_name.to_str().unwrap();
+                    if str_name.contains("bson") && str_name != "raddress.bson" {
+                        match Bson::add(db, collection_name, str_name).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error = Some(e);
+                                break;
+                            }
                         }
                     }
-                   }
-               }
+                }
                 //if error was some return it and if not continues syncing
                 if error.is_some() {
                     Err(error.unwrap())
