@@ -7,7 +7,7 @@ use sp_core::Pair;
 
 use crate::relay::{
     practical::transaction::Transaction,
-    tools::{utxo::UTXO, waiting::Waiting, HashMaker},
+    tools::{utxo::UTXO, waiting::Waiting, HashMaker, create_log::write_log},
 };
 
 use super::{coinbase::Coinbase, header::Header};
@@ -68,10 +68,13 @@ impl Block {
                                             Ok(_) => {
                                                 trx_backup.push(transaction.clone());
                                             }
-                                            Err(_) => {}
+                                            Err(e) => {
+                                                write_log(&format!("Error deleting transaction: {}", e));
+                                            }
                                         }
                                     }
                                     Err(e) => {
+                                        write_log(&format!("Transaction validation error: {}", e));
                                         trx_err.get_or_insert(e);
                                         break;
                                     }
@@ -85,14 +88,16 @@ impl Block {
                                     Ok(_) => {
                                         trx_backup.push(self.body.transactions[i].clone());
                                     }
-                                    Err(_) => {}
+                                    Err(e) => {
+                                        write_log(&format!("Error deleting existing transaction: {}", e));
+                                    }
                                 }
                             }
                         },
-                        Err(_) => {
-                            trx_err.get_or_insert(
-                                "Querying transaction problem-(relay/practical/block 61)",
-                            );
+                        Err(e) => {
+                            let error_msg = "Querying transaction problem-(relay/practical/block 61)";
+                            write_log(&format!("{}: {}", error_msg, e));
+                            trx_err.get_or_insert(error_msg);
                         }
                     }
                 }
@@ -121,6 +126,7 @@ impl Block {
                                 {
                                     Ok(_) => {}
                                     Err(e) => {
+                                        write_log(&format!("Error generating UTXO for coinbase: {}", e));
                                         utxo_err.get_or_insert(e);
                                         break;
                                     }
@@ -141,6 +147,7 @@ impl Block {
                                     {
                                         Ok(_) => {}
                                         Err(e) => {
+                                            write_log(&format!("Error generating UTXO for transaction: {}", e));
                                             utxo_err.get_or_insert(e);
                                             break;
                                         }
@@ -153,12 +160,15 @@ impl Block {
                                 match Waiting::update(db, Some(&self.header.validator)).await {
                                     Ok(_) => Ok(self),
                                     Err(e) => {
+                                        write_log(&format!("Error updating waiting validators: {}", e));
                                         // If updating the waiting validators fails, restore the transactions from the backup
                                         for trx in trx_backup {
                                             let trx_doc = to_document(&trx).unwrap();
                                             match trx_collection.insert_one(trx_doc).await {
                                                 Ok(_) => {}
-                                                Err(_) => {}
+                                                Err(e) => {
+                                                    write_log(&format!("Error restoring transaction: {}", e));
+                                                }
                                             }
                                         }
                                         Err(e)
@@ -170,40 +180,52 @@ impl Block {
                                     let trx_doc = to_document(&trx).unwrap();
                                     match trx_collection.insert_one(trx_doc).await {
                                         Ok(_) => {}
-                                        Err(_) => {}
+                                        Err(e) => {
+                                            write_log(&format!("Error restoring transaction after UTXO generation failure: {}", e));
+                                        }
                                     }
                                 }
                                 Err(utxo_err.unwrap())
                             }
                         }
                         Err(e) => {
+                            write_log(&format!("Coinbase validation error: {}", e));
                             // If coinbase validation fails, restore the transactions from the backup
                             for trx in trx_backup {
                                 let trx_doc = to_document(&trx).unwrap();
                                 match trx_collection.insert_one(trx_doc).await {
                                     Ok(_) => {}
-                                    Err(_) => {}
+                                    Err(e) => {
+                                        write_log(&format!("Error restoring transaction after coinbase validation failure: {}", e));
+                                    }
                                 }
                             }
                             Err(e)
                         }
                     }
                 } else {
+                    write_log(&format!("Transaction validation error: {}", trx_err.unwrap()));
                     // If transaction validation fails, restore the transactions from the backup
                     for trx in trx_backup {
                         let trx_doc = to_document(&trx).unwrap();
                         match trx_collection.insert_one(trx_doc).await {
                             Ok(_) => {}
-                            Err(_) => {}
+                            Err(e) => {
+                                write_log(&format!("Error restoring transaction after validation failure: {}", e));
+                            }
                         }
                     }
                     Err(trx_err.unwrap())
                 }
             } else {
-                Err("Block signature is wrong and Block rejected.")
+                let error_msg = "Block signature is wrong and Block rejected.";
+                write_log(error_msg);
+                Err(error_msg)
             }
         } else {
-            Err("Block validation problem!, previous hash doesn't match and Block rejected.")
+            let error_msg = "Block validation problem!, previous hash doesn't match and Block rejected.";
+            write_log(error_msg);
+            Err(error_msg)
         }
     }
 }

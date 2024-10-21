@@ -179,6 +179,7 @@ impl Requests {
                                 .publish(IdentTopic::new("validator"), str_gossip_message)
                             {
                                 Ok(_) => {
+                                    write_log("block message gossiped");
                                 }
                                 Err(e) => {
                                     write_log(&format!(

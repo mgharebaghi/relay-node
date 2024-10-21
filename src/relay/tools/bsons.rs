@@ -26,11 +26,9 @@ impl Bson {
                 while let Ok(doc) = Document::from_reader(&mut reader) {
                     collection.insert_one(doc).await.unwrap();
                 }
-                println!("bson file address: {}", bson_addr);
                 Ok(write_log(&format!("{} Synced", collection_name)))
             }
             Err(_e) => {
-                println!("bson file address has problem: {}", bson_addr);
                 Err("Your file address is incorrect!-(tools/bsons 31)")
             }
         }
