@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use libp2p::PeerId;
 use mongodb::{
     bson::{doc, from_document, to_document, Document},
@@ -83,28 +85,36 @@ impl Syncer {
         db: &'a Database,
         dialed_relays: &mut DialedRelays,
     ) -> Result<(), &'a str> {
-        //define collection names for use in collection name parameter of bson::add
-        //and us it for bson addreess in bson::add
-        let collections = vec!["Blocks", "transactions", "UTXOs", "validators", "reciepts"];
-
         let mut error = None; //for get error in loop of bson::add and return it at the end if it's some
 
         //get blockchain and unzip it at first and if there was problem return error of propblem
         match Self::get_blockchain(dialed_relays).await {
             Ok(_) => {
                 //add bsons to database or mempool by a loop
-                for coll in collections {
-                    let bson = format!("{}.bson", coll);
-
-                    match Bson::add(db, &coll, &bson).await {
+               //add bsons to database or mempool by a loop
+               let path = "./etc/dump/Centichain";
+               for entry in fs::read_dir(path).unwrap() {
+                   let item = entry.unwrap();
+                   let file_name = item.file_name();
+                   let collection_name =
+                       Path::new(&file_name).file_stem().unwrap().to_str().unwrap();
+                   let str_name = file_name.to_str().unwrap();
+                   if str_name.contains("bson") {
+                    match Bson::add(
+                        db,
+                        collection_name,
+                        str_name
+                    )
+                    .await
+                    {
                         Ok(_) => {}
                         Err(e) => {
                             error = Some(e);
                             break;
                         }
                     }
-                }
-
+                   }
+               }
                 //if error was some return it and if not continues syncing
                 if error.is_some() {
                     Err(error.unwrap())
