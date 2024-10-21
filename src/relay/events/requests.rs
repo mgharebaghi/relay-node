@@ -94,66 +94,91 @@ impl Requests {
                 }
 
                 // Handle transaction request
-                Requests::Transaction(transaction) => match transaction.validate(db).await {
-                    Ok(trx) => match trx.insertion(db, leader, connections_handler, swarm).await {
-                        Ok(_) => {
-                            // Propagate the transaction to the network
-                            let gossip_message = GossipMessages::Transaction(transaction.clone());
-                            let str_gossip_message =
-                                serde_json::to_string(&gossip_message).unwrap();
-                            match swarm
-                                .behaviour_mut()
-                                .gossipsub
-                                .publish(IdentTopic::new("validator"), str_gossip_message)
-                            {
-                                Ok(_) => {
-                                    // Insert receipt and send response
-                                    match Reciept::insertion(None, Some(&transaction), None, db)
+                Requests::Transaction(transaction) => {
+                    let collection: Collection<Document> = db.collection("transactions");
+                    let filter = doc! {"hash": transaction.hash.to_string()};
+                    match collection.find_one(filter).await {
+                        Ok(result) => {
+                            if result.is_none() {
+                                // Transaction not in collection, proceed with validation
+                                match transaction.validate(db).await {
+                                    Ok(trx) => match trx
+                                        .insertion(db, leader, connections_handler, swarm)
                                         .await
                                     {
                                         Ok(_) => {
-                                            let response = Res {
-                                                res: "".to_string(),
-                                            };
-                                            match swarm
-                                                .behaviour_mut()
-                                                .reqres
-                                                .send_response(channel, response)
-                                            {
-                                                Ok(_) => {}
-                                                Err(_e) => {
-                                                    write_log(
-                                                        "Sending transaction response error!",
-                                                    );
-                                                    std::process::exit(0)
+                                            // Propagate the transaction to the network
+                                            let gossip_message =
+                                                GossipMessages::Transaction(transaction.clone());
+                                            let str_gossip_message =
+                                                serde_json::to_string(&gossip_message).unwrap();
+                                            match swarm.behaviour_mut().gossipsub.publish(
+                                                IdentTopic::new("validator"),
+                                                str_gossip_message,
+                                            ) {
+                                                Ok(_) => {
+                                                    // Insert receipt and send response
+                                                    match Reciept::insertion(
+                                                        None,
+                                                        Some(&transaction),
+                                                        None,
+                                                        db,
+                                                    )
+                                                    .await
+                                                    {
+                                                        Ok(_) => {
+                                                            let response = Res {
+                                                                res: "".to_string(),
+                                                            };
+                                                            match swarm
+                                                                .behaviour_mut()
+                                                                .reqres
+                                                                .send_response(channel, response)
+                                                            {
+                                                                Ok(_) => {}
+                                                                Err(_e) => {
+                                                                    write_log(
+                                                                        "Sending transaction response error!",
+                                                                    );
+                                                                    std::process::exit(0)
+                                                                }
+                                                            }
+                                                        }
+                                                        Err(e) => {
+                                                            write_log(e);
+                                                            std::process::exit(0)
+                                                        }
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    write_log(&format!(
+                                                        "Gossiping transaction problem: {}",
+                                                        e.to_string()
+                                                    ));
+                                                    std::process::exit(0);
                                                 }
                                             }
                                         }
                                         Err(e) => {
                                             write_log(e);
-                                            std::process::exit(0)
+                                            std::process::exit(0);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        match connections_handler.remove(db, sender, swarm).await {
+                                            Ok(_) => write_log(e),
+                                            Err(e) => write_log(e),
                                         }
                                     }
-                                }
-                                Err(e) => {
-                                    write_log(&format!(
-                                        "Gossiping transaction problem: {}",
-                                        e.to_string()
-                                    ));
-                                    std::process::exit(0);
                                 }
                             }
                         }
                         Err(e) => {
-                            write_log(e);
+                            write_log(&format!("Error checking transaction in collection: {}", e));
                             std::process::exit(0);
                         }
-                    },
-                    Err(e) => match connections_handler.remove(db, sender, swarm).await{
-                        Ok(_) => write_log(e),
-                        Err(e) => write_log(e),
-                    },
-                },
+                    }
+                }
 
                 // Handle block message request
                 Requests::BlockMessage(block_message) => {
@@ -172,7 +197,8 @@ impl Requests {
                         Ok(_) => {
                             // Propagate the block message to the network
                             let gossip_message = GossipMessages::BlockMessage(block_message);
-                            let str_gossip_message = serde_json::to_string(&gossip_message).unwrap();
+                            let str_gossip_message =
+                                serde_json::to_string(&gossip_message).unwrap();
                             match swarm
                                 .behaviour_mut()
                                 .gossipsub
@@ -210,7 +236,7 @@ impl Requests {
         leader: &mut Leader,
     ) -> Result<(), &'a str> {
         let mut handshake_reponse = HandshakeResponse::new(wallet);
-        
+
         // Check blocks count and validators count from DB
         let b_collection: Collection<Document> = db.collection("Blocks");
         let v_collection: Collection<Document> = db.collection("validators");

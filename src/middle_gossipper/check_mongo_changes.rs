@@ -57,7 +57,6 @@ impl MiddleGossipper {
 
                 SwarmEvent::ConnectionClosed { .. } => {
                     write_log("Middlegossiper connection closed!");
-                    std::process::exit(0)
                 }
 
                 SwarmEvent::Behaviour(mybehaviour) => match mybehaviour {
