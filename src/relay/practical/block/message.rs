@@ -33,7 +33,7 @@ impl BlockMessage {
     ) -> Result<(), &'a str> {
         write_log("handle block message");
         // Check if the current node is the leader
-        if self.block.header.validator == leader.peerid.unwrap() {
+        if leader.peerid.is_none() || self.block.header.validator == leader.peerid.unwrap() {
             write_log("leader checked");
             match sync_state {
                 // If the current relay node is synced, proceed with block validation
