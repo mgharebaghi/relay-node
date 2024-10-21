@@ -1,5 +1,5 @@
 use libp2p::{PeerId, Swarm};
-use mongodb::Database;
+use mongodb::{bson::{doc, Document}, Collection, Database};
 use serde::{Deserialize, Serialize};
 
 use crate::relay::{
@@ -64,21 +64,29 @@ impl GossipMessages {
 
                     // Handle transactions
                     GossipMessages::Transaction(transaction) => {
-                        // Validate the transaction
-                        match transaction.validate(db).await {
-                            Ok(trx) => {
-                                // Insert validated transaction into the database
-                                match trx.insertion(db, leader, connections_handler, swarm).await {
-                                    Ok(_) => Reciept::insertion(None, Some(trx), None, db).await,
-                                    Err(e) => Err(e),
+                        // Check if transaction hash is not in the receipts collection
+                        let receipts_coll: Collection<Document> = db.collection("receipts");
+                        let filter = doc! {"hash": &transaction.hash};
+                        if let Ok(None) = receipts_coll.find_one(filter).await {
+                            // Validate the transaction if not found in receipts
+                            match transaction.validate(db).await {
+                                Ok(trx) => {
+                                    // Insert validated transaction into the database
+                                    match trx.insertion(db, leader, connections_handler, swarm).await {
+                                        Ok(_) => Reciept::insertion(None, Some(trx), None, db).await,
+                                        Err(e) => Err(e),
+                                    }
+                                }
+                                Err(_) => {
+                                    // Remove the connection if transaction is invalid
+                                    connections_handler
+                                        .remove(db, propagation_source, swarm)
+                                        .await
                                 }
                             }
-                            Err(_) => {
-                                // Remove the connection if transaction is invalid
-                                connections_handler
-                                    .remove(db, propagation_source, swarm)
-                                    .await
-                            }
+                        } else {
+                            // Transaction hash already exists in receipts, no need to validate
+                            Ok(())
                         }
                     }
 

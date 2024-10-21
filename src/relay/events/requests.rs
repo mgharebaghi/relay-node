@@ -95,7 +95,7 @@ impl Requests {
 
                 // Handle transaction request
                 Requests::Transaction(transaction) => {
-                    let collection: Collection<Document> = db.collection("transactions");
+                    let collection: Collection<Document> = db.collection("reciepts");
                     let filter = doc! {"hash": transaction.hash.to_string()};
                     match collection.find_one(filter).await {
                         Ok(result) => {
