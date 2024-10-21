@@ -97,7 +97,7 @@ impl Rpc {
             .route("/urec", post(handle_user_reciepts))
             .route("/block", post(handle_block))
             .route("/autxo", post(a_utxo))
-            .route("/coins-sse", get(centis_sse_handler))
+            .route("/coins", get(centis_sse_handler))
             .layer(cors)
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
