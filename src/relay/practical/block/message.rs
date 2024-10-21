@@ -92,6 +92,7 @@ impl BlockMessage {
                 Sync::NotSynced => Ok(recvied_blocks.push(self.clone())),
             }
         } else {
+            write_log("leader is not correct");
             // If the block is from an unexpected validator, remove it from the network
             connections_handler
                 .remove(db, self.block.header.validator, swarm)
