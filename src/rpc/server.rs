@@ -14,7 +14,7 @@ use tower_http::{
     services::ServeDir,
 };
 
-use axum_server::tls_openssl::OpenSSLConfig;
+use axum_server::tls_rustls::RustlsConfig;
 
 use crate::relay::{practical::block::block::Block, tools::create_log::write_log};
 
@@ -102,11 +102,11 @@ impl Rpc {
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
-        let config = OpenSSLConfig::from_pem_file("/etc/cert.pem", "/etc/key.pem").unwrap();
+        let config = RustlsConfig::from_pem_file("/etc/cert.pem", "/etc/key.pem").await.unwrap();
 
         let addr = SocketAddr::from(([0, 0, 0, 0], 33369)); // Change port to 443 for HTTPS
 
-        match axum_server::bind_openssl(addr, config)
+        match axum_server::bind_rustls(addr, config)
             .serve(app.into_make_service())
             .await
         {
