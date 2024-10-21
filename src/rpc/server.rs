@@ -14,6 +14,8 @@ use tower_http::{
     services::ServeDir,
 };
 
+use axum_server::tls_openssl::OpenSSLConfig;
+
 use crate::relay::{practical::block::block::Block, tools::create_log::write_log};
 
 use super::{
@@ -100,9 +102,11 @@ impl Rpc {
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
+        let config = OpenSSLConfig::from_pem("/etc/cert.pem", "/etc/key.pem").unwrap();
+
         let addr = SocketAddr::from(([0, 0, 0, 0], 33369)); // Change port to 443 for HTTPS
 
-        match axum_server::bind(addr)
+        match axum_server::bind_openssl(addr, config)
             .serve(app.into_make_service())
             .await
         {
@@ -111,4 +115,3 @@ impl Rpc {
         }
     }
 }
-
