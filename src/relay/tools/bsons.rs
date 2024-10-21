@@ -17,7 +17,7 @@ impl Bson {
     ) -> Result<(), &'a str> {
         //open bson file that its address is in the bson argument
         let bson_addr = format!("./etc/dump/Centichain/{}", bson);
-        let open_file = File::open(bson_addr);
+        let open_file = File::open(bson_addr.clone());
         match open_file {
             Ok(file) => {
                 let mut reader = BufReader::new(file);
@@ -26,6 +26,7 @@ impl Bson {
                 while let Ok(doc) = Document::from_reader(&mut reader) {
                     collection.insert_one(doc).await.unwrap();
                 }
+                println!("bson file address: {}", bson_addr);
                 Ok(write_log(&format!("{} Synced", collection_name)))
             }
             Err(_e) => {
