@@ -11,8 +11,7 @@ use crate::relay::{
         transaction::Transaction,
     },
     tools::{
-        syncer::{Sync, VSync},
-        wrongdoer::WrongDoer,
+        create_log::write_log, syncer::{Sync, VSync}, wrongdoer::WrongDoer
     },
 };
 
@@ -48,6 +47,7 @@ impl GossipMessages {
                 match gossip_message {
                     // Handle block messages
                     GossipMessages::BlockMessage(block_message) => {
+                        write_log("Block message received");
                         // Process the block message
                         block_message
                             .handle(
