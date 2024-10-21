@@ -102,7 +102,7 @@ impl Rpc {
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
-        let config = OpenSSLConfig::from_pem("/etc/cert.pem", "/etc/key.pem").unwrap();
+        let config = OpenSSLConfig::from_pem_file("/etc/cert.pem", "/etc/key.pem").unwrap();
 
         let addr = SocketAddr::from(([0, 0, 0, 0], 33369)); // Change port to 443 for HTTPS
 
