@@ -166,7 +166,9 @@ impl ConnectionsHandler {
             Some(index) => {
                 // Attempt to disconnect the peer from the swarm
                 match swarm.disconnect_peer_id(peerid) {
-                    Ok(_) => {}
+                    Ok(_) => {
+                        write_log(&format!("connection closed and removed with: {}", peerid));
+                    }
                     Err(_) => {}
                 }
 
