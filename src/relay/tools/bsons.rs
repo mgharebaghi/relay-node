@@ -28,7 +28,10 @@ impl Bson {
                 }
                 Ok(write_log(&format!("{} Synced", collection_name)))
             }
-            Err(_e) => Err("Your file address is incorrect!-(tools/bsons 31)"),
+            Err(_e) => {
+                println!("{}", _e);
+                Err("Your file address is incorrect!-(tools/bsons 31)")
+            }
         }
     }
 }
