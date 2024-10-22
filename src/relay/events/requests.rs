@@ -245,6 +245,7 @@ impl Requests {
 
         // If there are no blocks and validators, set this node as the first node
         if blocks_count == 0 && validators_count == 0 {
+            write_log("this is the first node");
             handshake_reponse.set_is_first();
             leader.update(Some(sender));
         }
