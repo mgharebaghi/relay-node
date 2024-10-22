@@ -123,7 +123,7 @@ impl State {
                         //remove closed connection from database as relay or validator
                         //break to dialing(mod) if there is no connection with atleast a relay
                         SwarmEvent::ConnectionClosed { peer_id, .. } => {
-                            if peer_id == leader.peerid.unwrap() {
+                            if leader.peerid.is_some() && peer_id == leader.peerid.unwrap() {
                                 match leader
                                     .start_voting(db, &mut connections_handler, swarm)
                                     .await
