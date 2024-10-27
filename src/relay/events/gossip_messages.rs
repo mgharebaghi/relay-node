@@ -113,7 +113,7 @@ impl GossipMessages {
 
                     // Handle outnode messages
                     GossipMessages::Outnode(peerid) => {
-                        if peerid == leader.peerid.unwrap() {
+                        if leader.peerid.is_some() && peerid == leader.peerid.unwrap() {
                             // Start voting process if the outnode is the current leader
                             leader.start_voting(db, connections_handler, swarm).await
                         } else {
