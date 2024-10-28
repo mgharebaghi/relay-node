@@ -1,4 +1,4 @@
-# Centichain
+# Centichain Relay
 
 Centichain is a decentralized blockchain network built with Rust and libp2p. It implements a relay-based networking architecture for secure and efficient peer-to-peer communication.
 
