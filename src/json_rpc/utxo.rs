@@ -98,8 +98,6 @@ async fn onchange(mut socket: WebSocket) {
                                             {
                                                 write_log("Error sending message to client-(RPC-server/ reciept.rs/ 53)");
                                                 break;
-                                            } else {
-                                                println!("utxo sent: {}", sum_utxos.to_string());
                                             }
                                         }
                                     }
