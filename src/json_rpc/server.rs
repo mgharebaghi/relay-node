@@ -22,7 +22,7 @@ use super::{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReqForUtxo {
-    pub public_key: String,
+    pub wallet: String,
     pub request: String,
 }
 

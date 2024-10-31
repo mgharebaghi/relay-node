@@ -22,7 +22,7 @@ pub async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> 
         Ok(db) => {
             // Query UTXOs collection for the given public key
             let utxo_coll: Collection<Document> = db.collection("UTXOs");
-            let filter = doc! {"public_key": utxo_req.public_key.clone()};
+            let filter = doc! {"wallet": utxo_req.wallet.clone()};
             let documnet = utxo_coll.find_one(filter).await.unwrap();
             match documnet {
                 Some(doc) => {
@@ -32,14 +32,14 @@ pub async fn handle_utxo(extract::Json(utxo_req): extract::Json<ReqForUtxo>) -> 
                 }
                 None => {
                     // Create new empty UTXO record if not found
-                    let person = Person::new(utxo_req.public_key.parse().unwrap(), Vec::new());
+                    let person = Person::new(utxo_req.wallet.parse().unwrap(), Vec::new());
                     return Json(person);
                 }
             }
         }
         Err(_) => {
             // Return empty UTXO record on database error
-            let person = Person::new(utxo_req.public_key.parse().unwrap(), Vec::new());
+            let person = Person::new(utxo_req.wallet.parse().unwrap(), Vec::new());
             return Json(person);
         }
     }
