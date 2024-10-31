@@ -83,6 +83,15 @@ impl Rpc {
             .allow_methods([Method::GET, Method::POST])
             .allow_origin(Any)
             .allow_headers(AllowHeaders::any());
+
+        let ws_layer = tower_http::cors::CorsLayer::permissive()
+            .allow_headers([
+                axum::http::HeaderName::from_static("upgrade"),
+                axum::http::HeaderName::from_static("sec-websocket-key"),
+                axum::http::HeaderName::from_static("sec-websocket-protocol"),
+                axum::http::HeaderName::from_static("sec-websocket-version"),
+            ]);
+
         let app: Router = Router::new()
             .route("/trx", post(handle_transaction))
             .route("/utxo", post(handle_utxo))
@@ -93,6 +102,7 @@ impl Rpc {
             .route("/reciept/ws", get(|ws| ws_reciept(ws)))
             .route("/utxo/ws", get(|ws| handle_utxo_ws(ws)))
             .layer(cors)
+            .layer(ws_layer)
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
