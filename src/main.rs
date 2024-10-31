@@ -1,11 +1,11 @@
 mod relay;
-mod rpc;
+mod json_rpc;
 use relay::practical::db::Mongodb;
 use relay::tools::create_log::write_log;
 use middle_gossipper::check_mongo_changes::MiddleGossipper;
 mod middle_gossipper;
 use relay::Relay;
-use rpc::Rpc;
+use json_rpc::Rpc;
 
 #[tokio::main]
 async fn main() {

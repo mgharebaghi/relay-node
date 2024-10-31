@@ -4,7 +4,7 @@ use serde_with::{serde_as, DisplayFromStr};
 use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 
-use axum::{http::Method, routing::post, Router};
+use axum::{http::Method, routing::{get, post}, Router};
 use tower_http::{
     cors::{AllowHeaders, Any, CorsLayer},
     services::ServeDir,
@@ -15,9 +15,9 @@ use crate::relay::{practical::block::block::Block, tools::create_log::write_log}
 use super::{
     block::handle_block,
     one_utxo::a_utxo,
-    reciept::{handle_reciept, handle_user_reciepts},
+    reciept::{handle_reciept, handle_user_reciepts, ws_reciept},
     transaction::handle_transaction,
-    utxo::handle_utxo,
+    utxo::{handle_utxo, handle_utxo_ws},
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -90,13 +90,15 @@ impl Rpc {
             .route("/urec", post(handle_user_reciepts))
             .route("/block", post(handle_block))
             .route("/autxo", post(a_utxo))
+            .route("/reciept/ws", get(|ws| ws_reciept(ws)))
+            .route("/utxo/ws", get(|ws| handle_utxo_ws(ws)))
             .layer(cors)
             .layer(ConcurrencyLimitLayer::new(100))
             .nest_service("/blockchain", ServeDir::new("/home"));
 
         // let config = RustlsConfig::from_pem_file("/etc/cert.pem", "/etc/key.pem").await.unwrap();
 
-        let addr = SocketAddr::from(([0, 0, 0, 0], 33369)); // Change port to 443 for HTTPS
+        let addr = SocketAddr::from(([0, 0, 0, 0], 33369));
 
         match axum_server::bind(addr).serve(app.into_make_service()).await {
             Ok(_) => {}
